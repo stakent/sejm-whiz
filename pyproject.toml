@@ -1,0 +1,7 @@
+[project]
+name = "sejm-whiz"
+version = "0.1.0"
+description = "Process data exposed by the Sejm (Polish parliament) API then..."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
