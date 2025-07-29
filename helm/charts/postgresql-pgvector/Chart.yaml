@@ -1,0 +1,17 @@
+apiVersion: v2
+name: postgresql-pgvector
+description: PostgreSQL with pgvector extension for sejm-whiz
+version: 0.1.0
+appVersion: "17"
+
+keywords:
+  - postgresql
+  - database
+  - pgvector
+  - vector
+  - embeddings
+
+maintainers:
+  - name: sejm-whiz-team
+
+dependencies: []

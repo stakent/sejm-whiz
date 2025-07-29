@@ -4,14 +4,31 @@ version = "0.1.0"
 description = "Process data exposed by the Sejm (Polish parliament) API then..."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "alembic>=1.16.4",
+    "beautifulsoup4>=4.13.4",
+    "httpx>=0.28.1",
+    "pgvector>=0.4.1",
+    "psycopg2-binary>=2.9.10",
+    "pydantic-settings>=2.10.1",
+    "redis>=6.2.0",
+    "sentence-transformers>=5.0.0",
+    "sqlalchemy>=2.0.41",
+    "tokenizers>=0.21.4",
+    "torch>=2.7.1",
+    "transformers>=4.54.0",
+]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
-dev = ["polylith-cli>=1.30.1"]
+dev = [
+    "polylith-cli>=1.30.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-postgresql>=7.0.2",
+]
 
 [tool.hatch.build]
 dev-mode-dirs = ["components", "bases", "development", "."]
