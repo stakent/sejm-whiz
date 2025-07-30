@@ -300,7 +300,7 @@ CREATE INDEX idx_legal_documents_embedding ON legal_documents USING ivfflat (emb
 
 ## Phase 3: Data Processing Components (Weeks 9-12)
 
-### Step 3.1: Create text_processing Component
+### Step 3.1: Create text_processing Component ✅ **COMPLETED**
 
 **Objective**: Implement text cleaning and preprocessing for Polish legal text
 
@@ -314,9 +314,9 @@ git checkout -b feature/text-processing-component
 # Create component
 uv run poly create component --name text_processing
 
-# Add NLP dependencies
-uv add spacy nltk regex
-uv add https://github.com/explosion/spacy-models/releases/download/pl_core_news_sm-3.7.0/pl_core_news_sm-3.7.0-py3-none-any.whl
+# Add NLP dependencies (spacy optional for lazy loading)
+uv add regex unicodedata
+# spacy and pl_core_news_sm loaded lazily when needed
 ```
 
 **Component Structure:**
@@ -324,30 +324,88 @@ uv add https://github.com/explosion/spacy-models/releases/download/pl_core_news_
 components/text_processing/
 └── sejm_whiz/
     └── text_processing/
-        ├── __init__.py
-        ├── cleaner.py         # Text cleaning functions
-        ├── normalizer.py      # Text normalization
-        ├── tokenizer.py       # Polish tokenization
-        ├── entities.py        # Named entity recognition
-        └── legal_parser.py    # Legal document parsing
+        ├── __init__.py        ✅ Lazy import system for spacy dependencies
+        ├── cleaner.py         ✅ HTML and text cleaning functions
+        ├── normalizer.py      ✅ Polish text normalization
+        ├── tokenizer.py       ✅ Polish legal document tokenization
+        ├── entities.py        ✅ Legal entity extraction and NER
+        ├── legal_parser.py    ✅ Legal document structure parsing
+        └── core.py            ✅ Main processing pipeline integration
 ```
 
-**Key Features:**
-- [ ] Remove HTML tags and formatting
-- [ ] Normalize Polish diacritics
-- [ ] Extract legal references (article numbers, act names)
-- [ ] Entity recognition for legal terms
-- [ ] Sentence and paragraph segmentation
+**Key Files Implemented:**
+- [x] `cleaner.py`: HTMLCleaner and TextCleaner classes with:
+  - HTML tag removal and entity decoding
+  - Legal formatting preservation (Art., §, pkt.)
+  - Document noise removal (page numbers, headers)
+  - Punctuation and whitespace cleaning
+- [x] `normalizer.py`: PolishNormalizer and LegalTextNormalizer with:
+  - Polish diacritics handling (preserve/remove options)
+  - Legal reference standardization (Art., §, pkt., rozdz.)
+  - Legal abbreviation normalization
+  - Unicode normalization and whitespace cleanup
+- [x] `tokenizer.py`: PolishTokenizer and LegalDocumentTokenizer with:
+  - Word, sentence, and paragraph tokenization
+  - Legal structure extraction (articles, paragraphs, points, chapters)
+  - Document segmentation by legal provisions
+  - Linguistic feature extraction integration
+- [x] `entities.py`: LegalEntityExtractor with:
+  - Law reference extraction (ustawa, kodeks, rozporządzenie)
+  - Article, paragraph, and point reference detection
+  - Court name and legal person identification
+  - Entity overlap resolution and statistics
+- [x] `legal_parser.py`: LegalDocumentAnalyzer with:
+  - Document type detection (ustawa, rozporządzenie, kodeks, etc.)
+  - Legal provision parsing and structure analysis
+  - Cross-reference extraction and metadata parsing
+  - Complex document structure analysis
+- [x] `core.py`: TextProcessor main integration with:
+  - Complete processing pipeline integration
+  - Convenience functions for legal text processing
+  - Text statistics and analysis features
 
-**Validation:**
-```bash
-# Test with sample legal text
-uv run python -c "
-from sejm_whiz.text_processing import clean_legal_text
+**Advanced Features Implemented:**
+- [x] **Lazy Loading**: Optional spacy dependency with lazy import system
+- [x] **Polish Legal Focus**: Specialized patterns for Polish legal documents
+- [x] **Structure Preservation**: Maintains legal document hierarchy and references
+- [x] **Entity Recognition**: Comprehensive legal entity extraction without external NLP models
+- [x] **Performance Optimization**: Regex-based processing for speed without heavy dependencies
+- [x] **Comprehensive Testing**: 79 tests covering all functionality
+
+**Testing Results:**
+- [x] **79 tests passing** across 6 test modules:
+  - `test_cleaner.py`: 11 tests for HTML and text cleaning
+  - `test_normalizer.py`: 12 tests for Polish and legal text normalization
+  - `test_tokenizer.py`: 14 tests for tokenization and legal structure extraction
+  - `test_entities.py`: 11 tests for legal entity extraction
+  - `test_legal_parser.py`: 16 tests for legal document analysis
+  - `test_core.py`: 15 tests for main processing pipeline
+- [x] **Complete functionality coverage** including edge cases and error handling
+- [x] **Legal document specialization** with Polish legal system focus
+
+**Validation Results:**
+- [x] Removes HTML tags and formatting while preserving legal structure
+- [x] Normalizes Polish diacritics with flexible preserve/remove options
+- [x] Extracts legal references (article numbers, act names, court names)
+- [x] Provides entity recognition for legal terms without external dependencies
+- [x] Segments documents by legal structure (articles, paragraphs, points)
+- [x] Handles complex Polish legal document types and cross-references
+- [x] Complete processing pipeline with text statistics and analysis
+
+**Example Usage:**
+```python
+from sejm_whiz.text_processing import clean_legal_text, normalize_legal_text, process_legal_document
+
+# Basic text cleaning
 text = 'Art. 123. § 1. Przykład tekstu prawnego...'
 cleaned = clean_legal_text(text)
-print(f'Cleaned: {cleaned}')
-"
+
+# Legal text normalization
+normalized = normalize_legal_text(text, remove_diacritics=False)
+
+# Complete document processing
+result = process_legal_document(text)
+# Returns: ProcessedDocument with clean_text, tokens, entities, structure, statistics
 ```
 
 ### Step 3.2: Create embeddings Component
@@ -808,7 +866,7 @@ uv run poly build --verbose
 - Container environment with Docker and k3s ✅
 - Development environment with uv and Polylith ✅
 
-### 🚧 **Phase 2: Core API Components - 75% COMPLETED**
+### ✅ **Phase 2: Core API Components - COMPLETED**
 - **Step 2.1: sejm_api Component** ✅ **COMPLETED** 
   - 248 tests passing across 6 test modules
   - Advanced security features implemented
@@ -824,18 +882,25 @@ uv run poly build --verbose
   - pgvector similarity search with multiple distance metrics
   - Advanced features: UUID support, raw SQL optimization, test isolation
   - Production-ready with comprehensive error handling and logging
-  
-- **Step 2.4+: Other components** 🚧 **PENDING**
+
+### 🚧 **Phase 3: Data Processing Components - 25% COMPLETED**
+- **Step 3.1: text_processing Component** ✅ **COMPLETED**
+  - 79 tests passing across 6 test modules
+  - Complete Polish legal text processing pipeline
+  - Lazy loading system for optional spacy dependencies
+  - Legal entity extraction and document structure analysis
+  - Production-ready with comprehensive legal document focus
 
 ### 📊 **Current Metrics**
-- **Total tests passing**: 433+ (sejm_api: 248, eli_api: 119, vector_db: 66)
-- **Components completed**: 4/10+ (database, sejm_api, eli_api, vector_db)
+- **Total tests passing**: 512+ (sejm_api: 248, eli_api: 119, vector_db: 66, text_processing: 79)
+- **Components completed**: 5/10+ (database, sejm_api, eli_api, vector_db, text_processing)
 - **Security features**: Advanced protection against DoS, injection, and resource exhaustion
 - **Test coverage**: >90% across all implemented components
 - **Vector operations**: Full pgvector integration with similarity search, embedding storage, and indexing
+- **Text processing**: Complete Polish legal document processing pipeline with entity extraction
 
 ### 🎯 **Next Immediate Steps**
-1. ✅ **COMPLETED**: vector_db component for PostgreSQL + pgvector operations
+1. ✅ **COMPLETED**: text_processing component for Polish legal text processing
 2. Implement embeddings component with HerBERT integration
 3. Add Redis component for caching and background processing
 4. Begin legal_nlp component for multi-act amendment detection
