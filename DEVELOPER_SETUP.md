@@ -162,9 +162,11 @@ uv run poly test
 
 # Run tests for specific component
 uv run pytest test/components/sejm_whiz/sejm_api/ -v
+uv run pytest test/components/sejm_whiz/eli_api/ -v
 
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
+uv run pytest test/components/sejm_whiz/eli_api/test_client.py -v
 
 # Run with coverage
 uv run pytest --cov=sejm_whiz test/
@@ -202,10 +204,13 @@ Use proper namespace imports:
 # Import from other components
 from sejm_whiz.database import DatabaseConnection
 from sejm_whiz.sejm_api import SejmApiClient
+from sejm_whiz.eli_api import EliApiClient
 
 # Import within same component
 from sejm_whiz.sejm_api.models import Session, Deputy
 from sejm_whiz.sejm_api.exceptions import SejmApiError
+from sejm_whiz.eli_api.models import LegalDocument, Amendment
+from sejm_whiz.eli_api.exceptions import EliApiError
 ```
 
 #### 3. Development with REPL
@@ -216,8 +221,11 @@ uv run python
 
 # In REPL, you can import and test components:
 # >>> from sejm_whiz.sejm_api import SejmApiClient
-# >>> client = SejmApiClient()
-# >>> await client.get_current_term()  # Test API methods
+# >>> from sejm_whiz.eli_api import EliApiClient
+# >>> sejm_client = SejmApiClient()
+# >>> eli_client = EliApiClient()
+# >>> await sejm_client.get_current_term()  # Test API methods
+# >>> await eli_client.search_documents(query="ustawa")  # Test ELI API
 ```
 
 ### Git Workflow
@@ -337,6 +345,7 @@ sejm-whiz-dev/
 │   ├── sejm_whiz/
 │   │   ├── database/        ✅ PostgreSQL + pgvector operations
 │   │   ├── document_ingestion/  # ELI API integration
+│   │   ├── eli_api/         ✅ ELI API client with security features
 │   │   ├── embeddings/          # HerBERT embeddings
 │   │   ├── redis/               # Caching and queues
 │   │   └── sejm_api/        ✅ Sejm API client with security features
@@ -344,6 +353,7 @@ sejm-whiz-dev/
 ├── test/                    # Test files organized by component
 │   └── components/sejm_whiz/
 │       ├── database/
+│       ├── eli_api/         ✅ 119 tests passing
 │       └── sejm_api/        ✅ 248 tests passing
 └── development/             # Shared development utilities
 ```
@@ -382,6 +392,7 @@ uv run mypy components/
 ```bash
 # Run security validation tests
 uv run pytest test/components/sejm_whiz/sejm_api/test_validation.py -v
+uv run pytest test/components/sejm_whiz/eli_api/test_client.py::TestEliApiClient -k "batch" -v
 
 # Check for security issues in dependencies
 uv audit
@@ -402,6 +413,17 @@ uv audit
 - Alembic migrations system
 - Connection management and operations
 
+**ELI API Component:**
+- Complete async HTTP client for Polish ELI (European Legislation Identifier) API
+- Comprehensive legal document parsing and structure extraction
+- Advanced security features:
+  - Batch processing with concurrency controls (max 50 docs, max 10 concurrent)
+  - Resource exhaustion prevention and input validation
+  - HTML parsing with XSS protection and size limits
+  - ReDoS (Regex DoS) prevention with timeout controls
+- 119 tests with full coverage across 6 test modules
+- Production-ready legal document processing pipeline
+
 **Sejm API Component:**
 - Complete async HTTP client for Sejm Proceedings API
 - Comprehensive Pydantic models for all endpoints
@@ -415,16 +437,18 @@ uv audit
 
 ### 🚧 Next Components to Implement
 
-1. **ELI API Component** - Legal document integration
-2. **Embeddings Component** - HerBERT Polish BERT implementation
-3. **Redis Component** - Caching and background job queues
+1. **Embeddings Component** - HerBERT Polish BERT implementation
+2. **Redis Component** - Caching and background job queues
+3. **Legal NLP Component** - Multi-act amendment detection and analysis
 
 ## Next Steps
 
 1. Read the project overview in `CLAUDE.md`
 2. Review the detailed implementation plan in `IMPLEMENTATION_PLAN.md`
-3. Check component implementation examples in `components/sejm_whiz/sejm_api/`
-4. Run existing tests to understand patterns: `uv run pytest test/components/sejm_whiz/sejm_api/ -v`
+3. Check component implementation examples in `components/sejm_whiz/sejm_api/` and `components/sejm_whiz/eli_api/`
+4. Run existing tests to understand patterns: 
+   - `uv run pytest test/components/sejm_whiz/sejm_api/ -v`
+   - `uv run pytest test/components/sejm_whiz/eli_api/ -v`
 5. Follow the git feature branch workflow for all changes
 
 ## Getting Help
