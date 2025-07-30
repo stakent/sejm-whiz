@@ -22,11 +22,14 @@ This is a Python project structured as a Polylith workspace implementing an AI-d
 Follows Polylith architecture pattern with planned components:
 
 ### Components
-- `sejm_api` - Sejm Proceedings API integration
-- `eli_api` - ELI API integration for legal documents
-- `text_processing` - Text cleaning and preprocessing
-- `embeddings` - Bag of embeddings document-level generation
-- `vector_db` - PostgreSQL + pgvector operations
+
+**✅ Implemented:**
+- `database` - PostgreSQL + pgvector operations with Alembic migrations
+
+**🚧 Planned:**
+- `document_ingestion` - ELI API integration and document processing pipeline
+- `embeddings` - HerBERT embeddings with bag-of-embeddings approach
+- `redis` - Caching and queue management for background tasks
 - `legal_nlp` - Legal document analysis with multi-act amendment detection
 - `legal_graph` - Legal act dependency mapping and cross-reference analysis
 - `prediction_models` - ML models for law change predictions
@@ -55,7 +58,7 @@ Follows Polylith architecture pattern with planned components:
 - **Cache**: Redis 7+
 - **ML Framework**: PyTorch with CUDA support
 - **Embedding Models**: HerBERT (Polish BERT)
-- **Orchestration**: k3s (single-node Kubernetes)
+- **Orchestration**: k3s (single-node Kubernetes) with Helm charts
 - **Container**: Docker with NVIDIA Container Toolkit
 
 ## Quick Start
@@ -75,9 +78,16 @@ Follows Polylith architecture pattern with planned components:
    uv run poly test
    ```
 
-4. **Run the application**:
+4. **Run database tests**:
    ```bash
-   uv run python main.py
+   uv run python test_database.py
+   ```
+
+5. **Deploy to k3s** (see `K3S_DEPLOYMENT.md` for full instructions):
+   ```bash
+   # Build and deploy containers
+   docker build -t sejm-whiz-api:latest -f Dockerfile.api .
+   docker build -t sejm-whiz-processor:latest -f Dockerfile.processor .
    ```
 
 ## Development Commands
@@ -100,7 +110,18 @@ Follows Polylith architecture pattern with planned components:
 
 ## Current State
 
-The project is in initial setup phase with basic workspace structure configured. Components, bases, and projects are planned but not yet implemented. See `sejm_whiz_plan.md` for detailed implementation roadmap.
+**Phase 1 - Infrastructure Setup**: ✅ **COMPLETED**
+- PostgreSQL database with pgvector extension configured
+- Alembic migrations system in place
+- Docker containerization with Dockerfile.api and Dockerfile.processor
+- k3s deployment documentation ready
+
+**Phase 2 - Core Components**: 🚧 **IN PROGRESS**
+- Database component implemented and functional
+- Currently on `feature/database-setup` branch
+- Ready to implement document ingestion, embeddings, and Redis components
+
+See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `K3S_DEPLOYMENT.md` for deployment instructions.
 
 ## Hardware Requirements
 
