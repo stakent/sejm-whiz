@@ -78,6 +78,163 @@ helm install redis ./helm/charts/redis \
 
 ```bash
 # Build and push Docker image to local registry or registry accessible by k3s
+
+### Option 1: Using k3s Built-in Registry (Recommended for Development)
+
+k3s comes with containerd that can load images directly without a registry:
+
+```bash
+# Build the Docker image locally
+docker build -t sejm-whiz-api:latest -f Dockerfile.api .
+docker build -t sejm-whiz-processor:latest -f Dockerfile.processor .
+
+# Save images to tar files
+docker save sejm-whiz-api:latest -o sejm-whiz-api.tar
+docker save sejm-whiz-processor:latest -o sejm-whiz-processor.tar
+
+# Copy images to k3s node (if building on different machine)
+scp sejm-whiz-api.tar user@p7:/tmp/
+scp sejm-whiz-processor.tar user@p7:/tmp/
+
+# Import images directly into k3s containerd
+sudo k3s ctr images import /tmp/sejm-whiz-api.tar
+sudo k3s ctr images import /tmp/sejm-whiz-processor.tar
+
+# Verify images are available
+sudo k3s ctr images ls | grep sejm-whiz
+```
+
+### Option 2: Using Local Docker Registry
+
+Set up a local registry accessible by k3s:
+
+```bash
+# Run a local registry container
+docker run -d -p 5000:5000 --name registry registry:2
+
+# Build and tag images for local registry
+docker build -t localhost:5000/sejm-whiz-api:latest -f Dockerfile.api .
+docker build -t localhost:5000/sejm-whiz-processor:latest -f Dockerfile.processor .
+
+# Push to local registry
+docker push localhost:5000/sejm-whiz-api:latest
+docker push localhost:5000/sejm-whiz-processor:latest
+
+# Configure k3s to use insecure registry (add to /etc/rancher/k3s/registries.yaml)
+sudo mkdir -p /etc/rancher/k3s
+sudo tee /etc/rancher/k3s/registries.yaml << EOF
+mirrors:
+  "localhost:5000":
+    endpoint:
+      - "http://localhost:5000"
+configs:
+  "localhost:5000":
+    tls:
+      insecure_skip_verify: true
+EOF
+
+# Restart k3s to pick up registry config
+sudo systemctl restart k3s
+```
+
+### Option 3: Using External Registry (Production)
+
+For production deployments, use a proper container registry:
+
+```bash
+# Login to your registry (Docker Hub, GitHub Container Registry, etc.)
+docker login ghcr.io -u your-username
+
+# Build and tag for external registry
+docker build -t ghcr.io/your-username/sejm-whiz-api:v1.0.0 -f Dockerfile.api .
+docker build -t ghcr.io/your-username/sejm-whiz-processor:v1.0.0 -f Dockerfile.processor .
+
+# Push to external registry
+docker push ghcr.io/your-username/sejm-whiz-api:v1.0.0
+docker push ghcr.io/your-username/sejm-whiz-processor:v1.0.0
+
+# Update Helm values to use external registry
+# In helm/charts/sejm-whiz-api/values.yaml:
+image:
+  repository: ghcr.io/your-username/sejm-whiz-api
+  tag: v1.0.0
+  pullPolicy: Always
+```
+
+### Dockerfile Configuration
+
+The project includes two Docker images for different services:
+
+**Dockerfile.api** (for web API server):
+```dockerfile
+FROM python:3.12-slim-bookworm AS base
+
+FROM base AS builder
+COPY --from=ghcr.io/astral-sh/uv:0.7.19 /uv /bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+ENV UV_HTTP_TIMEOUT=300
+
+WORKDIR /app
+COPY uv.lock pyproject.toml /app/
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --frozen --no-install-project --no-dev
+
+COPY . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --frozen --no-dev
+
+
+
+FROM base
+COPY --from=builder /app /app
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Expose port
+EXPOSE 8000
+
+# Run the application using system Python
+CMD ["python", "-m", "uvicorn", "bases.web_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+**Dockerfile.processor** (for data processing):
+```dockerfile
+FROM python:3.12-slim-bookworm AS base
+
+FROM base AS builder
+COPY --from=ghcr.io/astral-sh/uv:0.7.19 /uv /bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+ENV UV_HTTP_TIMEOUT=300
+
+WORKDIR /app
+COPY uv.lock pyproject.toml /app/
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --frozen --no-install-project --no-dev
+
+COPY . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --frozen --no-dev
+
+
+
+FROM base
+COPY --from=builder /app /app
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Run the processor
+CMD ["uv", "run", "python", "bases/data_pipeline/main.py"]
+```
+
+### Verify Image Deployment
+
+```bash
+# Check if images are available in k3s
+kubectl run test-pod --image=sejm-whiz-api:latest --rm -it --restart=Never -- /bin/bash
+
+# Or check with k3s directly
+sudo k3s ctr images ls | grep sejm-whiz
+```
 # Then deploy the API server
 helm install sejm-whiz-api ./helm/charts/sejm-whiz-api \
   --namespace sejm-whiz \

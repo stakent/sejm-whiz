@@ -4,10 +4,10 @@ This document provides a detailed, actionable implementation plan for the sejm-w
 
 ## Prerequisites Checklist
 
-- [ ] Development environment set up (see `DEVELOPER_SETUP.md`)
-- [ ] `uv sync --dev` completed successfully
-- [ ] `uv run poly info` shows workspace is ready
-- [ ] Git repository is clean and on main branch
+- [x] Development environment set up (see `DEVELOPER_SETUP.md`)
+- [x] `uv sync --dev` completed successfully
+- [x] `uv run poly info` shows workspace is ready
+- [x] Git repository is clean and on feature/database-setup branch
 
 ---
 
@@ -31,10 +31,10 @@ uv add --dev pytest-asyncio pytest-postgresql
 ```
 
 **Deliverables:**
-- [ ] PostgreSQL 17 installed with pgvector extension
-- [ ] Database connection configuration
-- [ ] Basic schema for legal documents and embeddings
-- [ ] Migration system setup with Alembic
+- [x] PostgreSQL 17 installed with pgvector extension
+- [x] Database connection configuration
+- [x] Basic schema for legal documents and embeddings
+- [x] Migration system setup with Alembic
 
 **Validation:**
 ```bash
@@ -52,22 +52,22 @@ uv run python -c "import pgvector; print('pgvector extension OK')"
 **Tasks:**
 ```bash
 # Create Docker configuration
-touch Dockerfile docker-compose.yml
+touch Dockerfile.api Dockerfile.processor
 
-# Add containerization for PostgreSQL
-# Add Redis container for caching
+# Containerization handled via Helm charts for k3s deployment
 ```
 
 **Deliverables:**
-- [ ] Dockerfile for main application
-- [ ] docker-compose.yml with PostgreSQL + pgvector
-- [ ] Redis container for caching
-- [ ] Volume mounts for persistent data
+- [x] Dockerfile for main application (Dockerfile.api, Dockerfile.processor)
+- [x] Helm charts for PostgreSQL + pgvector deployment
+- [x] Helm charts for Redis caching layer
+- [x] k3s persistent volume configuration
 
 **Validation:**
 ```bash
-docker-compose up -d
-docker-compose ps  # Verify all services running
+# Verify k3s deployment
+kubectl get pods -n sejm-whiz
+kubectl get services -n sejm-whiz
 ```
 
 ---
@@ -646,12 +646,12 @@ uv run poly sync
 
 **Tasks:**
 ```bash
-# Create production Dockerfiles
-touch projects/api_server/Dockerfile
-touch projects/data_processor/Dockerfile
+# Production deployment handled via Helm charts
+# Dockerfiles already exist: Dockerfile.api, Dockerfile.processor
 
-# Create docker-compose for production
-touch docker-compose.prod.yml
+# Create Helm chart templates for production
+mkdir -p helm/charts/sejm-whiz-api
+mkdir -p helm/charts/sejm-whiz-processor
 ```
 
 ### Step 7.2: GPU Optimization
