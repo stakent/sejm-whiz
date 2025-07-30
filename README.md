@@ -1,1 +1,122 @@
-# sejm-whiz
+# Sejm-Whiz: Polish Legal Change Prediction System
+
+**Goal**: Predict changes in Polish law using data from Sejm (Polish Parliament) APIs
+- **ELI API**: Effective law data from https://api.sejm.gov.pl/eli/openapi/
+- **Sejm Proceedings API**: Parliamentary proceedings from https://api.sejm.gov.pl/sejm/openapi/
+
+## Project Overview
+
+This is a Python project structured as a Polylith workspace implementing an AI-driven legal prediction system using bag of embeddings for semantic similarity. The system monitors parliamentary proceedings and legal documents to predict future law changes with multi-act amendment detection and cross-reference analysis.
+
+## Key Features
+
+- **Multi-Act Amendment Detection**: Identifies complex omnibus legislation and cascading legal changes
+- **Cross-Reference Analysis**: Maps relationships between legal acts and their dependencies
+- **Semantic Search**: Uses HerBERT (Polish BERT) with bag of embeddings for document-level similarity
+- **Real-Time Predictions**: Monitors parliamentary proceedings for early change indicators
+- **User Interest Profiling**: Personalized notifications based on legal domain preferences
+- **GPU-Optimized Inference**: Local processing on NVIDIA GTX 1060 6GB
+
+## Architecture
+
+Follows Polylith architecture pattern with planned components:
+
+### Components
+- `sejm_api` - Sejm Proceedings API integration
+- `eli_api` - ELI API integration for legal documents
+- `text_processing` - Text cleaning and preprocessing
+- `embeddings` - Bag of embeddings document-level generation
+- `vector_db` - PostgreSQL + pgvector operations
+- `legal_nlp` - Legal document analysis with multi-act amendment detection
+- `legal_graph` - Legal act dependency mapping and cross-reference analysis
+- `prediction_models` - ML models for law change predictions
+- `semantic_search` - Embedding-based search and similarity
+- `user_preferences` - User interest profiling and subscription management
+- `notification_system` - Multi-channel notification delivery
+- `dashboard` - Interactive prediction visualization
+
+### Bases
+- `web_api` - FastAPI web server base
+- `data_pipeline` - Data processing base
+- `ml_inference` - Model inference base
+
+### Projects
+- `api_server` - Main web API combining web_api base with user-facing components
+- `data_processor` - Batch processing combining data_pipeline base with ingestion components
+- `model_trainer` - ML training and validation workflows
+
+## Technology Stack
+
+- **Language**: Python 3.12+
+- **Architecture**: Polylith monorepo with components and projects
+- **Package Management**: uv with polylith-cli
+- **Web Framework**: FastAPI with async support
+- **Database**: PostgreSQL 17 with pgvector extension
+- **Cache**: Redis 7+
+- **ML Framework**: PyTorch with CUDA support
+- **Embedding Models**: HerBERT (Polish BERT)
+- **Orchestration**: k3s (single-node Kubernetes)
+- **Container**: Docker with NVIDIA Container Toolkit
+
+## Quick Start
+
+1. **Install dependencies**:
+   ```bash
+   uv sync --dev
+   ```
+
+2. **Check workspace status**:
+   ```bash
+   uv run poly info
+   ```
+
+3. **Run tests**:
+   ```bash
+   uv run poly test
+   ```
+
+4. **Run the application**:
+   ```bash
+   uv run python main.py
+   ```
+
+## Development Commands
+
+### Package Management
+- `uv sync --dev` - Install all dependencies including dev dependencies
+- `uv add <package>` - Add a new dependency
+- `uv remove <package>` - Remove a dependency
+
+### Polylith Workspace Management
+- `uv run poly info` - Show workspace summary
+- `uv run poly check` - Validate the Polylith workspace
+- `uv run poly sync` - Update pyproject.toml with missing bricks
+- `uv run poly create component <name>` - Create a new component
+- `uv run poly create base <name>` - Create a new base
+- `uv run poly create project <name>` - Create a new project
+- `uv run poly test` - Run tests across the workspace
+- `uv run poly deps` - Visualize dependencies between bricks
+- `uv run poly build` - Build packages
+
+## Current State
+
+The project is in initial setup phase with basic workspace structure configured. Components, bases, and projects are planned but not yet implemented. See `sejm_whiz_plan.md` for detailed implementation roadmap.
+
+## Hardware Requirements
+
+- **GPU**: NVIDIA GeForce GTX 1060 6GB (minimum)
+- **RAM**: 16GB+ recommended
+- **Storage**: NVMe SSD for vector index performance
+- **CUDA**: Version 11.8 or compatible
+
+## Contributing
+
+This project follows the Polylith architecture principles:
+- Components should be small, reusable, and do one thing well
+- Use the `sejm_whiz` namespace for all code
+- Follow component isolation principles
+- Test components independently using `poly test`
+
+## License
+
+[License information to be added]

@@ -1,0 +1,19 @@
+apiVersion: v2
+name: redis
+description: Redis cache and job queue for sejm-whiz
+type: application
+version: 0.1.0
+appVersion: "7.2"
+
+keywords:
+  - redis
+  - cache
+  - queue
+  - job-queue
+
+maintainers:
+  - name: sejm-whiz-team
+    email: dev@sejm-whiz.local
+
+sources:
+  - https://github.com/redis/redis
