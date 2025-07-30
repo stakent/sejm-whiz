@@ -32,6 +32,9 @@ This is a Python project structured as a Polylith workspace implementing an AI-d
 ### Testing
 - `uv run poly test` - Run tests using Polylith's test system (enabled in workspace.toml)
 
+## Code Quality and Formatting
+- Format and lint all Python files using ruff.
+
 ## Architecture
 
 This project follows the Polylith architecture pattern with planned components:
