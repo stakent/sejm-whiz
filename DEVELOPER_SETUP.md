@@ -164,11 +164,13 @@ uv run poly test
 uv run pytest test/components/sejm_whiz/sejm_api/ -v
 uv run pytest test/components/sejm_whiz/eli_api/ -v
 uv run pytest test/components/sejm_whiz/vector_db/ -v
+uv run pytest test/components/sejm_whiz/text_processing/ -v
 
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
 uv run pytest test/components/sejm_whiz/eli_api/test_client.py -v
 uv run pytest test/components/sejm_whiz/vector_db/test_embeddings.py -v
+uv run pytest test/components/sejm_whiz/text_processing/test_core.py -v
 
 # Run with coverage
 uv run pytest --cov=sejm_whiz test/
@@ -208,6 +210,7 @@ from sejm_whiz.database import DatabaseConnection
 from sejm_whiz.sejm_api import SejmApiClient
 from sejm_whiz.eli_api import EliApiClient
 from sejm_whiz.vector_db import get_vector_operations, get_similarity_search
+from sejm_whiz.text_processing import clean_legal_text, normalize_legal_text, process_legal_document
 
 # Import within same component
 from sejm_whiz.sejm_api.models import Session, Deputy
@@ -215,6 +218,8 @@ from sejm_whiz.sejm_api.exceptions import SejmApiError
 from sejm_whiz.eli_api.models import LegalDocument, Amendment
 from sejm_whiz.eli_api.exceptions import EliApiError
 from sejm_whiz.vector_db.embeddings import DistanceMetric
+from sejm_whiz.text_processing.core import TextProcessor
+from sejm_whiz.text_processing.legal_parser import LegalDocumentAnalyzer
 ```
 
 #### 3. Development with REPL
@@ -227,6 +232,7 @@ uv run python
 # >>> from sejm_whiz.sejm_api import SejmApiClient
 # >>> from sejm_whiz.eli_api import EliApiClient
 # >>> from sejm_whiz.vector_db import get_vector_operations, get_similarity_search
+# >>> from sejm_whiz.text_processing import clean_legal_text, process_legal_document
 # >>> sejm_client = SejmApiClient()
 # >>> eli_client = EliApiClient()
 # >>> ops = get_vector_operations()
@@ -234,6 +240,8 @@ uv run python
 # >>> await sejm_client.get_current_term()  # Test API methods
 # >>> await eli_client.search_documents(query="ustawa")  # Test ELI API
 # >>> health = validate_vector_db_health()  # Test vector DB health
+# >>> cleaned_text = clean_legal_text("Art. 123. § 1. Przykład...")  # Test text processing
+# >>> result = process_legal_document(legal_text)  # Test complete processing pipeline
 ```
 
 ### Git Workflow
@@ -357,6 +365,7 @@ sejm-whiz-dev/
 │   │   ├── embeddings/          # HerBERT embeddings
 │   │   ├── redis/               # Caching and queues
 │   │   ├── sejm_api/        ✅ Sejm API client with security features
+│   │   ├── text_processing/ ✅ Polish legal text processing pipeline
 │   │   └── vector_db/       ✅ Vector database operations with pgvector
 ├── projects/                # Polylith projects (coming soon)
 ├── test/                    # Test files organized by component
@@ -364,6 +373,7 @@ sejm-whiz-dev/
 │       ├── database/
 │       ├── eli_api/         ✅ 119 tests passing
 │       ├── sejm_api/        ✅ 248 tests passing
+│       ├── text_processing/ ✅ 79 tests passing
 │       └── vector_db/       ✅ 66 tests passing (unit + integration)
 └── development/             # Shared development utilities
 ```
@@ -404,6 +414,7 @@ uv run mypy components/
 uv run pytest test/components/sejm_whiz/sejm_api/test_validation.py -v
 uv run pytest test/components/sejm_whiz/eli_api/test_client.py::TestEliApiClient -k "batch" -v
 uv run pytest test/components/sejm_whiz/vector_db/test_integration.py -v
+uv run pytest test/components/sejm_whiz/text_processing/test_cleaner.py -v
 
 # Check for security issues in dependencies
 uv audit
@@ -460,6 +471,19 @@ uv audit
 - 66 tests passing (25 unit + 41 integration/utility tests)
 - Production-ready with comprehensive error handling and logging
 
+**Text Processing Component:**
+- Complete Polish legal text processing pipeline for document preparation
+- Advanced text cleaning and normalization specialized for Polish legal documents
+- Comprehensive text processing features:
+  - HTML cleaning with legal structure preservation
+  - Polish diacritics handling (preserve/remove options)
+  - Legal reference standardization (Art., §, pkt., rozdz.)
+  - Legal entity extraction (laws, articles, courts, legal persons)
+  - Document structure analysis and tokenization
+  - Lazy loading system for optional spacy dependencies
+- 79 tests passing across 6 test modules
+- Production-ready with comprehensive legal document focus
+
 ### 🚧 Next Components to Implement
 
 1. **Embeddings Component** - HerBERT Polish BERT implementation
@@ -475,6 +499,7 @@ uv audit
    - `uv run pytest test/components/sejm_whiz/sejm_api/ -v`
    - `uv run pytest test/components/sejm_whiz/eli_api/ -v`  
    - `uv run pytest test/components/sejm_whiz/vector_db/ -v`
+   - `uv run pytest test/components/sejm_whiz/text_processing/ -v`
 5. Follow the git feature branch workflow for all changes
 
 ## Getting Help

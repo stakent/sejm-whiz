@@ -28,6 +28,7 @@ Follows Polylith architecture pattern with planned components:
 - `eli_api` - ELI API integration with comprehensive legal document parsing, batch processing controls, and security features
 - `sejm_api` - Sejm Proceedings API integration with comprehensive validation, rate limiting, and security features
 - `vector_db` - Vector database operations with pgvector for semantic similarity search and embeddings storage
+- `text_processing` - Polish legal text processing with cleaning, normalization, tokenization, and entity extraction
 
 **🚧 Planned:**
 - `document_ingestion` - Document processing pipeline and ingestion workflows
@@ -124,6 +125,7 @@ Follows Polylith architecture pattern with planned components:
 - ELI API component completed with advanced legal document processing and security features ✅
 - Sejm API component completed with comprehensive security features ✅
 - Vector DB component completed with pgvector similarity search and embeddings storage ✅
+- Text Processing component completed with Polish legal text processing pipeline ✅
 - Currently on `feature/vector_db` branch
 - Ready to implement embeddings, Redis, and legal NLP components
 
