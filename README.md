@@ -29,11 +29,11 @@ Follows Polylith architecture pattern with planned components:
 - `sejm_api` - Sejm Proceedings API integration with comprehensive validation, rate limiting, and security features
 - `vector_db` - Vector database operations with pgvector for semantic similarity search and embeddings storage
 - `text_processing` - Polish legal text processing with cleaning, normalization, tokenization, and entity extraction
+- `embeddings` - HerBERT embeddings with comprehensive Polish BERT implementation, bag-of-embeddings approach, batch processing, similarity calculations, and GPU optimization
+- `redis` - Caching and queue management for background tasks and embedding operations
 
 **🚧 Planned:**
 - `document_ingestion` - Document processing pipeline and ingestion workflows
-- `embeddings` - HerBERT embeddings with bag-of-embeddings approach
-- `redis` - Caching and queue management for background tasks
 - `legal_nlp` - Legal document analysis with multi-act amendment detection
 - `legal_graph` - Legal act dependency mapping and cross-reference analysis
 - `prediction_models` - ML models for law change predictions
@@ -87,7 +87,21 @@ Follows Polylith architecture pattern with planned components:
    uv run python test_database.py
    ```
 
-5. **Deploy to k3s** (see `K3S_DEPLOYMENT.md` for full instructions):
+5. **Test embeddings system**:
+   ```bash
+   uv run pytest test/components/sejm_whiz/embeddings/ -v
+   ```
+
+6. **Test HerBERT embeddings**:
+   ```bash
+   # Test individual embedding components
+   uv run pytest test/components/sejm_whiz/embeddings/test_herbert_encoder.py -v
+   uv run pytest test/components/sejm_whiz/embeddings/test_bag_embeddings.py -v
+   uv run pytest test/components/sejm_whiz/embeddings/test_similarity.py -v
+   uv run pytest test/components/sejm_whiz/embeddings/test_batch_processor.py -v
+   ```
+
+7. **Deploy to k3s** (see `K3S_DEPLOYMENT.md` for full instructions):
    ```bash
    # Build and deploy containers
    docker build -t sejm-whiz-api:latest -f Dockerfile.api .
@@ -126,8 +140,10 @@ Follows Polylith architecture pattern with planned components:
 - Sejm API component completed with comprehensive security features ✅
 - Vector DB component completed with pgvector similarity search and embeddings storage ✅
 - Text Processing component completed with Polish legal text processing pipeline ✅
+- Embeddings component completed with comprehensive HerBERT Polish BERT implementation ✅
+- Redis component completed with caching, queue management, and health monitoring ✅
 - Currently on `feature/vector_db` branch
-- Ready to implement embeddings, Redis, and legal NLP components
+- Ready to implement document ingestion and legal NLP components
 
 See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `K3S_DEPLOYMENT.md` for deployment instructions.
 

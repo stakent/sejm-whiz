@@ -165,12 +165,16 @@ uv run pytest test/components/sejm_whiz/sejm_api/ -v
 uv run pytest test/components/sejm_whiz/eli_api/ -v
 uv run pytest test/components/sejm_whiz/vector_db/ -v
 uv run pytest test/components/sejm_whiz/text_processing/ -v
+uv run pytest test/components/sejm_whiz/embeddings/ -v
 
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
 uv run pytest test/components/sejm_whiz/eli_api/test_client.py -v
 uv run pytest test/components/sejm_whiz/vector_db/test_embeddings.py -v
 uv run pytest test/components/sejm_whiz/text_processing/test_core.py -v
+uv run pytest test/components/sejm_whiz/embeddings/test_herbert_encoder.py -v
+uv run pytest test/components/sejm_whiz/embeddings/test_bag_embeddings.py -v
+uv run pytest test/components/sejm_whiz/embeddings/test_similarity.py -v
 
 # Run with coverage
 uv run pytest --cov=sejm_whiz test/
@@ -211,6 +215,7 @@ from sejm_whiz.sejm_api import SejmApiClient
 from sejm_whiz.eli_api import EliApiClient
 from sejm_whiz.vector_db import get_vector_operations, get_similarity_search
 from sejm_whiz.text_processing import clean_legal_text, normalize_legal_text, process_legal_document
+from sejm_whiz.embeddings import get_herbert_embedder, get_bag_embeddings_generator, get_similarity_calculator
 
 # Import within same component
 from sejm_whiz.sejm_api.models import Session, Deputy
@@ -220,6 +225,9 @@ from sejm_whiz.eli_api.exceptions import EliApiError
 from sejm_whiz.vector_db.embeddings import DistanceMetric
 from sejm_whiz.text_processing.core import TextProcessor
 from sejm_whiz.text_processing.legal_parser import LegalDocumentAnalyzer
+from sejm_whiz.embeddings.herbert_encoder import HerBERTEncoder
+from sejm_whiz.embeddings.bag_embeddings import BagEmbeddingsGenerator
+from sejm_whiz.embeddings.similarity import SimilarityCalculator
 ```
 
 #### 3. Development with REPL
@@ -242,6 +250,10 @@ uv run python
 # >>> health = validate_vector_db_health()  # Test vector DB health
 # >>> cleaned_text = clean_legal_text("Art. 123. § 1. Przykład...")  # Test text processing
 # >>> result = process_legal_document(legal_text)  # Test complete processing pipeline
+# >>> herbert_embedder = get_herbert_embedder()  # Test HerBERT embedder
+# >>> embedding = herbert_embedder.embed_text("Przykład tekstu prawnego")  # Test embedding generation
+# >>> bag_gen = get_bag_embeddings_generator()  # Test bag embeddings
+# >>> sim_calc = get_similarity_calculator()  # Test similarity calculations
 ```
 
 ### Git Workflow
@@ -362,7 +374,7 @@ sejm-whiz-dev/
 │   │   ├── database/        ✅ PostgreSQL + pgvector operations
 │   │   ├── document_ingestion/  # ELI API integration
 │   │   ├── eli_api/         ✅ ELI API client with security features
-│   │   ├── embeddings/          # HerBERT embeddings
+│   │   ├── embeddings/      ✅ HerBERT Polish BERT with bag-of-embeddings
 │   │   ├── redis/               # Caching and queues
 │   │   ├── sejm_api/        ✅ Sejm API client with security features
 │   │   ├── text_processing/ ✅ Polish legal text processing pipeline
@@ -374,6 +386,7 @@ sejm-whiz-dev/
 │       ├── eli_api/         ✅ 119 tests passing
 │       ├── sejm_api/        ✅ 248 tests passing
 │       ├── text_processing/ ✅ 79 tests passing
+│       ├── embeddings/      ✅ 80+ tests passing (HerBERT + bag embeddings)
 │       └── vector_db/       ✅ 66 tests passing (unit + integration)
 └── development/             # Shared development utilities
 ```
@@ -484,9 +497,22 @@ uv audit
 - 79 tests passing across 6 test modules
 - Production-ready with comprehensive legal document focus
 
+**Embeddings Component:**
+- Complete HerBERT Polish BERT implementation (`allegro/herbert-klej-cased-v1`)
+- Bag-of-embeddings approach with document-level averaging for semantic similarity
+- GPU optimization for NVIDIA GTX 1060 6GB with efficient memory management
+- Advanced features:
+  - Batch processing with dynamic sizing and progress tracking
+  - Similarity calculations (cosine, Euclidean) and matrix operations
+  - Redis integration for embedding caching and performance optimization
+  - Automatic tensor cleanup and memory optimization
+  - Comprehensive error handling with graceful fallbacks
+- 80+ tests passing across 5 test modules
+- Production-ready with complete integration for vector database storage
+
 ### 🚧 Next Components to Implement
 
-1. **Embeddings Component** - HerBERT Polish BERT implementation
+1. ✅ **COMPLETED**: Embeddings Component - HerBERT Polish BERT implementation
 2. **Redis Component** - Caching and background job queues
 3. **Legal NLP Component** - Multi-act amendment detection and analysis
 
@@ -500,6 +526,7 @@ uv audit
    - `uv run pytest test/components/sejm_whiz/eli_api/ -v`  
    - `uv run pytest test/components/sejm_whiz/vector_db/ -v`
    - `uv run pytest test/components/sejm_whiz/text_processing/ -v`
+   - `uv run pytest test/components/sejm_whiz/embeddings/ -v`
 5. Follow the git feature branch workflow for all changes
 
 ## Getting Help
