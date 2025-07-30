@@ -163,10 +163,12 @@ uv run poly test
 # Run tests for specific component
 uv run pytest test/components/sejm_whiz/sejm_api/ -v
 uv run pytest test/components/sejm_whiz/eli_api/ -v
+uv run pytest test/components/sejm_whiz/vector_db/ -v
 
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
 uv run pytest test/components/sejm_whiz/eli_api/test_client.py -v
+uv run pytest test/components/sejm_whiz/vector_db/test_embeddings.py -v
 
 # Run with coverage
 uv run pytest --cov=sejm_whiz test/
@@ -205,12 +207,14 @@ Use proper namespace imports:
 from sejm_whiz.database import DatabaseConnection
 from sejm_whiz.sejm_api import SejmApiClient
 from sejm_whiz.eli_api import EliApiClient
+from sejm_whiz.vector_db import get_vector_operations, get_similarity_search
 
 # Import within same component
 from sejm_whiz.sejm_api.models import Session, Deputy
 from sejm_whiz.sejm_api.exceptions import SejmApiError
 from sejm_whiz.eli_api.models import LegalDocument, Amendment
 from sejm_whiz.eli_api.exceptions import EliApiError
+from sejm_whiz.vector_db.embeddings import DistanceMetric
 ```
 
 #### 3. Development with REPL
@@ -222,10 +226,14 @@ uv run python
 # In REPL, you can import and test components:
 # >>> from sejm_whiz.sejm_api import SejmApiClient
 # >>> from sejm_whiz.eli_api import EliApiClient
+# >>> from sejm_whiz.vector_db import get_vector_operations, get_similarity_search
 # >>> sejm_client = SejmApiClient()
 # >>> eli_client = EliApiClient()
+# >>> ops = get_vector_operations()
+# >>> search = get_similarity_search()
 # >>> await sejm_client.get_current_term()  # Test API methods
 # >>> await eli_client.search_documents(query="ustawa")  # Test ELI API
+# >>> health = validate_vector_db_health()  # Test vector DB health
 ```
 
 ### Git Workflow
@@ -348,13 +356,15 @@ sejm-whiz-dev/
 │   │   ├── eli_api/         ✅ ELI API client with security features
 │   │   ├── embeddings/          # HerBERT embeddings
 │   │   ├── redis/               # Caching and queues
-│   │   └── sejm_api/        ✅ Sejm API client with security features
+│   │   ├── sejm_api/        ✅ Sejm API client with security features
+│   │   └── vector_db/       ✅ Vector database operations with pgvector
 ├── projects/                # Polylith projects (coming soon)
 ├── test/                    # Test files organized by component
 │   └── components/sejm_whiz/
 │       ├── database/
 │       ├── eli_api/         ✅ 119 tests passing
-│       └── sejm_api/        ✅ 248 tests passing
+│       ├── sejm_api/        ✅ 248 tests passing
+│       └── vector_db/       ✅ 66 tests passing (unit + integration)
 └── development/             # Shared development utilities
 ```
 
@@ -393,6 +403,7 @@ uv run mypy components/
 # Run security validation tests
 uv run pytest test/components/sejm_whiz/sejm_api/test_validation.py -v
 uv run pytest test/components/sejm_whiz/eli_api/test_client.py::TestEliApiClient -k "batch" -v
+uv run pytest test/components/sejm_whiz/vector_db/test_integration.py -v
 
 # Check for security issues in dependencies
 uv audit
@@ -435,6 +446,20 @@ uv audit
 - 248 tests with full coverage across 6 test modules
 - Production-ready with robust error handling
 
+**Vector DB Component:**
+- Complete PostgreSQL + pgvector integration for semantic similarity search
+- Advanced vector operations with multiple distance metrics (cosine, L2, inner product)
+- Comprehensive document CRUD operations with embedding storage
+- Advanced features:
+  - UUID support with proper string-to-UUID conversion
+  - Raw SQL optimization for complex pgvector operations
+  - Test isolation with singleton reset fixtures
+  - Embedding validation for 768-dimension HerBERT vectors
+  - Vector index creation (IVFFlat and HNSW)
+  - Batch similarity search and embedding statistics
+- 66 tests passing (25 unit + 41 integration/utility tests)
+- Production-ready with comprehensive error handling and logging
+
 ### 🚧 Next Components to Implement
 
 1. **Embeddings Component** - HerBERT Polish BERT implementation
@@ -448,7 +473,8 @@ uv audit
 3. Check component implementation examples in `components/sejm_whiz/sejm_api/` and `components/sejm_whiz/eli_api/`
 4. Run existing tests to understand patterns: 
    - `uv run pytest test/components/sejm_whiz/sejm_api/ -v`
-   - `uv run pytest test/components/sejm_whiz/eli_api/ -v`
+   - `uv run pytest test/components/sejm_whiz/eli_api/ -v`  
+   - `uv run pytest test/components/sejm_whiz/vector_db/ -v`
 5. Follow the git feature branch workflow for all changes
 
 ## Getting Help

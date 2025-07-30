@@ -9,6 +9,7 @@ dependencies = [
     "alembic>=1.16.4",
     "beautifulsoup4>=4.13.4",
     "httpx>=0.28.1",
+    "numpy>=2.3.2",
     "pgvector>=0.4.1",
     "psycopg2-binary>=2.9.10",
     "pydantic>=2.11.7",
@@ -35,3 +36,12 @@ dev = [
 
 [tool.hatch.build]
 dev-mode-dirs = ["components", "bases", "development", "."]
+
+[tool.polylith.bricks]
+"components/sejm_whiz/sejm_api" = "sejm_whiz/sejm_api"
+"components/sejm_whiz/redis" = "sejm_whiz/redis"
+"components/sejm_whiz/document_ingestion" = "sejm_whiz/document_ingestion"
+"components/sejm_whiz/eli_api" = "sejm_whiz/eli_api"
+"components/sejm_whiz/database" = "sejm_whiz/database"
+"components/sejm_whiz/vector_db" = "sejm_whiz/vector_db"
+"components/sejm_whiz/embeddings" = "sejm_whiz/embeddings"
