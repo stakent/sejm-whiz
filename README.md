@@ -27,6 +27,7 @@ Follows Polylith architecture pattern with planned components:
 - `database` - PostgreSQL + pgvector operations with Alembic migrations
 - `eli_api` - ELI API integration with comprehensive legal document parsing, batch processing controls, and security features
 - `sejm_api` - Sejm Proceedings API integration with comprehensive validation, rate limiting, and security features
+- `vector_db` - Vector database operations with pgvector for semantic similarity search and embeddings storage
 
 **🚧 Planned:**
 - `document_ingestion` - Document processing pipeline and ingestion workflows
@@ -122,7 +123,8 @@ Follows Polylith architecture pattern with planned components:
 - Database component implemented and functional ✅
 - ELI API component completed with advanced legal document processing and security features ✅
 - Sejm API component completed with comprehensive security features ✅
-- Currently on `feature/database-setup` branch
+- Vector DB component completed with pgvector similarity search and embeddings storage ✅
+- Currently on `feature/vector_db` branch
 - Ready to implement embeddings, Redis, and legal NLP components
 
 See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `K3S_DEPLOYMENT.md` for deployment instructions.
