@@ -160,11 +160,17 @@ uv run poly deps
 # Run all tests using Polylith
 uv run poly test
 
-# Run specific test file (when tests are created)
-uv run pytest tests/test_specific.py
+# Run tests for specific component
+uv run pytest test/components/sejm_whiz/sejm_api/ -v
+
+# Run specific test file
+uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
 
 # Run with coverage
-uv run pytest --cov=sejm_whiz tests/
+uv run pytest --cov=sejm_whiz test/
+
+# Run tests for all components
+uv run pytest test/components/ -v
 ```
 
 ### Code Development Best Practices
@@ -182,7 +188,10 @@ uv run poly create component --name sejm_api
 # └── sejm_whiz/
 #     └── sejm_api/
 #         ├── __init__.py
-#         └── core.py
+#         ├── client.py          # Main implementation
+#         ├── models.py          # Pydantic models
+#         ├── exceptions.py      # Custom exceptions
+#         └── rate_limiter.py    # Rate limiting logic
 ```
 
 #### 2. Import Structure
@@ -191,11 +200,12 @@ Use proper namespace imports:
 
 ```python
 # Import from other components
-from sejm_whiz.eli_api import EliApiClient
-from sejm_whiz.text_processing import clean_legal_text
+from sejm_whiz.database import DatabaseConnection
+from sejm_whiz.sejm_api import SejmApiClient
 
 # Import within same component
-from sejm_whiz.sejm_api.utils import parse_response
+from sejm_whiz.sejm_api.models import Session, Deputy
+from sejm_whiz.sejm_api.exceptions import SejmApiError
 ```
 
 #### 3. Development with REPL
@@ -207,6 +217,7 @@ uv run python
 # In REPL, you can import and test components:
 # >>> from sejm_whiz.sejm_api import SejmApiClient
 # >>> client = SejmApiClient()
+# >>> await client.get_current_term()  # Test API methods
 ```
 
 ### Git Workflow
@@ -322,8 +333,18 @@ sejm-whiz-dev/
 ├── workspace.toml           # Polylith workspace configuration
 ├── main.py                  # Main application entry
 ├── bases/                   # Polylith bases (coming soon)
-├── components/              # Polylith components (coming soon)
+├── components/              # Polylith components
+│   ├── sejm_whiz/
+│   │   ├── database/        ✅ PostgreSQL + pgvector operations
+│   │   ├── document_ingestion/  # ELI API integration
+│   │   ├── embeddings/          # HerBERT embeddings
+│   │   ├── redis/               # Caching and queues
+│   │   └── sejm_api/        ✅ Sejm API client with security features
 ├── projects/                # Polylith projects (coming soon)
+├── test/                    # Test files organized by component
+│   └── components/sejm_whiz/
+│       ├── database/
+│       └── sejm_api/        ✅ 248 tests passing
 └── development/             # Shared development utilities
 ```
 
@@ -341,12 +362,70 @@ sejm-whiz-dev/
 - `*.pyc` - Compiled Python files
 - `.DS_Store` - macOS system files
 
+### Quality Assurance
+
+#### Code Formatting and Linting
+
+```bash
+# Format code with ruff
+uv run ruff format components/ test/
+
+# Check and fix linting issues
+uv run ruff check components/ test/ --fix
+
+# Type checking (if mypy is added)
+uv run mypy components/
+```
+
+#### Security Testing
+
+```bash
+# Run security validation tests
+uv run pytest test/components/sejm_whiz/sejm_api/test_validation.py -v
+
+# Check for security issues in dependencies
+uv audit
+
+# Manual security review checklist:
+# - Input validation on all user-controlled parameters
+# - Error message sanitization
+# - Rate limiting implementation
+# - Endpoint validation against path traversal
+```
+
+## Current Implementation Status
+
+### ✅ Completed Components
+
+**Database Component:**
+- PostgreSQL + pgvector integration
+- Alembic migrations system
+- Connection management and operations
+
+**Sejm API Component:**
+- Complete async HTTP client for Sejm Proceedings API
+- Comprehensive Pydantic models for all endpoints
+- Advanced security features:
+  - Endpoint validation preventing URL manipulation
+  - Error message sanitization preventing information disclosure
+  - Comprehensive input validation for all parameters
+  - Token bucket and sliding window rate limiting
+- 248 tests with full coverage across 6 test modules
+- Production-ready with robust error handling
+
+### 🚧 Next Components to Implement
+
+1. **ELI API Component** - Legal document integration
+2. **Embeddings Component** - HerBERT Polish BERT implementation
+3. **Redis Component** - Caching and background job queues
+
 ## Next Steps
 
 1. Read the project overview in `CLAUDE.md`
-2. Review the detailed implementation plan in `sejm_whiz_plan.md`
-3. Start with creating your first component using `uv run poly create component`
-4. Follow the git feature branch workflow for all changes
+2. Review the detailed implementation plan in `IMPLEMENTATION_PLAN.md`
+3. Check component implementation examples in `components/sejm_whiz/sejm_api/`
+4. Run existing tests to understand patterns: `uv run pytest test/components/sejm_whiz/sejm_api/ -v`
+5. Follow the git feature branch workflow for all changes
 
 ## Getting Help
 

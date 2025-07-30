@@ -25,6 +25,7 @@ Follows Polylith architecture pattern with planned components:
 
 **✅ Implemented:**
 - `database` - PostgreSQL + pgvector operations with Alembic migrations
+- `sejm_api` - Sejm Proceedings API integration with comprehensive validation, rate limiting, and security features
 
 **🚧 Planned:**
 - `document_ingestion` - ELI API integration and document processing pipeline
@@ -117,9 +118,10 @@ Follows Polylith architecture pattern with planned components:
 - k3s deployment documentation ready
 
 **Phase 2 - Core Components**: 🚧 **IN PROGRESS**
-- Database component implemented and functional
+- Database component implemented and functional ✅
+- Sejm API component completed with comprehensive security features ✅
 - Currently on `feature/database-setup` branch
-- Ready to implement document ingestion, embeddings, and Redis components
+- Ready to implement ELI API, embeddings, and Redis components
 
 See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `K3S_DEPLOYMENT.md` for deployment instructions.
 
