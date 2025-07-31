@@ -19,7 +19,7 @@ This is a Python project structured as a Polylith workspace implementing an AI-d
 
 ## Data Pipeline Architecture
 
-### Current State
+### Current Implementation State (Updated)
 
 ```mermaid
 graph TD
@@ -40,7 +40,7 @@ graph TD
     I --> J[legal_nlp<br/>Relationship extraction]
     J --> K[prediction_models<br/>Ensemble methods]
     
-    L[Redis Cache] --> E
+    L[redis<br/>Cache & Queues] --> E
     L --> F
     L --> I
     
@@ -54,6 +54,9 @@ graph TD
     P --> I
     P --> J
     P --> K
+    
+    Q[document_ingestion<br/>Processing Pipeline] --> E
+    Q --> F
     
     style B fill:#90EE90
     style D fill:#90EE90
@@ -69,6 +72,7 @@ graph TD
     style N fill:#90EE90
     style O fill:#90EE90
     style P fill:#90EE90
+    style Q fill:#FFE4B5
 ```
 
 ### Planned Complete State
@@ -169,11 +173,11 @@ Follows Polylith architecture pattern with planned components:
 - `redis` - Caching and queue management for background tasks and embedding operations
 - `legal_nlp` - Advanced legal document analysis with multi-act amendment detection, semantic analysis, and relationship extraction
 - `prediction_models` - ML models for law change predictions with ensemble methods, similarity-based predictors, and classification models
+- `semantic_search` - Embedding-based search and similarity with cross-register matching for legal vs parliamentary language
+- `document_ingestion` - Document processing pipeline and ingestion workflows
 
 **🚧 Planned:**
-- `document_ingestion` - Document processing pipeline and ingestion workflows
 - `legal_graph` - Legal act dependency mapping and cross-reference analysis
-- `semantic_search` - Embedding-based search and similarity with cross-register matching for legal vs parliamentary language
 - `user_preferences` - User interest profiling and subscription management
 - `notification_system` - Multi-channel notification delivery
 - `dashboard` - Interactive prediction visualization
@@ -182,8 +186,6 @@ Follows Polylith architecture pattern with planned components:
 
 **✅ Implemented:**
 - `web_api` - FastAPI web server base with comprehensive error handling, CORS support, health endpoints, and API documentation
-
-**✅ Implemented:**
 - `data_pipeline` - Data processing base with pipeline orchestration, batch processing, and error handling
 
 **🚧 Planned:**
@@ -332,6 +334,7 @@ Follows Polylith architecture pattern with planned components:
 
 **Phase 3 - Advanced Components**: ✅ **COMPLETED**
 - Semantic search component completed with cross-register matching ✅
+- Document ingestion component completed with advanced processing workflows ✅
 
 **Phase 4 - Project Assembly**: ✅ **COMPLETED**
 - Web API base completed with FastAPI application factory and comprehensive features ✅
@@ -340,9 +343,11 @@ Follows Polylith architecture pattern with planned components:
 - Data processor project completed with comprehensive ingestion pipeline ✅
 
 **Phase 5 - Advanced Features**: 🚧 **PLANNED**
-- Document ingestion component for advanced processing workflows
 - Legal graph component for dependency mapping
 - Model trainer project for ML training workflows
+- User preferences component for interest profiling
+- Notification system for multi-channel delivery
+- Dashboard component for interactive visualization
 
 See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `K3S_DEPLOYMENT.md` for deployment instructions.
 
