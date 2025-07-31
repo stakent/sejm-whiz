@@ -166,6 +166,7 @@ uv run pytest test/components/sejm_whiz/eli_api/ -v
 uv run pytest test/components/sejm_whiz/vector_db/ -v
 uv run pytest test/components/sejm_whiz/text_processing/ -v
 uv run pytest test/components/sejm_whiz/embeddings/ -v
+uv run pytest test/components/sejm_whiz/legal_nlp/ -v
 
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
@@ -175,6 +176,10 @@ uv run pytest test/components/sejm_whiz/text_processing/test_core.py -v
 uv run pytest test/components/sejm_whiz/embeddings/test_herbert_encoder.py -v
 uv run pytest test/components/sejm_whiz/embeddings/test_bag_embeddings.py -v
 uv run pytest test/components/sejm_whiz/embeddings/test_similarity.py -v
+uv run pytest test/components/sejm_whiz/legal_nlp/test_core.py -v
+uv run pytest test/components/sejm_whiz/legal_nlp/test_semantic_analyzer.py -v
+uv run pytest test/components/sejm_whiz/legal_nlp/test_relationship_extractor.py -v
+uv run pytest test/components/sejm_whiz/legal_nlp/test_integration.py -v
 
 # Run with coverage
 uv run pytest --cov=sejm_whiz test/
@@ -216,6 +221,7 @@ from sejm_whiz.eli_api import EliApiClient
 from sejm_whiz.vector_db import get_vector_operations, get_similarity_search
 from sejm_whiz.text_processing import clean_legal_text, normalize_legal_text, process_legal_document
 from sejm_whiz.embeddings import get_herbert_embedder, get_bag_embeddings_generator, get_similarity_calculator
+from sejm_whiz.legal_nlp import ComprehensiveLegalAnalyzer, analyze_legal_concepts, extract_semantic_fields
 
 # Import within same component
 from sejm_whiz.sejm_api.models import Session, Deputy
@@ -228,6 +234,9 @@ from sejm_whiz.text_processing.legal_parser import LegalDocumentAnalyzer
 from sejm_whiz.embeddings.herbert_encoder import HerBERTEncoder
 from sejm_whiz.embeddings.bag_embeddings import BagEmbeddingsGenerator
 from sejm_whiz.embeddings.similarity import SimilarityCalculator
+from sejm_whiz.legal_nlp.core import LegalNLPAnalyzer, LegalConcept, LegalAmendment
+from sejm_whiz.legal_nlp.semantic_analyzer import LegalSemanticAnalyzer, SemanticField
+from sejm_whiz.legal_nlp.relationship_extractor import LegalRelationshipExtractor, LegalEntity
 ```
 
 #### 3. Development with REPL
@@ -241,10 +250,12 @@ uv run python
 # >>> from sejm_whiz.eli_api import EliApiClient
 # >>> from sejm_whiz.vector_db import get_vector_operations, get_similarity_search
 # >>> from sejm_whiz.text_processing import clean_legal_text, process_legal_document
+# >>> from sejm_whiz.legal_nlp import ComprehensiveLegalAnalyzer, analyze_legal_concepts
 # >>> sejm_client = SejmApiClient()
 # >>> eli_client = EliApiClient()
 # >>> ops = get_vector_operations()
 # >>> search = get_similarity_search()
+# >>> legal_analyzer = ComprehensiveLegalAnalyzer()
 # >>> await sejm_client.get_current_term()  # Test API methods
 # >>> await eli_client.search_documents(query="ustawa")  # Test ELI API
 # >>> health = validate_vector_db_health()  # Test vector DB health
@@ -254,6 +265,8 @@ uv run python
 # >>> embedding = herbert_embedder.embed_text("Przykład tekstu prawnego")  # Test embedding generation
 # >>> bag_gen = get_bag_embeddings_generator()  # Test bag embeddings
 # >>> sim_calc = get_similarity_calculator()  # Test similarity calculations
+# >>> legal_analysis = legal_analyzer.analyze_document("Art. 1. Przykład ustawy...")  # Test legal NLP
+# >>> concepts = analyze_legal_concepts("Konstytucja określa prawa obywateli")  # Test concept extraction
 ```
 
 ### Git Workflow
@@ -375,6 +388,7 @@ sejm-whiz-dev/
 │   │   ├── document_ingestion/  # ELI API integration
 │   │   ├── eli_api/         ✅ ELI API client with security features
 │   │   ├── embeddings/      ✅ HerBERT Polish BERT with bag-of-embeddings
+│   │   ├── legal_nlp/       ✅ Advanced legal document analysis and NLP
 │   │   ├── redis/               # Caching and queues
 │   │   ├── sejm_api/        ✅ Sejm API client with security features
 │   │   ├── text_processing/ ✅ Polish legal text processing pipeline
@@ -384,9 +398,10 @@ sejm-whiz-dev/
 │   └── components/sejm_whiz/
 │       ├── database/
 │       ├── eli_api/         ✅ 119 tests passing
+│       ├── embeddings/      ✅ 80+ tests passing (HerBERT + bag embeddings)
+│       ├── legal_nlp/       ✅ 45+ tests passing (concept extraction + semantic analysis)
 │       ├── sejm_api/        ✅ 248 tests passing
 │       ├── text_processing/ ✅ 79 tests passing
-│       ├── embeddings/      ✅ 80+ tests passing (HerBERT + bag embeddings)
 │       └── vector_db/       ✅ 66 tests passing (unit + integration)
 └── development/             # Shared development utilities
 ```
@@ -428,6 +443,7 @@ uv run pytest test/components/sejm_whiz/sejm_api/test_validation.py -v
 uv run pytest test/components/sejm_whiz/eli_api/test_client.py::TestEliApiClient -k "batch" -v
 uv run pytest test/components/sejm_whiz/vector_db/test_integration.py -v
 uv run pytest test/components/sejm_whiz/text_processing/test_cleaner.py -v
+uv run pytest test/components/sejm_whiz/legal_nlp/test_core.py -k "concept" -v
 
 # Check for security issues in dependencies
 uv audit
@@ -510,11 +526,28 @@ uv audit
 - 80+ tests passing across 5 test modules
 - Production-ready with complete integration for vector database storage
 
+**Legal NLP Component:**
+- Advanced legal document analysis with multi-act amendment detection
+- Comprehensive semantic field analysis for Polish legal domains
+- Legal concept extraction with sophisticated pattern matching
+- Advanced features:
+  - Legal concept detection (principles, definitions, obligations, prohibitions, rights, penalties)
+  - Amendment detection with modification, addition, and deletion types
+  - Semantic field analysis (civil law, criminal law, administrative law, constitutional law, tax law, labor law)
+  - Semantic relations extraction (causal, temporal, modal, conditional)
+  - Legal definitions extraction using semantic patterns
+  - Argumentative structure analysis (premises, conclusions, counterarguments, justifications)
+  - Conceptual density analysis and complexity scoring
+  - Legal entity relationship mapping with confidence scoring
+- 45+ tests passing across 4 test modules
+- Production-ready with sophisticated Polish legal document processing
+
 ### 🚧 Next Components to Implement
 
 1. ✅ **COMPLETED**: Embeddings Component - HerBERT Polish BERT implementation
-2. **Redis Component** - Caching and background job queues
-3. **Legal NLP Component** - Multi-act amendment detection and analysis
+2. ✅ **COMPLETED**: Legal NLP Component - Multi-act amendment detection and semantic analysis
+3. **Redis Component** - Caching and background job queues
+4. **Document Ingestion Component** - Processing pipeline integration
 
 ## Next Steps
 
@@ -527,6 +560,7 @@ uv audit
    - `uv run pytest test/components/sejm_whiz/vector_db/ -v`
    - `uv run pytest test/components/sejm_whiz/text_processing/ -v`
    - `uv run pytest test/components/sejm_whiz/embeddings/ -v`
+   - `uv run pytest test/components/sejm_whiz/legal_nlp/ -v`
 5. Follow the git feature branch workflow for all changes
 
 ## Getting Help
