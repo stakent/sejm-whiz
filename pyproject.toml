@@ -59,6 +59,8 @@ dev-mode-dirs = ["components", "bases", "development", "."]
 "components/sejm_whiz/text_processing" = "sejm_whiz/text_processing"
 "components/sejm_whiz/legal_nlp" = "sejm_whiz/legal_nlp"
 "components/sejm_whiz/prediction_models" = "sejm_whiz/prediction_models"
+"bases/sejm_whiz/web_api" = "sejm_whiz/web_api"
+"components/sejm_whiz/semantic_search" = "sejm_whiz/semantic_search"
 
 [tool.uv.sources]
 pl-core-news-sm = { url = "https://github.com/explosion/spacy-models/releases/download/pl_core_news_sm-3.7.0/pl_core_news_sm-3.7.0-py3-none-any.whl" }

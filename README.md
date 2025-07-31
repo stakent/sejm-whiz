@@ -52,7 +52,11 @@ Follows Polylith architecture pattern with planned components:
 - `ml_inference` - Model inference base
 
 ### Projects
-- `api_server` - Main web API combining web_api base with user-facing components
+
+**✅ Implemented:**
+- `api_server` - Main web API server combining web_api base with FastAPI application, health endpoints, and API documentation
+
+**🚧 Planned:**
 - `data_processor` - Batch processing combining data_pipeline base with ingestion components
 - `model_trainer` - ML training and validation workflows
 
@@ -114,13 +118,22 @@ Follows Polylith architecture pattern with planned components:
    uv run pytest test/components/sejm_whiz/legal_nlp/test_integration.py -v
    ```
 
-8. **Test web API base**:
+8. **Run API server**:
+   ```bash
+   # Start the web API server
+   uv run python projects/api_server/main.py
+   
+   # Or with uvicorn for development
+   uv run uvicorn projects.api_server.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+9. **Test web API base**:
    ```bash
    # Test web API base implementation
    uv run pytest test/bases/sejm_whiz/web_api/test_core.py -v
    ```
 
-9. **Test semantic search**:
+10. **Test semantic search**:
    ```bash
    # Test semantic search components
    uv run pytest test/components/sejm_whiz/semantic_search/test_search_engine.py -v
@@ -129,7 +142,7 @@ Follows Polylith architecture pattern with planned components:
    uv run pytest test/components/sejm_whiz/semantic_search/test_cross_register.py -v
    ```
 
-10. **Deploy to k3s** (see `K3S_DEPLOYMENT.md` for full instructions):
+11. **Deploy to k3s** (see `K3S_DEPLOYMENT.md` for full instructions):
    ```bash
    # Build and deploy containers
    docker build -t sejm-whiz-api:latest -f Dockerfile.api .
@@ -178,7 +191,7 @@ Follows Polylith architecture pattern with planned components:
 
 **Phase 4 - Project Assembly**: 🚧 **IN PROGRESS**
 - Web API base completed with FastAPI application factory and comprehensive features ✅
-- Ready to implement api_server project assembling complete API server
+- API server project completed with web server implementation ✅
 - Ready to implement document ingestion and legal graph components
 
 See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `K3S_DEPLOYMENT.md` for deployment instructions.
