@@ -263,21 +263,21 @@ class TestSemanticSearchEngine:
         high_sim_doc.id = uuid4()
         high_sim_doc.title = "High similarity"
         high_sim_doc.content = "High similarity document content"
-        
+
         med_sim_doc = Mock()
         med_sim_doc.id = uuid4()
         med_sim_doc.title = "Medium similarity"
         med_sim_doc.content = "Medium similarity document content"
-        
+
         low_sim_doc = Mock()
         low_sim_doc.id = uuid4()
         low_sim_doc.title = "Low similarity"
         low_sim_doc.content = "Low similarity document content"
-        
+
         docs_with_distances = [
             (high_sim_doc, 0.1),  # similarity = 0.9
-            (med_sim_doc, 0.4),   # similarity = 0.6
-            (low_sim_doc, 0.8),   # similarity = 0.2
+            (med_sim_doc, 0.4),  # similarity = 0.6
+            (low_sim_doc, 0.8),  # similarity = 0.2
         ]
 
         search_engine.similarity_search.find_similar_documents.return_value = (
