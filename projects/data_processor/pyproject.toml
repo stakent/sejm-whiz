@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling", "hatch-polylith-bricks"]
+build-backend = "hatchling.build"
+
+[project]
+name = "data_processor"
+version = "0.1.0"
+description = "Batch processing combining data_pipeline base with ingestion components"
+
+requires-python = ">=3.12"
+
+dependencies = [
+    "asyncio",
+    "logging",
+    "datetime",
+]
+
+[tool.hatch.build.hooks.polylith-bricks]
+
+[tool.polylith.bricks]
+bases = ["data_pipeline"]
+
+[tool.polylith.bricks.components]
+document_ingestion = "*"
+sejm_api = "*"
+eli_api = "*"
+text_processing = "*"
+embeddings = "*"
+vector_db = "*"
+database = "*"
+redis = "*"
