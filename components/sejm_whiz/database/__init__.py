@@ -10,7 +10,7 @@ from .connection import (
     get_database_manager,
     init_database,
     get_db_session,
-    check_database_health
+    check_database_health,
 )
 from .models import (
     Base,
@@ -18,7 +18,7 @@ from .models import (
     LegalAmendment,
     CrossReference,
     DocumentEmbedding,
-    PredictionModel
+    PredictionModel,
 )
 from .operations import (
     DocumentOperations,
@@ -26,30 +26,27 @@ from .operations import (
     AmendmentOperations,
     CrossReferenceOperations,
     EmbeddingOperations,
-    AnalyticsOperations
+    AnalyticsOperations,
 )
 
 __all__ = [
     # Configuration
     "DatabaseConfig",
-    "get_database_config", 
+    "get_database_config",
     "db_config",
-    
     # Connection management
     "DatabaseManager",
     "get_database_manager",
     "init_database",
     "get_db_session",
     "check_database_health",
-    
     # Models
     "Base",
     "LegalDocument",
-    "LegalAmendment", 
+    "LegalAmendment",
     "CrossReference",
     "DocumentEmbedding",
     "PredictionModel",
-    
     # Operations
     "DocumentOperations",
     "VectorOperations",
