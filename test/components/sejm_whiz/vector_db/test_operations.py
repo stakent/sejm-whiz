@@ -1,11 +1,10 @@
 """Tests for vector_db operations module."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from uuid import uuid4, UUID
 
 from sejm_whiz.vector_db.operations import VectorDBOperations, get_vector_operations
-from sejm_whiz.database.models import LegalDocument, DocumentEmbedding
+from sejm_whiz.database.models import LegalDocument
 
 
 class TestVectorDBOperations:

@@ -1,7 +1,6 @@
 """Tests for vector_db connection module."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 from sejm_whiz.vector_db.connection import (
     VectorDBConnection,

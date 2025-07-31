@@ -1,9 +1,6 @@
 """Integration tests for vector_db component with real PostgreSQL."""
 
 import pytest
-import os
-from uuid import uuid4
-from typing import Generator
 
 from sejm_whiz.vector_db import (
     get_vector_db,

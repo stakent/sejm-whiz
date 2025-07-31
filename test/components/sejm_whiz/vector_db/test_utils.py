@@ -1,6 +1,5 @@
 """Tests for vector_db utils module."""
 
-import pytest
 import numpy as np
 from unittest.mock import Mock, patch
 
