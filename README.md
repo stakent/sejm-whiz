@@ -37,7 +37,7 @@ Follows Polylith architecture pattern with planned components:
 **🚧 Planned:**
 - `document_ingestion` - Document processing pipeline and ingestion workflows
 - `legal_graph` - Legal act dependency mapping and cross-reference analysis
-- `semantic_search` - Embedding-based search and similarity
+- `semantic_search` - Embedding-based search and similarity with cross-register matching for legal vs parliamentary language
 - `user_preferences` - User interest profiling and subscription management
 - `notification_system` - Multi-channel notification delivery
 - `dashboard` - Interactive prediction visualization
@@ -110,6 +110,15 @@ Follows Polylith architecture pattern with planned components:
    uv run pytest test/components/sejm_whiz/legal_nlp/test_integration.py -v
    ```
 
+8. **Test semantic search (when implemented)**:
+   ```bash
+   # Test semantic search components
+   uv run pytest test/components/sejm_whiz/semantic_search/test_search_engine.py -v
+   uv run pytest test/components/sejm_whiz/semantic_search/test_indexer.py -v
+   uv run pytest test/components/sejm_whiz/semantic_search/test_ranker.py -v
+   uv run pytest test/components/sejm_whiz/semantic_search/test_cross_register.py -v
+   ```
+
 8. **Deploy to k3s** (see `K3S_DEPLOYMENT.md` for full instructions):
    ```bash
    # Build and deploy containers
@@ -155,7 +164,7 @@ Follows Polylith architecture pattern with planned components:
 - Prediction Models component completed with ensemble methods, similarity-based predictors, and classification models ✅
 
 **Phase 3 - Advanced Components**: 🚧 **IN PROGRESS**
-- Currently on `feature/prediction-models-component` branch
+- Ready to implement semantic search component with cross-register matching
 - Ready to implement document ingestion and legal graph components
 
 See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `K3S_DEPLOYMENT.md` for deployment instructions.
