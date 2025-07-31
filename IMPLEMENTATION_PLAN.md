@@ -889,7 +889,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 - [x] Health check endpoint returns proper JSON response with timestamp
 - [x] Production-ready with comprehensive error handling and logging
 
-### Step 5.2: Create api_server Project
+### Step 5.2: Create api_server Project ✅ **COMPLETED**
 
 **Objective**: Assemble complete API server
 
@@ -904,21 +904,61 @@ git checkout -b feature/api-server-project
 uv run poly create project --name api_server
 ```
 
-**Project Dependencies:**
-Edit `projects/api_server/pyproject.toml`:
+**Project Structure:**
+```
+projects/api_server/
+├── pyproject.toml         ✅ Project configuration with web_api base
+├── main.py               ✅ FastAPI application entry point
+└── README.md             ✅ Documentation and usage instructions
+```
+
+**Key Files Implemented:**
+- [x] `pyproject.toml`: Project configuration using web_api base with proper dependencies (FastAPI, Uvicorn, Pydantic)
+- [x] `main.py`: Application entry point with uvicorn server configuration
+- [x] `README.md`: Comprehensive documentation with usage instructions and API endpoint information
+
+**Project Configuration:**
 ```toml
-[project]
-name = "sejm-whiz-api-server"
+[tool.polylith.bricks]
+bases = ["web_api"]
+components = []
+
 dependencies = [
-    "sejm_whiz[web_api,sejm_api,eli_api,semantic_search,prediction_models]"
+    "fastapi>=0.116.1",
+    "uvicorn>=0.35.0",
+    "pydantic>=2.11.7",
 ]
 ```
 
-**API Endpoints:**
+**Running the API Server:**
+```bash
+# From workspace root:
+uv run python projects/api_server/main.py
+
+# Or with uvicorn for development:
+uv run uvicorn projects.api_server.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**Available Endpoints:**
+- [x] `GET /` - Root endpoint with API information
+- [x] `GET /health` - Health check endpoint with structured response
+- [x] `GET /docs` - Interactive API documentation (Swagger UI)
+- [x] `GET /redoc` - Alternative API documentation (ReDoc)
+
+**Future API Endpoints** (to be added with additional components):
 - [ ] `/api/v1/predictions` - Get law change predictions
 - [ ] `/api/v1/search` - Semantic search endpoint
 - [ ] `/api/v1/documents` - Legal document management
 - [ ] `/api/v1/users` - User preference management
+
+**Validation Results:**
+- [x] API server starts successfully without errors
+- [x] FastAPI application factory integration works correctly
+- [x] Health endpoints respond with proper JSON structure
+- [x] API documentation accessible at `/docs` and `/redoc`
+- [x] CORS and error handling configured through web_api base
+- [x] Production-ready server configuration with uvicorn
+- [x] Polylith workspace integration successful (`uv run poly info` shows api_server project)
 
 ### Step 5.3: Create data_processor Project
 
@@ -1156,9 +1196,22 @@ uv run poly build --verbose
   - Legal domain specialization for Polish legal system
   - Production-ready with comprehensive test coverage across 7 modules
 
+### 🚧 **Phase 5: Project Assembly - IN PROGRESS**
+- **Step 5.1: web_api Base** ✅ **COMPLETED**
+  - FastAPI application factory with comprehensive configuration
+  - CORS middleware, error handling, and health endpoints
+  - Production-ready with structured responses and API documentation
+  
+- **Step 5.2: api_server Project** ✅ **COMPLETED**
+  - Main web API server using web_api base
+  - FastAPI application with uvicorn server configuration
+  - Health check endpoints and API documentation
+  - Production-ready server with comprehensive error handling
+
 ### 📊 **Current Metrics**
 - **Total tests passing**: 800+ (sejm_api: 248, eli_api: 119, vector_db: 66, text_processing: 79, embeddings: 80+, legal_nlp: 45+, prediction_models: validated, semantic_search: 70+ comprehensive tests)
 - **Components completed**: 9/10+ (database, sejm_api, eli_api, vector_db, text_processing, embeddings, legal_nlp, prediction_models, semantic_search)
+- **Projects completed**: 1/3+ (api_server)
 - **Security features**: Advanced protection against DoS, injection, and resource exhaustion
 - **Test coverage**: >90% across all implemented components
 - **Vector operations**: Full pgvector integration with similarity search, embedding storage, and indexing

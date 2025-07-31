@@ -173,6 +173,12 @@ uv run pytest test/components/sejm_whiz/semantic_search/ -v
 # Run tests for bases
 uv run pytest test/bases/sejm_whiz/web_api/ -v
 
+# Run API server
+uv run python projects/api_server/main.py
+
+# Or with uvicorn for development
+uv run uvicorn projects.api_server.main:app --host 0.0.0.0 --port 8000 --reload
+
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
 uv run pytest test/components/sejm_whiz/eli_api/test_client.py -v
@@ -432,7 +438,8 @@ sejm-whiz-dev/
 │   │   ├── semantic_search/     # Embedding-based search with cross-register matching
 │   │   ├── text_processing/ ✅ Polish legal text processing pipeline
 │   │   └── vector_db/       ✅ Vector database operations with pgvector
-├── projects/                # Polylith projects (coming soon)
+├── projects/                # Polylith projects
+│   └── api_server/          ✅ Main web API server using web_api base
 ├── test/                    # Test files organized by component
 │   ├── bases/sejm_whiz/
 │   │   └── web_api/         ✅ FastAPI base tests
@@ -620,19 +627,25 @@ uv audit
 3. ✅ **COMPLETED**: Prediction Models Component - ML pipeline for law change predictions
 4. ✅ **COMPLETED**: Semantic Search Component - Document retrieval and ranking system with cross-register matching
 5. ✅ **COMPLETED**: Web API Base - FastAPI application factory with comprehensive features
+6. ✅ **COMPLETED**: API Server Project - Main web API server combining web_api base with FastAPI application
 
 **🚧 Next Priorities:**
-1. **API Server Project** - Assemble complete API server combining web_api base with components
-2. **Redis Component** - Caching and background job queues  
-3. **Document Ingestion Component** - Processing pipeline integration
-4. **Data Pipeline Base** - Batch processing infrastructure
+1. **Redis Component** - Caching and background job queues  
+2. **Document Ingestion Component** - Processing pipeline integration
+3. **Data Pipeline Base** - Batch processing infrastructure
+4. **Data Processor Project** - Batch processing system
 
 ## Next Steps
 
 1. Read the project overview in `CLAUDE.md`
 2. Review the detailed implementation plan in `IMPLEMENTATION_PLAN.md`
 3. Check component implementation examples in `components/sejm_whiz/sejm_api/` and `components/sejm_whiz/eli_api/`
-4. Run existing tests to understand patterns:
+4. Run the API server to see it working:
+   - `uv run python projects/api_server/main.py`
+   - Visit http://localhost:8000 for basic API info
+   - Visit http://localhost:8000/docs for interactive API documentation
+   - Visit http://localhost:8000/health for health check endpoint
+5. Run existing tests to understand patterns:
    - `uv run pytest test/bases/sejm_whiz/web_api/ -v`
    - `uv run pytest test/components/sejm_whiz/sejm_api/ -v`
    - `uv run pytest test/components/sejm_whiz/eli_api/ -v`  
@@ -642,7 +655,7 @@ uv audit
    - `uv run pytest test/components/sejm_whiz/legal_nlp/ -v`
    - `uv run pytest test/components/sejm_whiz/prediction_models/ -v` (when tests are added)
    - `uv run pytest test/components/sejm_whiz/semantic_search/ -v`
-5. Follow the git feature branch workflow for all changes
+6. Follow the git feature branch workflow for all changes
 
 ## Getting Help
 
