@@ -9,8 +9,10 @@ dependencies = [
     "alembic>=1.16.4",
     "beautifulsoup4>=4.13.4",
     "httpx>=0.28.1",
+    "lightgbm>=4.6.0",
     "nltk>=3.9.1",
     "numpy>=2.3.2",
+    "optuna>=4.4.0",
     "pgvector>=0.4.1",
     "pl-core-news-sm",
     "psycopg2-binary>=2.9.10",
@@ -18,6 +20,7 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     "redis>=6.2.0",
     "regex>=2024.11.6",
+    "scikit-learn>=1.7.1",
     "sentence-transformers>=5.0.0",
     "slowapi>=0.1.9",
     "spacy==3.7.5",
@@ -25,6 +28,7 @@ dependencies = [
     "tokenizers>=0.21.4",
     "torch>=2.7.1",
     "transformers>=4.54.0",
+    "xgboost>=3.0.3",
 ]
 
 [build-system]
@@ -50,6 +54,8 @@ dev-mode-dirs = ["components", "bases", "development", "."]
 "components/sejm_whiz/vector_db" = "sejm_whiz/vector_db"
 "components/sejm_whiz/embeddings" = "sejm_whiz/embeddings"
 "components/sejm_whiz/text_processing" = "sejm_whiz/text_processing"
+"components/sejm_whiz/legal_nlp" = "sejm_whiz/legal_nlp"
+"components/sejm_whiz/prediction_models" = "sejm_whiz/prediction_models"
 
 [tool.uv.sources]
 pl-core-news-sm = { url = "https://github.com/explosion/spacy-models/releases/download/pl_core_news_sm-3.7.0/pl_core_news_sm-3.7.0-py3-none-any.whl" }
