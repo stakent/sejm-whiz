@@ -17,6 +17,142 @@ This is a Python project structured as a Polylith workspace implementing an AI-d
 - **User Interest Profiling**: Personalized notifications based on legal domain preferences
 - **GPU-Optimized Inference**: Local processing on NVIDIA GTX 1060 6GB
 
+## Data Pipeline Architecture
+
+### Current State
+
+```mermaid
+graph TD
+    A[ELI API] --> B[eli_api Component]
+    C[Sejm API] --> D[sejm_api Component]
+    
+    B --> E[text_processing]
+    D --> E
+    
+    E --> F[embeddings<br/>HerBERT Polish BERT]
+    
+    F --> G[vector_db<br/>PostgreSQL + pgvector]
+    E --> H[database<br/>Legal Documents]
+    
+    G --> I[semantic_search<br/>Cross-register matching]
+    H --> I
+    
+    I --> J[legal_nlp<br/>Relationship extraction]
+    J --> K[prediction_models<br/>Ensemble methods]
+    
+    L[Redis Cache] --> E
+    L --> F
+    L --> I
+    
+    M[data_pipeline Base] --> N[data_processor Project]
+    N --> B
+    N --> D
+    N --> E
+    N --> F
+    
+    O[web_api Base] --> P[api_server Project]
+    P --> I
+    P --> J
+    P --> K
+    
+    style B fill:#90EE90
+    style D fill:#90EE90
+    style E fill:#90EE90
+    style F fill:#90EE90
+    style G fill:#90EE90
+    style H fill:#90EE90
+    style I fill:#90EE90
+    style J fill:#90EE90
+    style K fill:#90EE90
+    style L fill:#90EE90
+    style M fill:#90EE90
+    style N fill:#90EE90
+    style O fill:#90EE90
+    style P fill:#90EE90
+```
+
+### Planned Complete State
+
+```mermaid
+graph TD
+    A[ELI API] --> B[eli_api Component]
+    C[Sejm API] --> D[sejm_api Component]
+    
+    B --> E[document_ingestion<br/>Advanced workflows]
+    D --> E
+    
+    E --> F[text_processing]
+    F --> G[embeddings<br/>HerBERT Polish BERT]
+    
+    G --> H[vector_db<br/>PostgreSQL + pgvector]
+    F --> I[database<br/>Legal Documents]
+    
+    H --> J[semantic_search<br/>Cross-register matching]
+    I --> J
+    
+    J --> K[legal_nlp<br/>Relationship extraction]
+    K --> L[legal_graph<br/>Dependency mapping]
+    
+    L --> M[prediction_models<br/>Ensemble methods]
+    
+    N[Redis Cache] --> F
+    N --> G
+    N --> J
+    N --> M
+    
+    O[data_pipeline Base] --> P[data_processor Project]
+    P --> B
+    P --> D
+    P --> E
+    P --> F
+    P --> G
+    
+    Q[web_api Base] --> R[api_server Project]
+    R --> J
+    R --> K
+    R --> L
+    R --> M
+    
+    S[ml_inference Base] --> T[model_trainer Project]
+    T --> M
+    T --> L
+    
+    M --> U[user_preferences<br/>Interest profiling]
+    U --> V[notification_system<br/>Multi-channel delivery]
+    V --> W[dashboard<br/>Interactive visualization]
+    
+    R --> U
+    R --> V
+    R --> W
+    
+    style B fill:#90EE90
+    style D fill:#90EE90
+    style F fill:#90EE90
+    style G fill:#90EE90
+    style H fill:#90EE90
+    style I fill:#90EE90
+    style J fill:#90EE90
+    style K fill:#90EE90
+    style M fill:#90EE90
+    style N fill:#90EE90
+    style O fill:#90EE90
+    style P fill:#90EE90
+    style Q fill:#90EE90
+    style R fill:#90EE90
+    
+    style E fill:#FFE4B5
+    style L fill:#FFE4B5
+    style S fill:#FFE4B5
+    style T fill:#FFE4B5
+    style U fill:#FFE4B5
+    style V fill:#FFE4B5
+    style W fill:#FFE4B5
+```
+
+**Legend:**
+- 🟢 Green: Implemented components/projects
+- 🟡 Orange: Planned components/projects
+
 ## Architecture
 
 Follows Polylith architecture pattern with planned components:
