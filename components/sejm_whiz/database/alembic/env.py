@@ -27,6 +27,7 @@ db_config = get_database_config()
 
 # Override with environment variables for port forwarding
 import os
+
 if os.getenv("DATABASE_HOST") and os.getenv("DATABASE_PORT"):
     db_url = f"postgresql://{db_config.username}:{db_config.password}@{os.getenv('DATABASE_HOST')}:{os.getenv('DATABASE_PORT')}/{db_config.database}?sslmode={db_config.ssl_mode}"
     config.set_main_option("sqlalchemy.url", db_url)
@@ -59,7 +60,7 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         compare_server_default=True,
-        render_as_batch=True
+        render_as_batch=True,
     )
 
     with context.begin_transaction():
@@ -82,7 +83,7 @@ def run_migrations_online() -> None:
 
         with connectable.connect() as connection:
             context.configure(
-                connection=connection, 
+                connection=connection,
                 target_metadata=target_metadata,
                 compare_type=True,
                 compare_server_default=True,
@@ -102,7 +103,7 @@ def run_migrations_online() -> None:
             dialect_opts={"paramstyle": "named"},
             compare_type=True,
             compare_server_default=True,
-            render_as_batch=True
+            render_as_batch=True,
         )
 
         with context.begin_transaction():

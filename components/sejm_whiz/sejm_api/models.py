@@ -57,8 +57,8 @@ class Session(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class Sitting(BaseModel):
-    """Parliamentary sitting model."""
+class ProceedingSitting(BaseModel):
+    """Parliamentary proceeding sitting model (full Sejm assembly)."""
 
     id: int
     term: int
@@ -143,7 +143,7 @@ class Voting(BaseModel):
     id: int
     term: int
     session: int
-    sitting: int
+    proceeding_sitting: int = Field(..., alias="sitting")
     voting_number: int = Field(..., alias="votingNumber")
     date: date
     time: Optional[str] = None
@@ -188,6 +188,25 @@ class Interpellation(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class CommitteeSitting(BaseModel):
+    """Parliamentary committee sitting model."""
+
+    id: int
+    term: int
+    committee_code: str = Field(..., alias="committeeCode")
+    committee_name: str = Field(..., alias="committeeName")
+    sitting_number: int = Field(..., alias="sittingNumber")
+    date: date
+    start_time: Optional[str] = Field(None, alias="startTime")
+    end_time: Optional[str] = Field(None, alias="endTime")
+    title: Optional[str] = None
+    agenda_items: Optional[List[Dict[str, Any]]] = Field(None, alias="agendaItems")
+    transcript_url: Optional[str] = Field(None, alias="transcriptUrl")
+    pdf_url: Optional[str] = Field(None, alias="pdfUrl")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class ProcessingStepInfo(BaseModel):
     """Information about a single processing step."""
 
@@ -202,41 +221,27 @@ class ProcessingStepInfo(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-class ProcessingInfo(BaseModel):
-    """Legislative processing information model."""
+class Proceeding(BaseModel):
+    """Parliamentary proceeding model (full Sejm assembly session)."""
 
-    id: int
-    term: int
-    print_number: str = Field(..., alias="printNumber")
+    number: int
     title: str
-    description: Optional[str] = None
-    document_type: Optional[str] = Field(None, alias="documentType")
-    document_date: Optional[date] = Field(None, alias="documentDate")
-    receipt_date: Optional[date] = Field(None, alias="receiptDate")
-    origin: Optional[str] = None
-    rcl_number: Optional[str] = Field(None, alias="rclNumber")
-    urgent: bool = False
-    processing_steps: List[ProcessingStepInfo] = Field(
-        default_factory=list, alias="processingSteps"
-    )
-    current_stage: Optional[ProcessingStage] = Field(None, alias="currentStage")
+    agenda: Optional[str] = None
+    current: bool = False
+    dates: List[str] = Field(default_factory=list)
 
     model_config = ConfigDict(populate_by_name=True)
 
     @property
-    def is_active(self) -> bool:
-        """Check if the processing is still active."""
-        return self.current_stage not in [
-            ProcessingStage.ENACTED,
-            ProcessingStage.REJECTED,
-        ]
-
-    @property
-    def days_in_processing(self) -> Optional[int]:
-        """Calculate number of days in processing."""
-        if not self.receipt_date:
-            return None
-        return (datetime.now().date() - self.receipt_date).days
+    def sitting_dates(self) -> List[date]:
+        """Get sitting dates as date objects."""
+        dates = []
+        for date_str in self.dates:
+            try:
+                dates.append(datetime.fromisoformat(date_str).date())
+            except ValueError:
+                continue
+        return dates
 
 
 class ProcessingDocument(BaseModel):

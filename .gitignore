@@ -211,3 +211,9 @@ local_settings.py
 *.hdf5
 *.onnx
 *.pb
+
+# Model files
+  *.bin
+  pytorch_model.bin
+  model.safetensors
+  *.safetensors

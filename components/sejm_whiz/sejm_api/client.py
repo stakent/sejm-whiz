@@ -7,8 +7,9 @@ import re
 
 from .models import (
     Session,
-    Sitting,
-    ProcessingInfo,
+    ProceedingSitting,
+    CommitteeSitting,
+    Proceeding,
     Voting,
     Deputy,
     Committee,
@@ -32,7 +33,7 @@ class SejmApiClient:
     - Interpellations and questions
     """
 
-    BASE_URL = "https://api.sejm.gov.pl/sejm/openapi"
+    BASE_URL = "https://api.sejm.gov.pl"
 
     def __init__(
         self,
@@ -329,42 +330,45 @@ class SejmApiClient:
         data = await self._make_request("sessions", params)
         return [Session.model_validate(item) for item in data.get("sessions", [])]
 
-    async def get_sittings(
+    async def get_proceeding_sittings(
         self,
         term: Optional[int] = None,
         session: Optional[int] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Sitting]:
+    ) -> List[Proceeding]:
         """
-        Get parliamentary sittings.
+        Get parliamentary proceedings (full Sejm assembly sessions).
+
+        Note: This returns proceedings, each of which contains multiple sitting dates.
 
         Args:
             term: Parliamentary term number
-            session: Session number
-            limit: Maximum number of results
-            offset: Offset for pagination
+            session: Session number (not used by API endpoint)
+            limit: Maximum number of results (not used by API endpoint)
+            offset: Offset for pagination (not used by API endpoint)
 
         Returns:
-            List of Sitting objects
+            List of Proceeding objects
         """
         # Validate parameters
         self._validate_term_param(term)
         self._validate_session_param(session)
         self._validate_pagination_params(limit, offset)
 
-        params = {}
-        if term:
-            params["term"] = term
-        if session:
-            params["session"] = session
-        if limit:
-            params["limit"] = limit
-        if offset:
-            params["offset"] = offset
+        # Term is required for proceedings endpoint, get current term if not provided
+        if not term:
+            term = await self.get_current_term()
 
-        data = await self._make_request("sittings", params)
-        return [Sitting.model_validate(item) for item in data.get("sittings", [])]
+        # Note: The proceedings endpoint doesn't support session, limit, offset parameters
+        # It returns all proceedings for the term
+        endpoint = f"sejm/term{term}/proceedings"
+        data = await self._make_request(endpoint, {})
+        # API returns a list directly, not wrapped in a dict
+        if isinstance(data, list):
+            return [Proceeding.model_validate(item) for item in data]
+        else:
+            return []
 
     # Voting methods
 
@@ -372,7 +376,7 @@ class SejmApiClient:
         self,
         term: Optional[int] = None,
         session: Optional[int] = None,
-        sitting: Optional[int] = None,
+        proceeding_sitting: Optional[int] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> List[Voting]:
@@ -382,7 +386,7 @@ class SejmApiClient:
         Args:
             term: Parliamentary term number
             session: Session number
-            sitting: Sitting number
+            proceeding_sitting: Proceeding sitting number
             limit: Maximum number of results
             offset: Offset for pagination
 
@@ -392,7 +396,7 @@ class SejmApiClient:
         # Validate parameters
         self._validate_term_param(term)
         self._validate_session_param(session)
-        self._validate_id_param(sitting, "sitting")
+        self._validate_id_param(proceeding_sitting, "proceeding_sitting")
         self._validate_pagination_params(limit, offset)
 
         params = {}
@@ -400,8 +404,8 @@ class SejmApiClient:
             params["term"] = term
         if session:
             params["session"] = session
-        if sitting:
-            params["sitting"] = sitting
+        if proceeding_sitting:
+            params["sitting"] = proceeding_sitting
         if limit:
             params["limit"] = limit
         if offset:
@@ -411,7 +415,7 @@ class SejmApiClient:
         return [Voting.model_validate(item) for item in data.get("votings", [])]
 
     async def get_voting_results(
-        self, term: int, session: int, sitting: int, voting: int
+        self, term: int, session: int, proceeding_sitting: int, voting: int
     ) -> Dict[str, Any]:
         """
         Get detailed voting results for a specific voting.
@@ -419,7 +423,7 @@ class SejmApiClient:
         Args:
             term: Parliamentary term number
             session: Session number
-            sitting: Sitting number
+            proceeding_sitting: Proceeding sitting number
             voting: Voting number
 
         Returns:
@@ -428,10 +432,10 @@ class SejmApiClient:
         # Validate parameters
         self._validate_term_param(term)
         self._validate_session_param(session)
-        self._validate_id_param(sitting, "sitting")
+        self._validate_id_param(proceeding_sitting, "proceeding_sitting")
         self._validate_id_param(voting, "voting")
 
-        endpoint = f"votings/{term}/{session}/{sitting}/{voting}"
+        endpoint = f"votings/{term}/{session}/{proceeding_sitting}/{voting}"
         return await self._make_request(endpoint)
 
     # Deputy methods
@@ -572,14 +576,14 @@ class SejmApiClient:
 
     # Processing information methods
 
-    async def get_processing_info(
+    async def get_proceedings(
         self,
         term: Optional[int] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[ProcessingInfo]:
+    ) -> List[Proceeding]:
         """
-        Get information about legislative processing.
+        Get parliamentary proceedings (full Sejm assembly sessions).
 
         Args:
             term: Parliamentary term number
@@ -587,7 +591,7 @@ class SejmApiClient:
             offset: Offset for pagination
 
         Returns:
-            List of ProcessingInfo objects
+            List of Proceeding objects
         """
         # Validate parameters
         self._validate_term_param(term)
@@ -602,9 +606,141 @@ class SejmApiClient:
             params["offset"] = offset
 
         data = await self._make_request("proceedings", params)
+        return [Proceeding.model_validate(item) for item in data.get("proceedings", [])]
+
+    # Committee sitting methods
+
+    async def get_committee_sittings_by_date(
+        self,
+        term: int,
+        date: datetime,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> List[CommitteeSitting]:
+        """
+        Get committee sittings for a specific date.
+
+        Args:
+            term: Parliamentary term number
+            date: Date to get sittings for
+            limit: Maximum number of results
+            offset: Offset for pagination
+
+        Returns:
+            List of CommitteeSitting objects
+        """
+        # Validate parameters
+        self._validate_term_param(term)
+        date_str = self._validate_date_param(date, "date")
+        self._validate_pagination_params(limit, offset)
+
+        params = {}
+        if limit:
+            params["limit"] = limit
+        if offset:
+            params["offset"] = offset
+
+        endpoint = f"sejm/term{term}/committees/sittings/{date_str}"
+        data = await self._make_request(endpoint, params)
         return [
-            ProcessingInfo.model_validate(item) for item in data.get("proceedings", [])
+            CommitteeSitting.model_validate(item) for item in data.get("sittings", [])
         ]
+
+    async def get_committee_sittings(
+        self,
+        term: int,
+        committee_code: str,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> List[CommitteeSitting]:
+        """
+        Get sittings for a specific committee.
+
+        Args:
+            term: Parliamentary term number
+            committee_code: Committee code
+            limit: Maximum number of results
+            offset: Offset for pagination
+
+        Returns:
+            List of CommitteeSitting objects
+        """
+        # Validate parameters
+        self._validate_term_param(term)
+        self._validate_pagination_params(limit, offset)
+
+        if not committee_code or not isinstance(committee_code, str):
+            raise ValidationError("Committee code must be a non-empty string")
+
+        params = {}
+        if limit:
+            params["limit"] = limit
+        if offset:
+            params["offset"] = offset
+
+        endpoint = f"sejm/term{term}/committees/{committee_code}/sittings"
+        data = await self._make_request(endpoint, params)
+        return [
+            CommitteeSitting.model_validate(item) for item in data.get("sittings", [])
+        ]
+
+    async def get_committee_sitting_details(
+        self, term: int, committee_code: str, sitting_num: int
+    ) -> CommitteeSitting:
+        """
+        Get detailed information about a specific committee sitting.
+
+        Args:
+            term: Parliamentary term number
+            committee_code: Committee code
+            sitting_num: Sitting number
+
+        Returns:
+            CommitteeSitting object with detailed information
+        """
+        # Validate parameters
+        self._validate_term_param(term)
+        self._validate_id_param(sitting_num, "sitting_num")
+
+        if not committee_code or not isinstance(committee_code, str):
+            raise ValidationError("Committee code must be a non-empty string")
+
+        endpoint = f"sejm/term{term}/committees/{committee_code}/sittings/{sitting_num}"
+        data = await self._make_request(endpoint)
+        return CommitteeSitting.model_validate(data)
+
+    async def get_committee_sitting_transcript(
+        self, term: int, committee_code: str, sitting_num: int, format: str = "html"
+    ) -> str:
+        """
+        Get committee sitting transcript in specified format.
+
+        Args:
+            term: Parliamentary term number
+            committee_code: Committee code
+            sitting_num: Sitting number
+            format: Transcript format ("html" or "pdf")
+
+        Returns:
+            Transcript content as string
+        """
+        # Validate parameters
+        self._validate_term_param(term)
+        self._validate_id_param(sitting_num, "sitting_num")
+
+        if not committee_code or not isinstance(committee_code, str):
+            raise ValidationError("Committee code must be a non-empty string")
+
+        if format not in ["html", "pdf"]:
+            raise ValidationError("Format must be 'html' or 'pdf'")
+
+        endpoint = f"sejm/term{term}/committees/{committee_code}/sittings/{sitting_num}/{format}"
+        response = await self._make_request(endpoint)
+
+        # Return the content directly for transcripts
+        if isinstance(response, dict) and "content" in response:
+            return response["content"]
+        return str(response)
 
     # Utility methods
 

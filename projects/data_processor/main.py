@@ -34,12 +34,14 @@ class SejmDataIngestionStep(PipelineStep):
         session_id = data.get("session_id")
         date_range = data.get("date_range")
 
-        # Fetch sittings for the session (closest to proceedings)
+        # Fetch proceeding sittings for the session
         if session_id:
-            proceedings = await self.client.get_sittings(term=int(session_id))
+            proceedings = await self.client.get_proceeding_sittings(
+                term=int(session_id)
+            )
         else:
-            # Default to current term sittings
-            proceedings = await self.client.get_sittings()
+            # Default to current term proceeding sittings
+            proceedings = await self.client.get_proceeding_sittings()
 
         return {
             **data,
@@ -95,12 +97,14 @@ class TextProcessingStep(PipelineStep):
             processed_proceedings = []
 
             for proceeding in proceedings:
-                processed_text = self.processor.clean_text(
-                    proceeding.get("content", "")
-                )
-                processed_proceedings.append(
-                    {**proceeding, "processed_content": processed_text}
-                )
+                # Extract text content from proceeding (agenda contains the main content)
+                content = getattr(proceeding, "agenda", "") or ""
+                processed_text = self.processor.clean_text(content)
+
+                # Convert to dict and add processed content
+                proceeding_dict = proceeding.model_dump()
+                proceeding_dict["processed_content"] = processed_text
+                processed_proceedings.append(proceeding_dict)
 
             processed_data["processed_sejm_proceedings"] = processed_proceedings
 

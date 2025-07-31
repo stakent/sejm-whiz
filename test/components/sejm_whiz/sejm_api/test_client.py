@@ -5,7 +5,13 @@ from datetime import datetime
 import httpx
 
 from sejm_whiz.sejm_api.client import SejmApiClient
-from sejm_whiz.sejm_api.models import Session, Sitting, Voting, Deputy
+from sejm_whiz.sejm_api.models import (
+    Session,
+    ProceedingSitting,
+    Proceeding,
+    Voting,
+    Deputy,
+)
 from sejm_whiz.sejm_api.exceptions import (
     SejmApiError,
     RateLimitExceeded,
@@ -173,32 +179,33 @@ class TestSejmApiClient:
             mock_request.assert_called_once_with("sessions", {"term": 10, "limit": 10})
 
     @pytest.mark.asyncio
-    async def test_get_sittings(self, client):
-        """Test getting parliamentary sittings."""
-        mock_data = {
-            "sittings": [
-                {
-                    "id": 1,
-                    "term": 10,
-                    "session": 1,
-                    "sittingNumber": 1,
-                    "date": "2023-01-15",
-                    "title": "Test Sitting",
-                }
-            ]
-        }
+    async def test_get_proceeding_sittings(self, client):
+        """Test getting parliamentary proceedings."""
+        # API returns array directly, not wrapped in object
+        mock_data = [
+            {
+                "number": 1,
+                "title": "1. Posiedzenie Sejmu RP",
+                "agenda": "<div>Agenda content</div>",
+                "current": False,
+                "dates": ["2023-01-15", "2023-01-16"],
+            }
+        ]
 
         with patch.object(
             client, "_make_request", new_callable=AsyncMock
         ) as mock_request:
             mock_request.return_value = mock_data
 
-            sittings = await client.get_sittings(term=10, session=1)
+            proceedings = await client.get_proceeding_sittings(term=10, session=1)
 
-            assert len(sittings) == 1
-            assert isinstance(sittings[0], Sitting)
-            assert sittings[0].term == 10
-            assert sittings[0].session == 1
+            assert len(proceedings) == 1
+            assert isinstance(proceedings[0], Proceeding)
+            assert proceedings[0].number == 1
+            assert proceedings[0].title == "1. Posiedzenie Sejmu RP"
+            assert len(proceedings[0].dates) == 2
+
+            mock_request.assert_called_once_with("sejm/term10/proceedings", {})
 
     @pytest.mark.asyncio
     async def test_get_votings(self, client):
@@ -226,7 +233,7 @@ class TestSejmApiClient:
         ) as mock_request:
             mock_request.return_value = mock_data
 
-            votings = await client.get_votings(term=10, session=1, sitting=1)
+            votings = await client.get_votings(term=10, session=1, proceeding_sitting=1)
 
             assert len(votings) == 1
             assert isinstance(votings[0], Voting)

@@ -1,12 +1,13 @@
 from .client import SejmApiClient
 from .models import (
     Session,
-    Sitting,
+    ProceedingSitting,
+    CommitteeSitting,
     Voting,
     Deputy,
     Committee,
     Interpellation,
-    ProcessingInfo,
+    Proceeding,
     VotingResult,
     DeputyStatus,
     ProcessingStage,
@@ -31,12 +32,13 @@ __all__ = [
     "SejmApiClient",
     # Models
     "Session",
-    "Sitting",
+    "ProceedingSitting",
+    "CommitteeSitting",
     "Voting",
     "Deputy",
     "Committee",
     "Interpellation",
-    "ProcessingInfo",
+    "Proceeding",
     # Enums
     "VotingResult",
     "DeputyStatus",
