@@ -47,17 +47,19 @@ Follows Polylith architecture pattern with planned components:
 **✅ Implemented:**
 - `web_api` - FastAPI web server base with comprehensive error handling, CORS support, health endpoints, and API documentation
 
+**✅ Implemented:**
+- `data_pipeline` - Data processing base with pipeline orchestration, batch processing, and error handling
+
 **🚧 Planned:**
-- `data_pipeline` - Data processing base
 - `ml_inference` - Model inference base
 
 ### Projects
 
 **✅ Implemented:**
 - `api_server` - Main web API server combining web_api base with FastAPI application, health endpoints, and API documentation
+- `data_processor` - Batch processing project combining data_pipeline base with ingestion components for processing Polish legal data
 
 **🚧 Planned:**
-- `data_processor` - Batch processing combining data_pipeline base with ingestion components
 - `model_trainer` - ML training and validation workflows
 
 ## Technology Stack
@@ -127,13 +129,19 @@ Follows Polylith architecture pattern with planned components:
    uv run uvicorn projects.api_server.main:app --host 0.0.0.0 --port 8000 --reload
    ```
 
-9. **Test web API base**:
+9. **Run data processor**:
+   ```bash
+   # Start the batch data processing pipeline
+   uv run python projects/data_processor/main.py
+   ```
+
+10. **Test web API base**:
    ```bash
    # Test web API base implementation
    uv run pytest test/bases/sejm_whiz/web_api/test_core.py -v
    ```
 
-10. **Test semantic search**:
+11. **Test semantic search**:
    ```bash
    # Test semantic search components
    uv run pytest test/components/sejm_whiz/semantic_search/test_search_engine.py -v
@@ -142,7 +150,7 @@ Follows Polylith architecture pattern with planned components:
    uv run pytest test/components/sejm_whiz/semantic_search/test_cross_register.py -v
    ```
 
-11. **Deploy to k3s** (see `K3S_DEPLOYMENT.md` for full instructions):
+12. **Deploy to k3s** (see `K3S_DEPLOYMENT.md` for full instructions):
    ```bash
    # Build and deploy containers
    docker build -t sejm-whiz-api:latest -f Dockerfile.api .
@@ -189,10 +197,16 @@ Follows Polylith architecture pattern with planned components:
 **Phase 3 - Advanced Components**: ✅ **COMPLETED**
 - Semantic search component completed with cross-register matching ✅
 
-**Phase 4 - Project Assembly**: 🚧 **IN PROGRESS**
+**Phase 4 - Project Assembly**: ✅ **COMPLETED**
 - Web API base completed with FastAPI application factory and comprehensive features ✅
 - API server project completed with web server implementation ✅
-- Ready to implement document ingestion and legal graph components
+- Data pipeline base completed with pipeline orchestration and batch processing ✅
+- Data processor project completed with comprehensive ingestion pipeline ✅
+
+**Phase 5 - Advanced Features**: 🚧 **PLANNED**
+- Document ingestion component for advanced processing workflows
+- Legal graph component for dependency mapping
+- Model trainer project for ML training workflows
 
 See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `K3S_DEPLOYMENT.md` for deployment instructions.
 

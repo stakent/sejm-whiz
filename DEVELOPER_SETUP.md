@@ -179,6 +179,9 @@ uv run python projects/api_server/main.py
 # Or with uvicorn for development
 uv run uvicorn projects.api_server.main:app --host 0.0.0.0 --port 8000 --reload
 
+# Run data processor (batch processing pipeline)
+uv run python projects/data_processor/main.py
+
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
 uv run pytest test/components/sejm_whiz/eli_api/test_client.py -v
@@ -424,6 +427,7 @@ sejm-whiz-dev/
 ├── main.py                  # Main application entry
 ├── bases/                   # Polylith bases
 │   └── sejm_whiz/
+│       ├── data_pipeline/   ✅ Data processing base with pipeline orchestration
 │       └── web_api/         ✅ FastAPI web server base with comprehensive features
 ├── components/              # Polylith components
 │   ├── sejm_whiz/
@@ -439,9 +443,11 @@ sejm-whiz-dev/
 │   │   ├── text_processing/ ✅ Polish legal text processing pipeline
 │   │   └── vector_db/       ✅ Vector database operations with pgvector
 ├── projects/                # Polylith projects
-│   └── api_server/          ✅ Main web API server using web_api base
+│   ├── api_server/          ✅ Main web API server using web_api base
+│   └── data_processor/      ✅ Batch processing pipeline using data_pipeline base
 ├── test/                    # Test files organized by component
 │   ├── bases/sejm_whiz/
+│   │   ├── data_pipeline/   # Pipeline orchestration tests
 │   │   └── web_api/         ✅ FastAPI base tests
 │   └── components/sejm_whiz/
 │       ├── database/
@@ -632,19 +638,23 @@ uv audit
 **🚧 Next Priorities:**
 1. **Redis Component** - Caching and background job queues  
 2. **Document Ingestion Component** - Processing pipeline integration
-3. **Data Pipeline Base** - Batch processing infrastructure
-4. **Data Processor Project** - Batch processing system
+3. ✅ **Data Pipeline Base** - Batch processing infrastructure (COMPLETED)
+4. ✅ **Data Processor Project** - Batch processing system (COMPLETED)
 
 ## Next Steps
 
 1. Read the project overview in `CLAUDE.md`
 2. Review the detailed implementation plan in `IMPLEMENTATION_PLAN.md`
 3. Check component implementation examples in `components/sejm_whiz/sejm_api/` and `components/sejm_whiz/eli_api/`
-4. Run the API server to see it working:
-   - `uv run python projects/api_server/main.py`
-   - Visit http://localhost:8000 for basic API info
-   - Visit http://localhost:8000/docs for interactive API documentation
-   - Visit http://localhost:8000/health for health check endpoint
+4. Run the projects to see them working:
+   - **API server**: `uv run python projects/api_server/main.py`
+     - Visit http://localhost:8000 for basic API info
+     - Visit http://localhost:8000/docs for interactive API documentation
+     - Visit http://localhost:8000/health for health check endpoint
+   - **Data processor**: `uv run python projects/data_processor/main.py`
+     - Demonstrates batch processing pipeline with modular steps
+     - Shows integration of Sejm API, ELI API, text processing, and embeddings
+     - Includes error handling and metrics collection
 5. Run existing tests to understand patterns:
    - `uv run pytest test/bases/sejm_whiz/web_api/ -v`
    - `uv run pytest test/components/sejm_whiz/sejm_api/ -v`
