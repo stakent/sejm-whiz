@@ -1,7 +1,7 @@
 """Tests for vector_db embeddings module."""
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 from sejm_whiz.vector_db.embeddings import (

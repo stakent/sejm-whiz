@@ -1,6 +1,5 @@
 """Core tests for vector_db component."""
 
-import pytest
 from sejm_whiz.vector_db import (
     get_vector_db,
     get_vector_session,
