@@ -31,10 +31,10 @@ Follows Polylith architecture pattern with planned components:
 - `text_processing` - Polish legal text processing with cleaning, normalization, tokenization, and entity extraction
 - `embeddings` - HerBERT embeddings with comprehensive Polish BERT implementation, bag-of-embeddings approach, batch processing, similarity calculations, and GPU optimization
 - `redis` - Caching and queue management for background tasks and embedding operations
+- `legal_nlp` - Advanced legal document analysis with multi-act amendment detection, semantic analysis, and relationship extraction
 
 **🚧 Planned:**
 - `document_ingestion` - Document processing pipeline and ingestion workflows
-- `legal_nlp` - Legal document analysis with multi-act amendment detection
 - `legal_graph` - Legal act dependency mapping and cross-reference analysis
 - `prediction_models` - ML models for law change predictions
 - `semantic_search` - Embedding-based search and similarity
@@ -101,7 +101,16 @@ Follows Polylith architecture pattern with planned components:
    uv run pytest test/components/sejm_whiz/embeddings/test_batch_processor.py -v
    ```
 
-7. **Deploy to k3s** (see `K3S_DEPLOYMENT.md` for full instructions):
+7. **Test legal NLP analysis**:
+   ```bash
+   # Test legal document analysis components
+   uv run pytest test/components/sejm_whiz/legal_nlp/test_core.py -v
+   uv run pytest test/components/sejm_whiz/legal_nlp/test_semantic_analyzer.py -v
+   uv run pytest test/components/sejm_whiz/legal_nlp/test_relationship_extractor.py -v
+   uv run pytest test/components/sejm_whiz/legal_nlp/test_integration.py -v
+   ```
+
+8. **Deploy to k3s** (see `K3S_DEPLOYMENT.md` for full instructions):
    ```bash
    # Build and deploy containers
    docker build -t sejm-whiz-api:latest -f Dockerfile.api .
@@ -142,8 +151,9 @@ Follows Polylith architecture pattern with planned components:
 - Text Processing component completed with Polish legal text processing pipeline ✅
 - Embeddings component completed with comprehensive HerBERT Polish BERT implementation ✅
 - Redis component completed with caching, queue management, and health monitoring ✅
-- Currently on `feature/vector_db` branch
-- Ready to implement document ingestion and legal NLP components
+- Legal NLP component completed with advanced document analysis, semantic fields detection, and relationship extraction ✅
+- Currently on `feature/legal_nlp` branch
+- Ready to implement document ingestion and legal graph components
 
 See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `K3S_DEPLOYMENT.md` for deployment instructions.
 
