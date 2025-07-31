@@ -4,9 +4,17 @@ import torch
 import logging
 import re
 import numpy as np
+import traceback
 from typing import List, Dict, Any, Optional, Tuple, Union
 from dataclasses import dataclass
-from transformers import AutoTokenizer, AutoModel
+from transformers import (
+    AutoTokenizer,
+    AutoModel,
+    BertTokenizer,
+    BertModel,
+    RobertaTokenizer,
+)
+from huggingface_hub import hf_hub_download, list_repo_files
 import time
 
 from .config import get_embedding_config, EmbeddingConfig
@@ -60,6 +68,7 @@ class HerBERTEmbedder:
             return
 
         logger.info(f"Loading HerBERT model: {self.config.model_name}")
+        logger.info(f"Config cache dir: {repr(self.config.model_cache_dir)}")
         start_time = time.time()
 
         try:
@@ -68,20 +77,95 @@ class HerBERTEmbedder:
             logger.info(f"Using device: {self.device}")
 
             # Load tokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.config.model_name,
-                cache_dir=self.config.model_cache_dir,
-                use_fast=self.config.use_fast_tokenizer,
-            )
+            cache_dir = None
+            if self.config.model_cache_dir and self.config.model_cache_dir.strip():
+                import os
+
+                cache_dir = os.path.abspath(self.config.model_cache_dir)
+                # Create cache directory if it doesn't exist
+                os.makedirs(cache_dir, exist_ok=True)
+            logger.info(f"Resolved cache dir: {repr(cache_dir)}")
+
+            try:
+                logger.info(
+                    f"Loading tokenizer with model_name: {repr(self.config.model_name)}"
+                )
+
+                # First, let's check what files are available in the repo
+                try:
+                    repo_files = list_repo_files(self.config.model_name)
+                    logger.info(f"Available files in repo: {repo_files}")
+
+                    # Check for vocabulary files
+                    vocab_files = [f for f in repo_files if "vocab" in f.lower()]
+                    logger.info(f"Vocabulary files found: {vocab_files}")
+
+                except Exception as e:
+                    logger.warning(f"Could not list repo files: {e}")
+
+                # Try to manually download required files
+                logger.info("Attempting to manually download tokenizer files...")
+                try:
+                    # Download config.json first
+                    config_path = hf_hub_download(
+                        repo_id=self.config.model_name,
+                        filename="config.json",
+                        cache_dir=cache_dir,
+                    )
+                    logger.info(f"Downloaded config.json to: {config_path}")
+
+                    # Try to download tokenizer.json (fast tokenizer)
+                    try:
+                        tokenizer_path = hf_hub_download(
+                            repo_id=self.config.model_name,
+                            filename="tokenizer.json",
+                            cache_dir=cache_dir,
+                        )
+                        logger.info(f"Downloaded tokenizer.json to: {tokenizer_path}")
+                    except Exception as e:
+                        logger.warning(f"Could not download tokenizer.json: {e}")
+
+                    # Try to download vocab.json and merges.txt
+                    for filename in ["vocab.json", "merges.txt"]:
+                        try:
+                            file_path = hf_hub_download(
+                                repo_id=self.config.model_name,
+                                filename=filename,
+                                cache_dir=cache_dir,
+                            )
+                            logger.info(f"Downloaded {filename} to: {file_path}")
+                        except Exception as e:
+                            logger.warning(f"Could not download {filename}: {e}")
+
+                except Exception as e:
+                    logger.error(f"Manual download failed: {e}")
+
+                # Now try loading the tokenizer
+                logger.info("Attempting to load tokenizer after manual download...")
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    self.config.model_name,
+                    cache_dir=cache_dir,
+                    local_files_only=False,
+                    trust_remote_code=True,
+                )
+                logger.info("Tokenizer loaded successfully")
+
+            except Exception as e:
+                logger.error(f"Failed to load tokenizer: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                raise
 
             # Load model
-            self.model = AutoModel.from_pretrained(
-                self.config.model_name,
-                cache_dir=self.config.model_cache_dir,
-                torch_dtype=torch.float16
-                if self.config.use_half_precision
-                else torch.float32,
-            )
+            try:
+                logger.info(
+                    f"Loading model with model_name: {repr(self.config.model_name)}"
+                )
+                # Try loading with minimal parameters first
+                self.model = AutoModel.from_pretrained(self.config.model_name)
+                logger.info("Model loaded successfully")
+            except Exception as e:
+                logger.error(f"Failed to load model: {e}")
+                raise
 
             # Move to device
             self.model = self.model.to(self.device)

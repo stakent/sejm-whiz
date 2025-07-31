@@ -1,7 +1,7 @@
 """Embedding generation configuration for HerBERT and other models."""
 
 import os
-from typing import List, Dict
+from typing import List, Dict, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -11,9 +11,11 @@ class EmbeddingConfig(BaseSettings):
 
     # Model settings
     model_name: str = Field(
-        default="allegro/herbert-klej-cased-v1", env="EMBEDDING_MODEL_NAME"
+        default="allegro/herbert-base-cased", env="EMBEDDING_MODEL_NAME"
     )
-    model_cache_dir: str = Field(default="./models", env="EMBEDDING_MODEL_CACHE_DIR")
+    model_cache_dir: Optional[str] = Field(
+        default="./models", env="EMBEDDING_MODEL_CACHE_DIR"
+    )
     device: str = Field(default="auto", env="EMBEDDING_DEVICE")  # auto, cpu, cuda, mps
 
     # HerBERT specific settings
