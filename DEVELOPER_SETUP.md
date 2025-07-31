@@ -170,6 +170,9 @@ uv run pytest test/components/sejm_whiz/legal_nlp/ -v
 uv run pytest test/components/sejm_whiz/prediction_models/ -v
 uv run pytest test/components/sejm_whiz/semantic_search/ -v
 
+# Run tests for bases
+uv run pytest test/bases/sejm_whiz/web_api/ -v
+
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
 uv run pytest test/components/sejm_whiz/eli_api/test_client.py -v
@@ -220,6 +223,9 @@ uv run poly create component --name sejm_api
 Use proper namespace imports:
 
 ```python
+# Import from bases
+from sejm_whiz.web_api import create_app, get_app, HealthResponse, ErrorResponse
+
 # Import from other components
 from sejm_whiz.database import DatabaseConnection
 from sejm_whiz.sejm_api import SejmApiClient
@@ -264,6 +270,7 @@ from sejm_whiz.semantic_search.query_processor import QueryProcessor
 uv run python
 
 # In REPL, you can import and test components:
+# >>> from sejm_whiz.web_api import create_app, get_app
 # >>> from sejm_whiz.sejm_api import SejmApiClient
 # >>> from sejm_whiz.eli_api import EliApiClient
 # >>> from sejm_whiz.vector_db import get_vector_operations, get_similarity_search
@@ -274,6 +281,7 @@ uv run python
 # >>> ops = get_vector_operations()
 # >>> search = get_similarity_search()
 # >>> legal_analyzer = ComprehensiveLegalAnalyzer()
+# >>> app = get_app()  # Test web API creation
 # >>> await sejm_client.get_current_term()  # Test API methods
 # >>> await eli_client.search_documents(query="ustawa")  # Test ELI API
 # >>> health = validate_vector_db_health()  # Test vector DB health
@@ -408,7 +416,9 @@ sejm-whiz-dev/
 ├── pyproject.toml           # Project configuration and dependencies
 ├── workspace.toml           # Polylith workspace configuration
 ├── main.py                  # Main application entry
-├── bases/                   # Polylith bases (coming soon)
+├── bases/                   # Polylith bases
+│   └── sejm_whiz/
+│       └── web_api/         ✅ FastAPI web server base with comprehensive features
 ├── components/              # Polylith components
 │   ├── sejm_whiz/
 │   │   ├── database/        ✅ PostgreSQL + pgvector operations
@@ -424,6 +434,8 @@ sejm-whiz-dev/
 │   │   └── vector_db/       ✅ Vector database operations with pgvector
 ├── projects/                # Polylith projects (coming soon)
 ├── test/                    # Test files organized by component
+│   ├── bases/sejm_whiz/
+│   │   └── web_api/         ✅ FastAPI base tests
 │   └── components/sejm_whiz/
 │       ├── database/
 │       ├── eli_api/         ✅ 119 tests passing
@@ -489,6 +501,18 @@ uv audit
 ## Current Implementation Status
 
 ### ✅ Completed Components
+
+**Web API Base:**
+- Complete FastAPI web server base implementation with production-ready features
+- Comprehensive error handling for all exception types with structured responses
+- CORS middleware configuration with production considerations
+- Health check endpoint (`/health`) with structured JSON response and timestamp
+- Root endpoint (`/`) with API metadata and documentation links
+- Pydantic models for type-safe request/response handling (HealthResponse, ErrorResponse)
+- Automatic API documentation at `/docs` (Swagger) and `/redoc`
+- Logging integration for comprehensive error tracking and debugging
+- Modular application factory pattern with `create_app()` and `get_app()` functions
+- Ready for component integration and extensible route structure
 
 **Database Component:**
 - PostgreSQL + pgvector integration
@@ -588,21 +612,28 @@ uv audit
 - Production-ready with integration to embeddings and vector database components
 
 
-### 🚧 Next Components to Implement
+### 🚧 Next Steps
 
+**✅ Recently Completed:**
 1. ✅ **COMPLETED**: Embeddings Component - HerBERT Polish BERT implementation
-2. ✅ **COMPLETED**: Legal NLP Component - Multi-act amendment detection and semantic analysis
+2. ✅ **COMPLETED**: Legal NLP Component - Multi-act amendment detection and semantic analysis  
 3. ✅ **COMPLETED**: Prediction Models Component - ML pipeline for law change predictions
-4. **READY**: Semantic Search Component - Document retrieval and ranking system with cross-register matching
-5. **Redis Component** - Caching and background job queues
-6. **Document Ingestion Component** - Processing pipeline integration
+4. ✅ **COMPLETED**: Semantic Search Component - Document retrieval and ranking system with cross-register matching
+5. ✅ **COMPLETED**: Web API Base - FastAPI application factory with comprehensive features
+
+**🚧 Next Priorities:**
+1. **API Server Project** - Assemble complete API server combining web_api base with components
+2. **Redis Component** - Caching and background job queues  
+3. **Document Ingestion Component** - Processing pipeline integration
+4. **Data Pipeline Base** - Batch processing infrastructure
 
 ## Next Steps
 
 1. Read the project overview in `CLAUDE.md`
 2. Review the detailed implementation plan in `IMPLEMENTATION_PLAN.md`
 3. Check component implementation examples in `components/sejm_whiz/sejm_api/` and `components/sejm_whiz/eli_api/`
-4. Run existing tests to understand patterns: 
+4. Run existing tests to understand patterns:
+   - `uv run pytest test/bases/sejm_whiz/web_api/ -v`
    - `uv run pytest test/components/sejm_whiz/sejm_api/ -v`
    - `uv run pytest test/components/sejm_whiz/eli_api/ -v`  
    - `uv run pytest test/components/sejm_whiz/vector_db/ -v`
@@ -610,7 +641,7 @@ uv audit
    - `uv run pytest test/components/sejm_whiz/embeddings/ -v`
    - `uv run pytest test/components/sejm_whiz/legal_nlp/ -v`
    - `uv run pytest test/components/sejm_whiz/prediction_models/ -v` (when tests are added)
-   - `uv run pytest test/components/sejm_whiz/semantic_search/ -v` (when implemented)
+   - `uv run pytest test/components/sejm_whiz/semantic_search/ -v`
 5. Follow the git feature branch workflow for all changes
 
 ## Getting Help
