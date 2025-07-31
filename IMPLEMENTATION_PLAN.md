@@ -667,7 +667,7 @@ components/prediction_models/
 
 ### Step 4.2: Create semantic_search Component
 
-**Objective**: Implement semantic search using bag of embeddings
+**Objective**: Implement semantic search using bag of embeddings with cross-register matching
 
 **Tasks:**
 ```bash
@@ -679,7 +679,7 @@ git checkout -b feature/semantic-search-component
 # Create component
 uv run poly create component --name semantic_search
 
-# Dependencies already available
+# Dependencies already available from embeddings and vector_db components
 ```
 
 **Component Structure:**
@@ -687,18 +687,67 @@ uv run poly create component --name semantic_search
 components/semantic_search/
 └── sejm_whiz/
     └── semantic_search/
-        ├── __init__.py
-        ├── search_engine.py    # Main search interface
-        ├── indexer.py          # Document indexing
-        ├── ranker.py           # Result ranking
-        └── cross_register.py   # Formal/informal matching
+        ├── __init__.py           # Component exports and public API
+        ├── config.py             # SearchConfig with ranking parameters
+        ├── search_engine.py      # Main SemanticSearchEngine class
+        ├── indexer.py            # DocumentIndexer for embedding management
+        ├── ranker.py             # ResultRanker for relevance scoring
+        ├── cross_register.py     # CrossRegisterMatcher for legal/parliamentary matching
+        ├── query_processor.py    # QueryProcessor for query expansion and refinement
+        └── core.py               # Main integration layer
 ```
 
-**Key Features:**
-- [ ] Cosine similarity search on document embeddings
-- [ ] Cross-register matching (legal vs parliamentary language)
-- [ ] Real-time similarity scoring
-- [ ] Efficient indexing and retrieval
+**Key Features to Implement:**
+- [ ] **Semantic Search Engine**: Main search interface using HerBERT embeddings and pgvector similarity
+- [ ] **Cross-Register Matching**: Specialized matching between formal legal language and informal parliamentary proceedings
+- [ ] **Document Indexing**: Efficient embedding storage and retrieval with batch processing
+- [ ] **Relevance Ranking**: Multi-factor ranking combining semantic similarity, document metadata, and temporal relevance
+- [ ] **Query Processing**: Query expansion, refinement, and legal term normalization
+- [ ] **Real-Time Search**: Fast similarity scoring with caching and performance optimization
+- [ ] **Advanced Filtering**: Search filtering by document type, legal domain, date ranges, and amendment types
+
+**Advanced Implementation Features:**
+- [ ] **Hybrid Search**: Combination of semantic similarity and keyword matching for comprehensive results
+- [ ] **Legal Domain Awareness**: Domain-specific search optimization for different areas of Polish law
+- [ ] **Amendment Tracking**: Specialized search for tracking legal changes and amendment relationships
+- [ ] **Temporal Weighting**: Time-based relevance scoring for recent vs historical documents
+- [ ] **Multi-Act Analysis**: Cross-document search for omnibus legislation and cascading amendments
+- [ ] **Performance Optimization**: Efficient vector operations with batch processing and caching strategies
+
+**Integration Points:**
+- [ ] **Vector Database**: Uses existing pgvector operations for similarity search
+- [ ] **Embeddings Component**: Leverages HerBERT encoder for query and document embeddings
+- [ ] **Text Processing**: Uses normalized legal text for improved search accuracy  
+- [ ] **Legal NLP**: Incorporates legal concept extraction for enhanced relevance
+- [ ] **Prediction Models**: Provides search results for law change prediction features
+
+**Testing Strategy:**
+```bash
+# Test semantic search functionality
+uv run pytest test/components/sejm_whiz/semantic_search/test_search_engine.py -v
+uv run pytest test/components/sejm_whiz/semantic_search/test_indexer.py -v  
+uv run pytest test/components/sejm_whiz/semantic_search/test_ranker.py -v
+uv run pytest test/components/sejm_whiz/semantic_search/test_cross_register.py -v
+uv run pytest test/components/sejm_whiz/semantic_search/test_query_processor.py -v
+uv run pytest test/components/sejm_whiz/semantic_search/test_core.py -v
+
+# Integration tests
+uv run pytest test/components/sejm_whiz/semantic_search/test_integration.py -v
+```
+
+**Performance Requirements:**
+- [ ] Search response time: <100ms for single document queries
+- [ ] Batch search: <500ms for 10 concurrent queries
+- [ ] Cross-register matching: <200ms for legal-parliamentary document pairs
+- [ ] Index updates: Real-time embedding storage without search disruption
+
+**Validation Criteria:**
+- [ ] Semantic similarity search returns relevant legal documents
+- [ ] Cross-register matching successfully connects legal acts with parliamentary discussions
+- [ ] Query processing improves search accuracy through legal term normalization
+- [ ] Ranking algorithm combines multiple relevance factors effectively
+- [ ] Integration with existing components works seamlessly
+- [ ] Performance meets requirements under realistic document corpus size
 
 ---
 
@@ -1011,9 +1060,9 @@ uv run poly build --verbose
 2. ✅ **COMPLETED**: embeddings component with HerBERT integration
 3. ✅ **COMPLETED**: legal_nlp component for multi-act amendment detection and semantic analysis
 4. ✅ **COMPLETED**: prediction_models component with ML pipeline
-5. Add Redis component for caching and background processing
-6. Begin document_ingestion component for processing pipeline integration
-7. Implement semantic_search component for document retrieval
+5. **READY**: semantic_search component for document retrieval with cross-register matching
+6. Add Redis component for caching and background processing
+7. Begin document_ingestion component for processing pipeline integration
 
 ---
 

@@ -168,6 +168,7 @@ uv run pytest test/components/sejm_whiz/text_processing/ -v
 uv run pytest test/components/sejm_whiz/embeddings/ -v
 uv run pytest test/components/sejm_whiz/legal_nlp/ -v
 uv run pytest test/components/sejm_whiz/prediction_models/ -v
+uv run pytest test/components/sejm_whiz/semantic_search/ -v
 
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
@@ -181,6 +182,10 @@ uv run pytest test/components/sejm_whiz/legal_nlp/test_core.py -v
 uv run pytest test/components/sejm_whiz/legal_nlp/test_semantic_analyzer.py -v
 uv run pytest test/components/sejm_whiz/legal_nlp/test_relationship_extractor.py -v
 uv run pytest test/components/sejm_whiz/legal_nlp/test_integration.py -v
+uv run pytest test/components/sejm_whiz/semantic_search/test_search_engine.py -v
+uv run pytest test/components/sejm_whiz/semantic_search/test_indexer.py -v
+uv run pytest test/components/sejm_whiz/semantic_search/test_ranker.py -v
+uv run pytest test/components/sejm_whiz/semantic_search/test_cross_register.py -v
 
 # Run with coverage
 uv run pytest --cov=sejm_whiz test/
@@ -224,6 +229,7 @@ from sejm_whiz.text_processing import clean_legal_text, normalize_legal_text, pr
 from sejm_whiz.embeddings import get_herbert_embedder, get_bag_embeddings_generator, get_similarity_calculator
 from sejm_whiz.legal_nlp import ComprehensiveLegalAnalyzer, analyze_legal_concepts, extract_semantic_fields
 from sejm_whiz.prediction_models import get_prediction_config, get_ensemble_model, get_similarity_predictor, get_classifier
+from sejm_whiz.semantic_search import get_search_engine, get_document_indexer, get_result_ranker, get_cross_register_matcher
 
 # Import within same component
 from sejm_whiz.sejm_api.models import Session, Deputy
@@ -243,6 +249,12 @@ from sejm_whiz.prediction_models.config import PredictionConfig
 from sejm_whiz.prediction_models.ensemble import VotingEnsemble, StackingEnsemble, BlendingEnsemble
 from sejm_whiz.prediction_models.similarity import CosineDistancePredictor, HybridSimilarityPredictor
 from sejm_whiz.prediction_models.classification import RandomForestLegalClassifier, SVMLegalClassifier
+from sejm_whiz.semantic_search.config import SearchConfig
+from sejm_whiz.semantic_search.search_engine import SemanticSearchEngine
+from sejm_whiz.semantic_search.indexer import DocumentIndexer
+from sejm_whiz.semantic_search.ranker import ResultRanker
+from sejm_whiz.semantic_search.cross_register import CrossRegisterMatcher
+from sejm_whiz.semantic_search.query_processor import QueryProcessor
 ```
 
 #### 3. Development with REPL
@@ -277,6 +289,11 @@ uv run python
 # >>> ensemble = get_ensemble_model(config, 'voting')  # Test ensemble models
 # >>> predictor = get_similarity_predictor(config, 'cosine')  # Test similarity predictors
 # >>> classifier = get_classifier(config, 'random_forest')  # Test classification models
+# >>> search_engine = get_search_engine()  # Test semantic search
+# >>> indexer = get_document_indexer()  # Test document indexing
+# >>> ranker = get_result_ranker()  # Test result ranking
+# >>> cross_matcher = get_cross_register_matcher()  # Test cross-register matching
+# >>> results = search_engine.search("ustawa o ochronie danych", limit=5)  # Test semantic search functionality
 ```
 
 ### Git Workflow
@@ -402,6 +419,7 @@ sejm-whiz-dev/
 │   │   ├── prediction_models/ ✅ ML models for law change predictions
 │   │   ├── redis/               # Caching and queues
 │   │   ├── sejm_api/        ✅ Sejm API client with security features
+│   │   ├── semantic_search/     # Embedding-based search with cross-register matching
 │   │   ├── text_processing/ ✅ Polish legal text processing pipeline
 │   │   └── vector_db/       ✅ Vector database operations with pgvector
 ├── projects/                # Polylith projects (coming soon)
@@ -413,6 +431,7 @@ sejm-whiz-dev/
 │       ├── legal_nlp/       ✅ 45+ tests passing (concept extraction + semantic analysis)
 │       ├── prediction_models/ ✅ Validated (ensemble, similarity, classification)
 │       ├── sejm_api/        ✅ 248 tests passing
+│       ├── semantic_search/     # Tests ready for implementation
 │       ├── text_processing/ ✅ 79 tests passing
 │       └── vector_db/       ✅ 66 tests passing (unit + integration)
 └── development/             # Shared development utilities
@@ -574,9 +593,9 @@ uv audit
 1. ✅ **COMPLETED**: Embeddings Component - HerBERT Polish BERT implementation
 2. ✅ **COMPLETED**: Legal NLP Component - Multi-act amendment detection and semantic analysis
 3. ✅ **COMPLETED**: Prediction Models Component - ML pipeline for law change predictions
-4. **Redis Component** - Caching and background job queues
-5. **Document Ingestion Component** - Processing pipeline integration
-6. **Semantic Search Component** - Document retrieval and ranking system
+4. **READY**: Semantic Search Component - Document retrieval and ranking system with cross-register matching
+5. **Redis Component** - Caching and background job queues
+6. **Document Ingestion Component** - Processing pipeline integration
 
 ## Next Steps
 
@@ -591,6 +610,7 @@ uv audit
    - `uv run pytest test/components/sejm_whiz/embeddings/ -v`
    - `uv run pytest test/components/sejm_whiz/legal_nlp/ -v`
    - `uv run pytest test/components/sejm_whiz/prediction_models/ -v` (when tests are added)
+   - `uv run pytest test/components/sejm_whiz/semantic_search/ -v` (when implemented)
 5. Follow the git feature branch workflow for all changes
 
 ## Getting Help
