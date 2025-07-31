@@ -167,6 +167,7 @@ uv run pytest test/components/sejm_whiz/vector_db/ -v
 uv run pytest test/components/sejm_whiz/text_processing/ -v
 uv run pytest test/components/sejm_whiz/embeddings/ -v
 uv run pytest test/components/sejm_whiz/legal_nlp/ -v
+uv run pytest test/components/sejm_whiz/prediction_models/ -v
 
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
@@ -222,6 +223,7 @@ from sejm_whiz.vector_db import get_vector_operations, get_similarity_search
 from sejm_whiz.text_processing import clean_legal_text, normalize_legal_text, process_legal_document
 from sejm_whiz.embeddings import get_herbert_embedder, get_bag_embeddings_generator, get_similarity_calculator
 from sejm_whiz.legal_nlp import ComprehensiveLegalAnalyzer, analyze_legal_concepts, extract_semantic_fields
+from sejm_whiz.prediction_models import get_prediction_config, get_ensemble_model, get_similarity_predictor, get_classifier
 
 # Import within same component
 from sejm_whiz.sejm_api.models import Session, Deputy
@@ -237,6 +239,10 @@ from sejm_whiz.embeddings.similarity import SimilarityCalculator
 from sejm_whiz.legal_nlp.core import LegalNLPAnalyzer, LegalConcept, LegalAmendment
 from sejm_whiz.legal_nlp.semantic_analyzer import LegalSemanticAnalyzer, SemanticField
 from sejm_whiz.legal_nlp.relationship_extractor import LegalRelationshipExtractor, LegalEntity
+from sejm_whiz.prediction_models.config import PredictionConfig
+from sejm_whiz.prediction_models.ensemble import VotingEnsemble, StackingEnsemble, BlendingEnsemble
+from sejm_whiz.prediction_models.similarity import CosineDistancePredictor, HybridSimilarityPredictor
+from sejm_whiz.prediction_models.classification import RandomForestLegalClassifier, SVMLegalClassifier
 ```
 
 #### 3. Development with REPL
@@ -267,6 +273,10 @@ uv run python
 # >>> sim_calc = get_similarity_calculator()  # Test similarity calculations
 # >>> legal_analysis = legal_analyzer.analyze_document("Art. 1. Przykład ustawy...")  # Test legal NLP
 # >>> concepts = analyze_legal_concepts("Konstytucja określa prawa obywateli")  # Test concept extraction
+# >>> config = get_prediction_config()  # Test prediction config
+# >>> ensemble = get_ensemble_model(config, 'voting')  # Test ensemble models
+# >>> predictor = get_similarity_predictor(config, 'cosine')  # Test similarity predictors
+# >>> classifier = get_classifier(config, 'random_forest')  # Test classification models
 ```
 
 ### Git Workflow
@@ -389,6 +399,7 @@ sejm-whiz-dev/
 │   │   ├── eli_api/         ✅ ELI API client with security features
 │   │   ├── embeddings/      ✅ HerBERT Polish BERT with bag-of-embeddings
 │   │   ├── legal_nlp/       ✅ Advanced legal document analysis and NLP
+│   │   ├── prediction_models/ ✅ ML models for law change predictions
 │   │   ├── redis/               # Caching and queues
 │   │   ├── sejm_api/        ✅ Sejm API client with security features
 │   │   ├── text_processing/ ✅ Polish legal text processing pipeline
@@ -400,6 +411,7 @@ sejm-whiz-dev/
 │       ├── eli_api/         ✅ 119 tests passing
 │       ├── embeddings/      ✅ 80+ tests passing (HerBERT + bag embeddings)
 │       ├── legal_nlp/       ✅ 45+ tests passing (concept extraction + semantic analysis)
+│       ├── prediction_models/ ✅ Validated (ensemble, similarity, classification)
 │       ├── sejm_api/        ✅ 248 tests passing
 │       ├── text_processing/ ✅ 79 tests passing
 │       └── vector_db/       ✅ 66 tests passing (unit + integration)
@@ -542,12 +554,29 @@ uv audit
 - 45+ tests passing across 4 test modules
 - Production-ready with sophisticated Polish legal document processing
 
+**Prediction Models Component:**
+- Complete ML pipeline for law change predictions with multiple model types
+- Ensemble methods: VotingEnsemble, StackingEnsemble, BlendingEnsemble with soft/hard voting
+- Similarity-based predictors: Cosine, Euclidean, Hybrid, and Temporal similarity models
+- Classification models: Random Forest, Gradient Boosting, SVM, Logistic Regression, TF-IDF embedding
+- Advanced features:
+  - Comprehensive configuration with environment variable support
+  - Legal document-specific feature extraction and processing
+  - Model persistence with joblib integration and evaluation metrics
+  - Batch processing with error handling and confidence levels
+  - GPU/CPU optimization presets and production-ready configuration
+- Component validated with successful imports and factory functions
+- Production-ready with integration to embeddings and vector database components
+
+
 ### 🚧 Next Components to Implement
 
 1. ✅ **COMPLETED**: Embeddings Component - HerBERT Polish BERT implementation
 2. ✅ **COMPLETED**: Legal NLP Component - Multi-act amendment detection and semantic analysis
-3. **Redis Component** - Caching and background job queues
-4. **Document Ingestion Component** - Processing pipeline integration
+3. ✅ **COMPLETED**: Prediction Models Component - ML pipeline for law change predictions
+4. **Redis Component** - Caching and background job queues
+5. **Document Ingestion Component** - Processing pipeline integration
+6. **Semantic Search Component** - Document retrieval and ranking system
 
 ## Next Steps
 
@@ -561,6 +590,7 @@ uv audit
    - `uv run pytest test/components/sejm_whiz/text_processing/ -v`
    - `uv run pytest test/components/sejm_whiz/embeddings/ -v`
    - `uv run pytest test/components/sejm_whiz/legal_nlp/ -v`
+   - `uv run pytest test/components/sejm_whiz/prediction_models/ -v` (when tests are added)
 5. Follow the git feature branch workflow for all changes
 
 ## Getting Help
