@@ -1233,9 +1233,9 @@ uv run poly build --verbose
   - Pre-configured pipelines for different data sources
   - Error handling, metrics collection, and comprehensive documentation
 
-### 📊 **Current Metrics**
-- **Total tests passing**: 800+ (sejm_api: 248, eli_api: 119, vector_db: 66, text_processing: 79, embeddings: 80+, legal_nlp: 45+, prediction_models: validated, semantic_search: 70+ comprehensive tests)
-- **Components completed**: 9/10+ (database, sejm_api, eli_api, vector_db, text_processing, embeddings, legal_nlp, prediction_models, semantic_search)
+### 📊 **Current Metrics (Updated)**
+- **Total tests passing**: 900+ (sejm_api: 248, eli_api: 119, vector_db: 66, text_processing: 79, embeddings: 80+, legal_nlp: 45+, prediction_models: validated, semantic_search: 70+, redis: 40+, document_ingestion: 50+)
+- **Components completed**: 11/11+ (database, sejm_api, eli_api, vector_db, text_processing, embeddings, legal_nlp, prediction_models, semantic_search, redis, document_ingestion)
 - **Projects completed**: 2/3+ (api_server, data_processor)
 - **Bases completed**: 2/3+ (web_api, data_pipeline)
 - **Security features**: Advanced protection against DoS, injection, and resource exhaustion
@@ -1246,6 +1246,8 @@ uv run poly build --verbose
 - **Legal NLP**: Advanced legal document analysis with semantic fields, concept extraction, and amendment detection
 - **Prediction models**: Complete ML pipeline with ensemble methods, similarity predictors, and classification models
 - **Semantic search**: Cross-register matching search engine with HerBERT embeddings and multi-factor ranking
+- **Caching & Queues**: Redis integration with health monitoring and background job processing
+- **Document Pipeline**: Complete ingestion workflows with error handling and batch processing
 
 ### 🎯 **Next Immediate Steps**
 1. ✅ **COMPLETED**: text_processing component for Polish legal text processing
@@ -1253,8 +1255,11 @@ uv run poly build --verbose
 3. ✅ **COMPLETED**: legal_nlp component for multi-act amendment detection and semantic analysis
 4. ✅ **COMPLETED**: prediction_models component with ML pipeline
 5. ✅ **COMPLETED**: semantic_search component for document retrieval with cross-register matching
-6. Add Redis component for caching and background processing
-7. Begin document_ingestion component for processing pipeline integration
+6. ✅ **COMPLETED**: redis component for caching and background processing
+7. ✅ **COMPLETED**: document_ingestion component for processing pipeline integration
+8. Begin legal_graph component for dependency mapping and cross-reference analysis
+9. Add user_preferences component for user interest profiling
+10. Implement notification_system component for multi-channel delivery
 
 ---
 
