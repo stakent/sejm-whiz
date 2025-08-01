@@ -1,5 +1,10 @@
 # Sejm-Whiz: Polish Legal Change Prediction System
 
+## Project Status
+This is an active portfolio project demonstrating AI system architecture.
+While the code is open source (MIT), the project is not currently seeking
+external contributions as it's under rapid development.
+
 **Goal**: Predict changes in Polish law using data from Sejm (Polish Parliament) APIs
 - **ELI API**: Effective law data from https://api.sejm.gov.pl/eli/openapi/
 - **Sejm Proceedings API**: Parliamentary proceedings from https://api.sejm.gov.pl/sejm/openapi/
@@ -25,39 +30,39 @@ This is a Python project structured as a Polylith workspace implementing an AI-d
 graph TD
     A[ELI API] --> B[eli_api Component]
     C[Sejm API] --> D[sejm_api Component]
-    
+
     B --> E[text_processing]
     D --> E
-    
+
     E --> F[embeddings<br/>HerBERT Polish BERT]
-    
+
     F --> G[vector_db<br/>PostgreSQL + pgvector]
     E --> H[database<br/>Legal Documents]
-    
+
     G --> I[semantic_search<br/>Cross-register matching]
     H --> I
-    
+
     I --> J[legal_nlp<br/>Relationship extraction]
     J --> K[prediction_models<br/>Ensemble methods]
-    
+
     L[redis<br/>Cache & Queues] --> E
     L --> F
     L --> I
-    
+
     M[data_pipeline Base] --> N[data_processor Project]
     N --> B
     N --> D
     N --> E
     N --> F
-    
+
     O[web_api Base] --> P[api_server Project]
     P --> I
     P --> J
     P --> K
-    
+
     Q[document_ingestion<br/>Processing Pipeline] --> E
     Q --> F
-    
+
     style B fill:#90EE90
     style D fill:#90EE90
     style E fill:#90EE90
@@ -81,54 +86,54 @@ graph TD
 graph TD
     A[ELI API] --> B[eli_api Component]
     C[Sejm API] --> D[sejm_api Component]
-    
+
     B --> E[document_ingestion<br/>Advanced workflows]
     D --> E
-    
+
     E --> F[text_processing]
     F --> G[embeddings<br/>HerBERT Polish BERT]
-    
+
     G --> H[vector_db<br/>PostgreSQL + pgvector]
     F --> I[database<br/>Legal Documents]
-    
+
     H --> J[semantic_search<br/>Cross-register matching]
     I --> J
-    
+
     J --> K[legal_nlp<br/>Relationship extraction]
     K --> L[legal_graph<br/>Dependency mapping]
-    
+
     L --> M[prediction_models<br/>Ensemble methods]
-    
+
     N[Redis Cache] --> F
     N --> G
     N --> J
     N --> M
-    
+
     O[data_pipeline Base] --> P[data_processor Project]
     P --> B
     P --> D
     P --> E
     P --> F
     P --> G
-    
+
     Q[web_api Base] --> R[api_server Project]
     R --> J
     R --> K
     R --> L
     R --> M
-    
+
     S[ml_inference Base] --> T[model_trainer Project]
     T --> M
     T --> L
-    
+
     M --> U[user_preferences<br/>Interest profiling]
     U --> V[notification_system<br/>Multi-channel delivery]
     V --> W[dashboard<br/>Interactive visualization]
-    
+
     R --> U
     R --> V
     R --> W
-    
+
     style B fill:#90EE90
     style D fill:#90EE90
     style F fill:#90EE90
@@ -143,7 +148,7 @@ graph TD
     style P fill:#90EE90
     style Q fill:#90EE90
     style R fill:#90EE90
-    
+
     style E fill:#FFE4B5
     style L fill:#FFE4B5
     style S fill:#FFE4B5
@@ -262,7 +267,7 @@ Follows Polylith architecture pattern with planned components:
    ```bash
    # Start the web API server
    uv run python projects/api_server/main.py
-   
+
    # Or with uvicorn for development
    uv run uvicorn projects.api_server.main:app --host 0.0.0.0 --port 8000 --reload
    ```
@@ -368,4 +373,10 @@ This project follows the Polylith architecture principles:
 
 ## License
 
-[License information to be added]
+Copyright (c) 2025 Dariusz Walat
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
