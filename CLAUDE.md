@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Planning Documents
+- See `IMPLEMENTATION_PLAN.md` Phase 7-8 for deployment architecture and multi-cloud strategy
+
 ## Project Overview
 
 **Goal**: Predict changes in Polish law using data from Sejm (Polish Parliament) APIs

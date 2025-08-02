@@ -86,7 +86,7 @@ k3s comes with containerd that can load images directly without a registry:
 ```bash
 # Build the Docker image locally
 docker build -t sejm-whiz-api:latest -f Dockerfile.api .
-docker build -t sejm-whiz-processor:latest -f Dockerfile.processor .
+docker build -t sejm-whiz-processor:latest -f projects/data_processor/Dockerfile .
 
 # Save images to tar files
 docker save sejm-whiz-api:latest -o sejm-whiz-api.tar
@@ -114,7 +114,7 @@ docker run -d -p 5000:5000 --name registry registry:2
 
 # Build and tag images for local registry
 docker build -t localhost:5000/sejm-whiz-api:latest -f Dockerfile.api .
-docker build -t localhost:5000/sejm-whiz-processor:latest -f Dockerfile.processor .
+docker build -t localhost:5000/sejm-whiz-processor:latest -f projects/data_processor/Dockerfile .
 
 # Push to local registry
 docker push localhost:5000/sejm-whiz-api:latest
@@ -147,7 +147,7 @@ docker login ghcr.io -u your-username
 
 # Build and tag for external registry
 docker build -t ghcr.io/your-username/sejm-whiz-api:v1.0.0 -f Dockerfile.api .
-docker build -t ghcr.io/your-username/sejm-whiz-processor:v1.0.0 -f Dockerfile.processor .
+docker build -t ghcr.io/your-username/sejm-whiz-processor:v1.0.0 -f projects/data_processor/Dockerfile .
 
 # Push to external registry
 docker push ghcr.io/your-username/sejm-whiz-api:v1.0.0
@@ -197,34 +197,11 @@ EXPOSE 8000
 CMD ["python", "-m", "uvicorn", "bases.web_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-**Dockerfile.processor** (for data processing):
-```dockerfile
-FROM python:3.12-slim-bookworm AS base
-
-FROM base AS builder
-COPY --from=ghcr.io/astral-sh/uv:0.7.19 /uv /bin/uv
-
-ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
-ENV UV_HTTP_TIMEOUT=300
-
-WORKDIR /app
-COPY uv.lock pyproject.toml /app/
-RUN --mount=type=cache,target=/root/.cache/uv \
-  uv sync --frozen --no-install-project --no-dev
-
-COPY . /app
-RUN --mount=type=cache,target=/root/.cache/uv \
-  uv sync --frozen --no-dev
-
-
-
-FROM base
-COPY --from=builder /app /app
-ENV PATH="/app/.venv/bin:$PATH"
-
-# Run the processor
-CMD ["uv", "run", "python", "bases/data_pipeline/main.py"]
-```
+**projects/data_processor/Dockerfile** (GPU-enabled data processing):
+- Located in `projects/data_processor/Dockerfile`
+- Uses NVIDIA CUDA 12.2 base image for GPU support
+- Installs Python 3.12 via uv
+- Configured for GPU acceleration with HerBERT embeddings
 
 ### Verify Image Deployment
 

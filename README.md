@@ -277,15 +277,16 @@ This project demonstrates the Polylith Architecture - a components-first approac
 
 ### Prerequisites
 - Python 3.12+
-- NVIDIA GPU with CUDA 11.8+ (for embeddings)
+- NVIDIA GPU with CUDA 12.2+ (for embeddings)
 - PostgreSQL 17 with pgvector extension
 - Redis 7+
+- k3s cluster with NVIDIA Container Toolkit (for GPU deployment)
 
 ### Installation
 
 1. **Clone and install dependencies**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/stakent/sejm-whiz.git
    cd sejm-whiz
    uv sync --dev
    ```
@@ -309,7 +310,7 @@ This project demonstrates the Polylith Architecture - a components-first approac
    uv run pytest test/components/sejm_whiz/semantic_search/ -v
    ```
 
-4. **Start services**:
+4. **Start services locally**:
    ```bash
    # API server (FastAPI with automatic docs at /docs)
    uv run python projects/api_server/main.py
@@ -318,11 +319,12 @@ This project demonstrates the Polylith Architecture - a components-first approac
    uv run python projects/data_processor/main.py
    ```
 
-5. **Deploy to k3s** (production-ready deployment):
+5. **Deploy to k3s with GPU** (production deployment):
    ```bash
-   # See K3S_DEPLOYMENT.md for complete instructions
-   docker build -t sejm-whiz-api:latest -f Dockerfile.api .
-   docker build -t sejm-whiz-processor:latest -f Dockerfile.processor .
+   # Quick GPU deployment (from project root)
+   ./deployments/k3s/scripts/setup-gpu.sh
+   
+   # Or manual deployment - see deployments/k3s/README.md
    ```
 
 ## Development Workflow
@@ -346,35 +348,60 @@ uv run poly deps
 - `uv run poly test` - Run tests across all components and projects
 - `uv run poly build` - Build distributable packages
 
+## Deployment
+
+### k3s GPU Deployment (Current)
+The project includes production-ready k3s deployment with GPU support:
+- **Location**: `deployments/k3s/`
+- **Quick Deploy**: `./deployments/k3s/scripts/setup-gpu.sh`
+- **GPU Support**: NVIDIA CUDA 12.2 with runtime class
+- **Documentation**: See `deployments/k3s/README.md`
+
+### Multi-Cloud Strategy (Planned)
+Following the hybrid deployment approach (`hybrid_deployment_summary.md`):
+- **AWS**: ECS Fargate + SageMaker (coming soon)
+- **OpenStack**: Heat templates for private cloud (planned)
+- **Universal**: Crossplane for cloud-agnostic deployment (future)
+
 ## Project Status & Development Phases
 
-**🔄 Phase 1-4 Mostly Complete (Edge Case Refinement)**
+**✅ Phase 1-4 Complete (Production Ready)**
 - All core components implemented and tested
 - API server and data processor projects operational
-- Container deployment ready
+- GPU-enabled k3s deployment working
+- PostgreSQL + pgvector database deployed
 - Comprehensive test coverage
-- Currently identifying and handling edge cases - not production-ready yet
+
+**🚀 Current State**:
+- **k3s Cluster**: Running on p7 host with GTX 1060 GPU
+- **Database**: PostgreSQL with pgvector extension active
+- **Processor**: GPU-enabled container processing embeddings
+- **Model Cache**: 10Gi persistent volume for HerBERT models
 
 **🚧 Phase 5 Planned (Advanced Features)**
 - Legal dependency graphing
 - User personalization system
 - Interactive dashboard
 - Advanced ML training pipelines
+- Multi-cloud deployment support
 
-See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `K3S_DEPLOYMENT.md` for production deployment instructions.
+See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `deployments/k3s/README.md` for deployment instructions.
 
 ## Hardware Requirements
 
 **Development:**
 - **GPU**: NVIDIA GeForce GTX 1060 6GB (minimum for HerBERT)
+- **CUDA**: Version 12.2 or compatible
 - **RAM**: 16GB+ (12GB+ available for embeddings processing)
 - **Storage**: NVMe SSD recommended for vector index performance
 
-**Production:**
+**Production (k3s):**
+- **Node**: Single node k3s cluster (p7 host)
 - **CPU**: 8+ cores for concurrent API requests
-- **GPU**: GTX 1060 6GB or better for embedding generation
+- **GPU**: GTX 1060 6GB with NVIDIA Container Toolkit
 - **RAM**: 32GB+ for production workloads
 - **Storage**: High-IOPS storage for PostgreSQL and vector indices
+- **Network**: Static IP for cluster access
 
 ## Contributing
 
