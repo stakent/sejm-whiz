@@ -144,3 +144,40 @@ The pipeline can be customized by:
 - Configuring step parameters
 - Adjusting batch processing settings
 - Modifying logging levels and formats
+
+### Environment Variables
+
+- `EMBEDDING_DEVICE`: Set to "cuda" for GPU or "cpu" for CPU-only processing
+- `HF_HOME`: HuggingFace model cache directory
+- `TRANSFORMERS_CACHE`: Transformers cache directory
+- `CUDA_VISIBLE_DEVICES`: GPU device selection (default: "0")
+
+## Docker Deployment
+
+This project includes a GPU-enabled Dockerfile for containerized deployment:
+
+### Building the Image
+
+```bash
+# Build from project root
+docker build -t sejm-whiz-processor:gpu-latest -f projects/data_processor/Dockerfile .
+
+# Run with GPU support
+docker run --gpus all sejm-whiz-processor:gpu-latest
+```
+
+### Dockerfile Details
+
+- **Base Image**: `nvidia/cuda:12.2.0-devel-ubuntu22.04` for GPU support
+- **Python**: 3.12 installed via uv package manager
+- **GPU Support**: NVIDIA runtime with CUDA 12.2
+- **Optimizations**: Multi-stage build with bytecode compilation
+
+## Deployment
+
+For production deployment on k3s with GPU support, see `deployments/k3s/README.md`.
+
+The processor is designed to run as a Kubernetes deployment with:
+- NVIDIA runtime class for GPU access
+- Persistent volume for model caching
+- Resource limits and requests for proper scheduling

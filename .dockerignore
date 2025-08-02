@@ -1,0 +1,75 @@
+# Git and version control
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+.tox/
+.cache/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation and development files
+# README.md - needed for package build
+docs/
+.claude/
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Development and testing
+tests/
+test_*.py
+*_test.py
+pytest.ini
+.pytest_cache/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Local development
+.env
+.env.local
+.env.development
+*.log
+logs/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Kubernetes and deployment (keep what we need for the processor)
+k3s-*.yaml
+rsync-*.sh
+k3-*.txt
+helm/
+charts/
+
+# Models and data (if large)
+models/
+data/
+*.pkl
+*.model

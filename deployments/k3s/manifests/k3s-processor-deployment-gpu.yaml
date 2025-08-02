@@ -1,0 +1,74 @@
+# GPU-enabled deployment based on working k3s-docker-gpu example
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sejm-whiz-processor-gpu
+  namespace: sejm-whiz
+  labels:
+    app: sejm-whiz-processor-gpu
+    version: gpu
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sejm-whiz-processor-gpu
+  template:
+    metadata:
+      labels:
+        app: sejm-whiz-processor-gpu
+        version: gpu
+    spec:
+      runtimeClassName: nvidia  # Direct NVIDIA runtime access
+      nodeSelector:
+        gpu: gtx1060  # Target GPU node
+      containers:
+      - name: processor
+        image: sejm-whiz-processor:gpu-latest
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "5Gi"
+            cpu: "2"
+        env:
+        # NVIDIA GPU environment variables (from working example)
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: "all"
+        - name: NVIDIA_DRIVER_CAPABILITIES
+          value: "compute,utility"
+        - name: CUDA_VISIBLE_DEVICES
+          value: "0"
+        # Application-specific environment
+        - name: EMBEDDING_DEVICE
+          value: "cuda"
+        - name: EMBEDDING_MODEL_CACHE_DIR
+          value: "/app/.cache"
+        - name: HF_HOME
+          value: "/app/.cache"
+        - name: TRANSFORMERS_CACHE
+          value: "/app/.cache"
+        volumeMounts:
+        - name: model-cache
+          mountPath: /app/.cache
+      volumes:
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: sejm-whiz-model-cache
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sejm-whiz-processor-gpu
+  namespace: sejm-whiz
+  labels:
+    app: sejm-whiz-processor-gpu
+spec:
+  selector:
+    app: sejm-whiz-processor-gpu
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP

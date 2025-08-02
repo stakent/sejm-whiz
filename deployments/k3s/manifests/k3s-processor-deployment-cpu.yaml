@@ -1,0 +1,45 @@
+# k3s-processor-deployment-cpu.yaml
+# CPU-only deployment for testing
+# usage:
+# 	kubectl apply -f k3s-processor-deployment-cpu.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sejm-whiz-processor-cpu
+  namespace: sejm-whiz
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sejm-whiz-processor-cpu
+  template:
+    metadata:
+      labels:
+        app: sejm-whiz-processor-cpu
+    spec:
+      containers:
+      - name: processor
+        image: sejm-whiz-processor:optimized
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+        env:
+        - name: EMBEDDING_DEVICE
+          value: "cpu"
+        - name: EMBEDDING_MODEL_CACHE_DIR
+          value: "/app/.cache"
+        - name: HF_HOME
+          value: "/app/.cache"
+        - name: TRANSFORMERS_CACHE
+          value: "/app/.cache"
+        volumeMounts:
+        - name: model-cache
+          mountPath: /app/.cache
+      volumes:
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: sejm-whiz-model-cache
