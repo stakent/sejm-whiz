@@ -36,6 +36,7 @@ This is a Python project structured as a Polylith workspace implementing an AI-d
 - **User Interest Profiling**: Personalized notifications based on legal domain preferences
 - **GPU-Optimized Inference**: Local processing on NVIDIA GTX 1060 6GB with memory management
 - **Production Architecture**: Containerized deployment with k3s, comprehensive monitoring
+- **Web Dashboard**: Real-time monitoring interface for data processing pipeline
 
 ## System Architecture
 
@@ -227,6 +228,7 @@ This project demonstrates the Polylith Architecture - a components-first approac
 - `data_pipeline` (base) - Data processing base with pipeline orchestration, batch processing, and error handling
 - `api_server` (project) - Main web API server combining web_api base with FastAPI application, health endpoints, and API documentation
 - `data_processor` (project) - Batch processing project combining data_pipeline base with ingestion components
+- `web_ui` (project) - Web monitoring dashboard with real-time log streaming, multi-page interface, and production deployment
 
 ### Planned Components (Phase 5)
 - `legal_graph` - Legal act dependency mapping and cross-reference analysis
@@ -312,6 +314,10 @@ This project demonstrates the Polylith Architecture - a components-first approac
 
 4. **Start services locally**:
    ```bash
+   # Web UI monitoring dashboard (recommended)
+   uv run python projects/web_ui/main.py
+   # Access: http://localhost:8000/
+
    # API server (FastAPI with automatic docs at /docs)
    uv run python projects/api_server/main.py
 
@@ -319,12 +325,16 @@ This project demonstrates the Polylith Architecture - a components-first approac
    uv run python projects/data_processor/main.py
    ```
 
-5. **Deploy to k3s with GPU** (production deployment):
+5. **Deploy to k3s** (production deployment):
    ```bash
-   # Quick GPU deployment (from project root)
+   # Deploy data processor with GPU support
    ./deployments/k3s/scripts/setup-gpu.sh
    
-   # Or manual deployment - see deployments/k3s/README.md
+   # Deploy web UI monitoring dashboard
+   ./deployments/k3s/scripts/setup-web-ui.sh
+   
+   # Access web UI: http://192.168.0.200:30800/
+   # See deployments/k3s/README.md for manual deployment
    ```
 
 ## Development Workflow
@@ -362,6 +372,47 @@ Following the hybrid deployment approach (`hybrid_deployment_summary.md`):
 - **AWS**: ECS Fargate + SageMaker (coming soon)
 - **OpenStack**: Heat templates for private cloud (planned)
 - **Universal**: Crossplane for cloud-agnostic deployment (future)
+
+## Web UI Dashboard
+
+The project includes a comprehensive web interface for monitoring and interacting with the data processing pipeline:
+
+### Available Pages
+- **🏠 Home**: Landing page with project overview and feature descriptions
+- **📊 Dashboard**: Real-time monitoring of data processor with live log streaming
+- **📚 API Docs**: Interactive FastAPI/Swagger documentation with API testing
+- **❤️ Health**: System health status and service availability
+
+### Dashboard Features
+- **Fixed Top Navigation**: Easy access to all pages with visual active page indicators
+- **Live Log Streaming**: Real-time logs from data processor with auto-scroll and color coding
+- **Status Monitoring**: Current pipeline stage, document counts, and processor health
+- **Interactive Controls**: Pause/resume streaming, clear logs, auto-scroll toggle
+- **Fixed Container Height**: Logs scroll within fixed viewport without page layout expansion
+- **Modern UI**: Gradient-styled interface with blur effects and responsive design
+
+### Access URLs
+- **Local Development**: 
+  - Home: http://localhost:8000/ (redirects to /home)
+  - Dashboard: http://localhost:8000/dashboard
+  - API Docs: http://localhost:8000/docs
+  - Health: http://localhost:8000/health
+
+- **k3s Production** (NodePort 30800):
+  - Home: http://192.168.0.200:30800/
+  - Dashboard: http://192.168.0.200:30800/dashboard
+  - API Docs: http://192.168.0.200:30800/docs
+  - Health: http://192.168.0.200:30800/health
+
+### Technology Stack
+- **Architecture**: Dedicated Polylith project (`projects/web_ui/`) using `web_api` base
+- **Backend**: FastAPI with embedded HTML templates (no external dependencies)
+- **Frontend**: Vanilla JavaScript with Server-Sent Events (SSE) for real-time updates
+- **Styling**: Modern CSS with flexbox, gradients, and backdrop-filter effects
+- **Log Sources**: Demo log generation with real-time streaming
+- **Navigation**: Single-page application feel with fixed top navigation
+- **Deployment**: Multi-stage Docker build with k3s deployment manifests
+- **Container**: Production-ready containerization following data processor pattern
 
 ## Project Status & Development Phases
 

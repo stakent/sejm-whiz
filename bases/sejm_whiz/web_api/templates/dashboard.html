@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1em;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .status-card {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-card h3 {
+            color: #718096;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .status-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-running {
+            background: #48bb78;
+        }
+
+        .status-error {
+            background: #f56565;
+        }
+
+        .status-unknown {
+            background: #a0aec0;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(72, 187, 120, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(72, 187, 120, 0);
+            }
+        }
+
+        .log-container {
+            background: #1a202c;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            min-height: 500px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #2d3748;
+        }
+
+        .log-title {
+            color: #e2e8f0;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .log-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+
+        .btn-secondary {
+            background: #4a5568;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #2d3748;
+        }
+
+        #logContent {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .log-line {
+            padding: 4px 0;
+            border-left: 3px solid transparent;
+            padding-left: 10px;
+            margin-bottom: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .log-line:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-left-color: #667eea;
+        }
+
+        .log-info {
+            color: #63b3ed;
+        }
+
+        .log-warning {
+            color: #f6ad55;
+        }
+
+        .log-error {
+            color: #fc8181;
+        }
+
+        .log-success {
+            color: #68d391;
+        }
+
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .connected {
+            background: #48bb78;
+            color: white;
+        }
+
+        .disconnected {
+            background: #f56565;
+            color: white;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar styling */
+        .log-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: #2d3748;
+            border-radius: 4px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 4px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Sejm Whiz Data Processor Monitor</h1>
+            <p>Real-time monitoring of data ingestion and processing pipeline</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-card">
+                <h3>Processor Status</h3>
+                <div class="status-value">
+                    <span id="statusIndicator" class="status-indicator status-unknown"></span>
+                    <span id="statusText">Checking...</span>
+                </div>
+            </div>
+            <div class="status-card">
+                <h3>Documents Processed</h3>
+                <div class="status-value" id="docsProcessed">0</div>
+            </div>
+            <div class="status-card">
+                <h3>Current Pipeline</h3>
+                <div class="status-value" id="currentPipeline">-</div>
+            </div>
+            <div class="status-card">
+                <h3>Last Update</h3>
+                <div class="status-value" id="lastUpdate">-</div>
+            </div>
+        </div>
+
+        <div class="log-container">
+            <div class="log-header">
+                <div class="log-title">Live Logs</div>
+                <div class="log-controls">
+                    <button class="btn btn-secondary" onclick="clearLogs()">Clear</button>
+                    <button class="btn btn-secondary" onclick="toggleAutoScroll()">
+                        <span id="autoScrollText">Auto-scroll: ON</span>
+                    </button>
+                    <button class="btn btn-primary" onclick="toggleConnection()">
+                        <span id="connectionToggle">Pause</span>
+                    </button>
+                </div>
+            </div>
+            <div id="logContent">Connecting to log stream...</div>
+        </div>
+    </div>
+
+    <div id="connectionStatus" class="connection-status disconnected">
+        Connecting<span class="spinner"></span>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let autoScroll = true;
+        let isConnected = false;
+        let logBuffer = [];
+        const maxLogLines = 1000;
+        let stats = {
+            docsProcessed: 0,
+            currentPipeline: '-',
+            lastUpdate: new Date()
+        };
+
+        function connectToLogStream() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            eventSource = new EventSource('/api/logs/stream');
+            
+            eventSource.onopen = function() {
+                isConnected = true;
+                updateConnectionStatus(true);
+                addLogLine('Connected to log stream', 'success');
+            };
+
+            eventSource.onmessage = function(event) {
+                const logLine = event.data;
+                addLogLine(logLine);
+                parseLogForStats(logLine);
+                updateStats();
+            };
+
+            eventSource.onerror = function(error) {
+                isConnected = false;
+                updateConnectionStatus(false);
+                addLogLine('Connection lost. Attempting to reconnect...', 'error');
+                
+                // Attempt to reconnect after 5 seconds
+                setTimeout(() => {
+                    if (!isConnected) {
+                        connectToLogStream();
+                    }
+                }, 5000);
+            };
+        }
+
+        function addLogLine(line, type = '') {
+            const logContent = document.getElementById('logContent');
+            
+            // Create log line element
+            const logLine = document.createElement('div');
+            logLine.className = 'log-line';
+            
+            // Apply color based on log level
+            if (line.includes('ERROR') || type === 'error') {
+                logLine.className += ' log-error';
+            } else if (line.includes('WARNING')) {
+                logLine.className += ' log-warning';
+            } else if (line.includes('INFO')) {
+                logLine.className += ' log-info';
+            } else if (type === 'success') {
+                logLine.className += ' log-success';
+            }
+            
+            logLine.textContent = line;
+            
+            // Add to buffer and maintain max lines
+            logBuffer.push(logLine);
+            if (logBuffer.length > maxLogLines) {
+                const removed = logBuffer.shift();
+                if (removed.parentNode) {
+                    removed.parentNode.removeChild(removed);
+                }
+            }
+            
+            logContent.appendChild(logLine);
+            
+            // Auto-scroll if enabled
+            if (autoScroll) {
+                logContent.scrollTop = logContent.scrollHeight;
+            }
+        }
+
+        function parseLogForStats(logLine) {
+            // Parse log lines for statistics
+            if (logLine.includes('Pipeline completed successfully')) {
+                stats.currentPipeline = 'Completed';
+            } else if (logLine.includes('Starting data processor')) {
+                stats.currentPipeline = 'Starting';
+            } else if (logLine.includes('sejm_ingestion')) {
+                stats.currentPipeline = 'Sejm Ingestion';
+            } else if (logLine.includes('eli_ingestion')) {
+                stats.currentPipeline = 'ELI Ingestion';
+            } else if (logLine.includes('text_processing')) {
+                stats.currentPipeline = 'Text Processing';
+            } else if (logLine.includes('embedding_generation')) {
+                stats.currentPipeline = 'Embedding Generation';
+            } else if (logLine.includes('database_storage')) {
+                stats.currentPipeline = 'Database Storage';
+            }
+            
+            // Count processed documents
+            const docMatch = logLine.match(/stored_(\w+)_documents.*?(\d+)/);
+            if (docMatch) {
+                stats.docsProcessed += parseInt(docMatch[2]);
+            }
+            
+            stats.lastUpdate = new Date();
+        }
+
+        function updateStats() {
+            document.getElementById('docsProcessed').textContent = stats.docsProcessed;
+            document.getElementById('currentPipeline').textContent = stats.currentPipeline;
+            document.getElementById('lastUpdate').textContent = 
+                stats.lastUpdate.toLocaleTimeString();
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            const toggleBtn = document.getElementById('connectionToggle');
+            
+            if (connected) {
+                statusEl.className = 'connection-status connected';
+                statusEl.innerHTML = 'Connected';
+                statusIndicator.className = 'status-indicator status-running';
+                statusText.textContent = 'Running';
+                toggleBtn.textContent = 'Pause';
+            } else {
+                statusEl.className = 'connection-status disconnected';
+                statusEl.innerHTML = 'Disconnected<span class="spinner"></span>';
+                statusIndicator.className = 'status-indicator status-error';
+                statusText.textContent = 'Disconnected';
+                toggleBtn.textContent = 'Resume';
+            }
+        }
+
+        function clearLogs() {
+            const logContent = document.getElementById('logContent');
+            logContent.innerHTML = '';
+            logBuffer = [];
+            addLogLine('Logs cleared', 'success');
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            document.getElementById('autoScrollText').textContent = 
+                `Auto-scroll: ${autoScroll ? 'ON' : 'OFF'}`;
+        }
+
+        function toggleConnection() {
+            if (isConnected) {
+                eventSource.close();
+                isConnected = false;
+                updateConnectionStatus(false);
+                addLogLine('Paused log streaming', 'warning');
+            } else {
+                connectToLogStream();
+            }
+        }
+
+        // Fetch processor status periodically
+        async function fetchProcessorStatus() {
+            try {
+                const response = await fetch('/api/processor/status');
+                const data = await response.json();
+                
+                const statusIndicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                
+                if (data.status === 'Running') {
+                    statusIndicator.className = 'status-indicator status-running';
+                    statusText.textContent = 'Running';
+                } else if (data.status === 'unknown') {
+                    statusIndicator.className = 'status-indicator status-unknown';
+                    statusText.textContent = 'Unknown';
+                } else {
+                    statusIndicator.className = 'status-indicator status-error';
+                    statusText.textContent = data.status;
+                }
+            } catch (error) {
+                console.error('Error fetching processor status:', error);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            connectToLogStream();
+            fetchProcessorStatus();
+            
+            // Update processor status every 30 seconds
+            setInterval(fetchProcessorStatus, 30000);
+            
+            // Update last update time every second
+            setInterval(() => {
+                const lastUpdateEl = document.getElementById('lastUpdate');
+                if (stats.lastUpdate) {
+                    const secondsAgo = Math.floor((new Date() - stats.lastUpdate) / 1000);
+                    if (secondsAgo < 60) {
+                        lastUpdateEl.textContent = `${secondsAgo}s ago`;
+                    } else {
+                        lastUpdateEl.textContent = stats.lastUpdate.toLocaleTimeString();
+                    }
+                }
+            }, 1000);
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (eventSource) {
+                eventSource.close();
+            }
+        });
+    </script>
+</body>
+</html>

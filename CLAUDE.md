@@ -64,13 +64,17 @@ This project follows the Polylith architecture pattern with planned components:
 
 ### Implemented Projects
 - `api_server` - Main web API project with FastAPI
+  - **Web Dashboard**: Real-time monitoring interface at `/dashboard`
+    - Live log streaming with Server-Sent Events (SSE)
+    - Pipeline status monitoring and document count tracking
+    - Interactive controls for log management
+    - Kubernetes pod log integration with local fallback
 - `data_processor` - Batch processing project for data ingestion
 
 ### Not Yet Implemented
 - `legal_graph` - Legal act dependency mapping (planned)
 - `user_preferences` - User interest profiling (planned)
 - `notification_system` - Multi-channel notifications (planned)
-- `dashboard` - Interactive visualization (planned)
 - `ml_inference` - Model inference base (planned)
 - `model_trainer` - ML training project (planned)
 
@@ -105,4 +109,4 @@ The project has advanced significantly from initial setup:
 - Secure database operations
 
 ### Next Steps
-The core system is functional. Remaining work includes UI components (dashboard), user management (preferences, notifications), advanced legal graph analysis, and ML training workflows.
+The core system is functional with basic monitoring dashboard. Remaining work includes advanced UI components, user management (preferences, notifications), legal graph analysis, and ML training workflows.

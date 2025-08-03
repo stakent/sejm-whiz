@@ -184,6 +184,64 @@ uv run uvicorn projects.api_server.main:app --host 0.0.0.0 --port 8000 --reload
 # Run data processor (batch processing pipeline)
 uv run python projects/data_processor/main.py
 
+# Run web UI monitoring dashboard
+uv run python projects/web_ui/main.py
+
+### Web UI Dashboard
+
+The project includes a dedicated web monitoring dashboard for real-time pipeline monitoring:
+
+```bash
+# Start the web UI monitoring dashboard
+uv run python projects/web_ui/main.py
+
+# Access the web interface
+# Home page: http://localhost:8000/
+# Dashboard: http://localhost:8000/dashboard
+# API Docs: http://localhost:8000/docs
+# Health: http://localhost:8000/health
+```
+
+**Available Pages:**
+- **🏠 Home** (`/` or `/home`): Landing page with project overview and feature descriptions
+- **📊 Dashboard** (`/dashboard`): Real-time monitoring of data processor with live log streaming
+- **📚 API Docs** (`/docs`): Interactive FastAPI/Swagger documentation with API testing
+- **❤️ Health** (`/health`): System health status and service availability
+
+**Dashboard Features:**
+- **Fixed Top Navigation**: Easy access to all pages with visual active page indicators
+- **Live Log Streaming**: Real-time logs from data processor with auto-scroll and color coding
+- **Status Monitoring**: Current pipeline stage, document counts, and processor health
+- **Interactive Controls**: Pause/resume streaming, clear logs, auto-scroll toggle
+- **Fixed Container Height**: Logs scroll within fixed viewport without page layout expansion
+- **Modern UI**: Gradient-styled interface with blur effects and responsive design
+- **Automatic Reconnection**: Handles connection loss gracefully
+
+**Web Interface API Endpoints:**
+- `/` - Root endpoint (redirects to home page)
+- `/home` - Landing page with project overview
+- `/dashboard` - HTML dashboard interface
+- `/api/logs/stream` - Server-Sent Events endpoint for real-time logs
+- `/api/processor/status` - JSON status of data processor
+- `/docs` - Interactive API documentation (Swagger UI)
+- `/health` - Health check with structured response
+
+**Technology Stack:**
+- **Architecture**: Dedicated Polylith project (`projects/web_ui/`) using `web_api` base
+- **Backend**: FastAPI with embedded HTML templates (no external dependencies)
+- **Frontend**: Vanilla JavaScript with Server-Sent Events (SSE) for real-time updates
+- **Styling**: Modern CSS with flexbox, gradients, and backdrop-filter effects
+- **Log Sources**: Demo log generation with real-time streaming
+- **Navigation**: Single-page application feel with fixed top navigation
+- **Deployment**: Multi-stage Docker build with k3s deployment manifests
+
+**Development Notes:**
+- Proper Polylith project structure using `web_api` base
+- No external frontend dependencies required
+- Dashboard works in both local development and Kubernetes environments
+- For k3s deployment, access via NodePort: http://192.168.0.200:30800/
+- Production-ready containerization following data processor pattern
+
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
 uv run pytest test/components/sejm_whiz/eli_api/test_client.py -v
@@ -459,7 +517,8 @@ sejm-whiz-dev/
 │   │   └── vector_db/       ✅ Vector database operations with pgvector
 ├── projects/                # Polylith projects
 │   ├── api_server/          ✅ Main web API server using web_api base
-│   └── data_processor/      ✅ Batch processing pipeline using data_pipeline base
+│   ├── data_processor/      ✅ Batch processing pipeline using data_pipeline base
+│   └── web_ui/              ✅ Web monitoring dashboard using web_api base
 ├── test/                    # Test files organized by component
 │   ├── bases/sejm_whiz/
 │   │   ├── data_pipeline/   # Pipeline orchestration tests
@@ -534,12 +593,18 @@ uv audit
 
 **Web API Base:**
 - Complete FastAPI web server base implementation with production-ready features
+- Comprehensive web interface with multiple pages and fixed top navigation
+- Real-time monitoring dashboard with Server-Sent Events (SSE) log streaming
 - Comprehensive error handling for all exception types with structured responses
 - CORS middleware configuration with production considerations
-- Health check endpoint (`/health`) with structured JSON response and timestamp
-- Root endpoint (`/`) with API metadata and documentation links
+- Multi-page web interface:
+  - Home page (`/` or `/home`) with project overview and feature descriptions
+  - Dashboard (`/dashboard`) with real-time data processor monitoring
+  - API documentation (`/docs`) with interactive Swagger UI
+  - Health check endpoint (`/health`) with structured JSON response
 - Pydantic models for type-safe request/response handling (HealthResponse, ErrorResponse)
-- Automatic API documentation at `/docs` (Swagger) and `/redoc`
+- Modern UI with gradient styling, fixed navigation, and responsive design
+- Embedded HTML templates with no external dependencies for containerized deployment
 - Logging integration for comprehensive error tracking and debugging
 - Modular application factory pattern with `create_app()` and `get_app()` functions
 - Ready for component integration and extensible route structure
@@ -715,7 +780,13 @@ uv audit
 3. Check component implementation examples in `components/sejm_whiz/sejm_api/` and `components/sejm_whiz/eli_api/`
 4. Run the projects to see them working:
    - **API server**: `uv run python projects/api_server/main.py`
-     - Visit http://localhost:8000 for basic API info
+     - Simple API server for backend services and health checks
+     - Visit http://localhost:8000/docs for interactive API documentation
+     - Visit http://localhost:8000/health for health check endpoint
+   - **Web UI**: `uv run python projects/web_ui/main.py`
+     - Complete monitoring dashboard with real-time features
+     - Visit http://localhost:8000/ for home page with project overview
+     - Visit http://localhost:8000/dashboard for real-time monitoring dashboard
      - Visit http://localhost:8000/docs for interactive API documentation
      - Visit http://localhost:8000/health for health check endpoint
    - **Data processor**: `uv run python projects/data_processor/main.py`

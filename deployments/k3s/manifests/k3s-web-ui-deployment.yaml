@@ -1,0 +1,91 @@
+# Web UI deployment for sejm-whiz monitoring dashboard
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sejm-whiz-web-ui
+  namespace: sejm-whiz
+  labels:
+    app: sejm-whiz-web-ui
+    component: web-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sejm-whiz-web-ui
+  template:
+    metadata:
+      labels:
+        app: sejm-whiz-web-ui
+        component: web-ui
+    spec:
+      containers:
+      - name: web-ui
+        image: docker.io/library/sejm-whiz-web-ui:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+          name: http
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sejm-whiz-web-ui
+  namespace: sejm-whiz
+  labels:
+    app: sejm-whiz-web-ui
+    component: web-ui
+spec:
+  selector:
+    app: sejm-whiz-web-ui
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    nodePort: 30800  # External access
+  type: NodePort
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sejm-whiz-web-ui-ingress
+  namespace: sejm-whiz
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: sejm-whiz.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sejm-whiz-web-ui
+            port:
+              number: 8000

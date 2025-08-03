@@ -9,10 +9,12 @@ deployments/k3s/
 ├── manifests/          # Kubernetes YAML manifests
 │   ├── k3s-processor-deployment-gpu.yaml  # GPU-enabled processor deployment
 │   ├── k3s-processor-deployment-cpu.yaml  # CPU-only fallback deployment
+│   ├── k3s-web-ui-deployment.yaml         # Web UI monitoring dashboard
 │   ├── k3s-model-cache-pvc.yaml          # Persistent volume for model cache
 │   └── nvidia-runtime-class.yaml          # NVIDIA runtime configuration
 ├── scripts/            # Deployment and validation scripts
 │   ├── setup-gpu.sh    # Main GPU deployment script
+│   ├── setup-web-ui.sh # Web UI deployment script
 │   └── gpu_validation.py # GPU validation and testing script
 └── helm/               # Helm charts (future)
 ```
@@ -36,6 +38,28 @@ This script will:
 5. Import to k3s containerd
 6. Deploy the processor with GPU support
 7. Run validation tests
+8. Optionally deploy Web UI monitoring dashboard
+
+### Web UI Deployment
+
+Deploy the monitoring dashboard separately:
+
+```bash
+# Deploy Web UI only
+./deployments/k3s/scripts/setup-web-ui.sh
+```
+
+This will:
+1. Build Web UI Docker image
+2. Import to k3s containerd
+3. Deploy Web UI with NodePort service
+4. Test health endpoint
+
+**Access URLs:**
+- Home: http://192.168.0.200:30800/
+- Dashboard: http://192.168.0.200:30800/dashboard
+- API Docs: http://192.168.0.200:30800/docs
+- Health: http://192.168.0.200:30800/health
 
 ### Manual Deployment
 
@@ -44,6 +68,7 @@ This script will:
 ssh root@p7 "kubectl apply -f -" < deployments/k3s/manifests/nvidia-runtime-class.yaml
 ssh root@p7 "kubectl apply -f -" < deployments/k3s/manifests/k3s-model-cache-pvc.yaml
 ssh root@p7 "kubectl apply -f -" < deployments/k3s/manifests/k3s-processor-deployment-gpu.yaml
+ssh root@p7 "kubectl apply -f -" < deployments/k3s/manifests/k3s-web-ui-deployment.yaml
 ```
 
 ### Validation
