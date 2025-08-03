@@ -51,7 +51,7 @@ def test_embedding_config_creation():
     """Test embedding configuration creation."""
     config = EmbeddingConfig()
 
-    assert config.model_name == "allegro/herbert-klej-cased-v1"
+    assert config.model_name == "allegro/herbert-base-cased"
     assert config.embedding_dim == 768
     assert config.pooling_strategy == "mean"
     assert config.batch_size > 0
@@ -63,8 +63,8 @@ def test_embedding_config_for_gpu():
     config = EmbeddingConfig.for_gpu()
 
     assert config.device == "cuda"
-    assert config.use_half_precision == True
-    assert config.compile_model == True
+    assert config.use_half_precision
+    assert config.compile_model
     assert config.batch_size >= 16
 
 
@@ -73,8 +73,8 @@ def test_embedding_config_for_cpu():
     config = EmbeddingConfig.for_cpu()
 
     assert config.device == "cpu"
-    assert config.use_half_precision == False
-    assert config.compile_model == False
+    assert not config.use_half_precision
+    assert not config.compile_model
 
 
 def test_embedding_config_for_production():
@@ -82,8 +82,8 @@ def test_embedding_config_for_production():
     config = EmbeddingConfig.for_production()
 
     assert config.device == "auto"
-    assert config.cache_embeddings == True
-    assert config.compile_model == True
+    assert config.cache_embeddings
+    assert config.compile_model
     assert config.similarity_threshold >= 0.8
 
 
@@ -184,9 +184,9 @@ def test_batch_processor_integration(mock_sim_calc, mock_bag_gen, mock_encoder):
 
 def test_singleton_patterns():
     """Test that singleton patterns work correctly."""
-    # Test that get functions return same instances
-    config1 = get_embedding_config()
-    config2 = get_embedding_config()
+    # Test that get functions return instances
+    get_embedding_config()
+    get_embedding_config()
     # Note: config doesn't use singleton pattern, so instances may differ
 
     with patch("sejm_whiz.embeddings.herbert_encoder.HerBERTEncoder"):
