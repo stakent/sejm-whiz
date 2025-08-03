@@ -23,7 +23,7 @@ spec:
         gpu: gtx1060  # Target GPU node
       containers:
       - name: processor
-        image: sejm-whiz-processor:gpu-latest
+        image: sejm-whiz-processor:optimized
         resources:
           requests:
             memory: "2Gi"

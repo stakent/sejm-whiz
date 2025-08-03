@@ -315,6 +315,7 @@ async def dashboard():
             eventSource.onopen = function() {
                 isConnected = true;
                 document.getElementById('connectionStatus').innerHTML = '✅ Connected';
+                document.getElementById('logContent').innerHTML = ''; // Clear initial text
                 addLogLine('✅ Connected to log stream', 'success');
             };
 
@@ -402,9 +403,53 @@ async def dashboard():
 
 @app.get("/api/logs/stream")
 async def stream_logs():
-    """Stream demo logs for the dashboard."""
+    """Stream real processor logs from Kubernetes."""
     async def log_generator() -> AsyncGenerator[str, None]:
-        yield f"data: {datetime.utcnow().isoformat()} - web_ui - INFO - Demo log stream started\\n\\n"
+        kubectl_available = False
+        pod_selector = None
+        
+        # Try GPU processor first, then CPU processor
+        processor_labels = [
+            "app=sejm-whiz-processor-gpu",
+            "app=sejm-whiz-processor-cpu", 
+            "app=data-processor"
+        ]
+        
+        # Check which processor pods are available
+        for label in processor_labels:
+            try:
+                check_process = await asyncio.create_subprocess_exec(
+                    "kubectl", "get", "pods", "-n", "sejm-whiz", "-l", label,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, stderr = await check_process.communicate()
+                if check_process.returncode == 0 and b"No resources found" not in stdout and stdout.strip():
+                    kubectl_available = True
+                    pod_selector = label
+                    yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found processor pods with label: {label}\n\n"
+                    break
+            except (FileNotFoundError, OSError):
+                continue
+        
+        if kubectl_available and pod_selector:
+            try:
+                # Stream logs from Kubernetes pod
+                process = await asyncio.create_subprocess_exec(
+                    "kubectl", "logs", "-f", "-n", "sejm-whiz", "-l", pod_selector, "--tail=50",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                
+                if process.stdout:
+                    async for line in process.stdout:
+                        yield f"data: {line.decode('utf-8')}\n\n"
+                    return
+            except Exception as e:
+                yield f"data: {datetime.utcnow().isoformat()} - dashboard - ERROR - Failed to stream logs: {e}\n\n"
+        
+        # Fallback: Generate demo logs
+        yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - No live processor found, showing demo logs\n\n"
         
         batch_num = 1
         while True:
@@ -417,7 +462,7 @@ async def stream_logs():
                 f"{datetime.utcnow().isoformat()} - data_processor - INFO - Batch {batch_num} completed",
             ]
             for log in logs:
-                yield f"data: {log}\\n\\n"
+                yield f"data: {log}\n\n"
                 await asyncio.sleep(1)
             batch_num += 1
             await asyncio.sleep(3)
@@ -427,6 +472,49 @@ async def stream_logs():
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
     )
+
+@app.get("/api/processor/status")
+async def processor_status():
+    """Get the current status of the data processor."""
+    try:
+        # Try GPU processor first, then CPU processor
+        processor_labels = [
+            "app=sejm-whiz-processor-gpu",
+            "app=sejm-whiz-processor-cpu", 
+            "app=data-processor"
+        ]
+        
+        for label in processor_labels:
+            result = subprocess.run(
+                ["kubectl", "get", "pods", "-n", "sejm-whiz", "-l", label, "-o", "json"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0:
+                import json
+                pods_data = json.loads(result.stdout)
+                if pods_data.get("items"):
+                    pod = pods_data["items"][0]
+                    processor_type = "GPU" if "gpu" in label else "CPU" if "cpu" in label else "Unknown"
+                    return {
+                        "status": pod["status"]["phase"],
+                        "processor_type": processor_type,
+                        "pod_name": pod["metadata"]["name"],
+                        "started_at": pod["status"].get("startTime"),
+                        "container_statuses": pod["status"].get("containerStatuses", []),
+                        "label_selector": label
+                    }
+    except Exception as e:
+        pass
+    
+    # Fallback status
+    return {
+        "status": "unknown",
+        "message": "Unable to determine processor status",
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
