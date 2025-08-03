@@ -15,6 +15,7 @@ deployments/k3s/
 ├── scripts/            # Deployment and validation scripts
 │   ├── setup-gpu.sh    # Main GPU deployment script
 │   ├── setup-web-ui.sh # Web UI deployment script
+│   ├── setup-production.sh # Production-ready deployment with monitoring
 │   ├── run-migrations.sh # Database migration script
 │   └── gpu_validation.py # GPU validation and testing script
 └── helm/               # Helm charts (future)
@@ -38,12 +39,29 @@ This will create all necessary tables including:
 - `cross_references` - Document relationships
 - `prediction_models` - ML model metadata
 
-### GPU-Enabled Deployment
+### Production-Ready Deployment
 
 From the project root directory:
 
 ```bash
-# Run the complete GPU setup
+# Run the complete production setup (recommended)
+./deployments/k3s/scripts/setup-production.sh
+```
+
+This script provides:
+1. Health checks and readiness probes for all components
+2. Prometheus metrics collection and alerting rules
+3. Error recovery mechanisms and restart policies
+4. Resource optimization with GPU limits
+5. Comprehensive validation and testing
+6. Production monitoring endpoints
+
+### GPU-Enabled Deployment (Basic)
+
+For development/testing only:
+
+```bash
+# Run the basic GPU setup
 ./deployments/k3s/scripts/setup-gpu.sh
 ```
 
@@ -118,16 +136,48 @@ ssh root@p7 "kubectl exec -n sejm-whiz $POD_NAME -- python /app/deployments/k3s/
 
 ## Monitoring
 
-Check deployment status:
+### Production Monitoring
+
+Production deployment includes comprehensive monitoring:
+
 ```bash
-ssh root@p7 "kubectl get pods -n sejm-whiz"
-ssh root@p7 "kubectl logs -n sejm-whiz deployment/sejm-whiz-processor-gpu"
+# Check all deployment status
+kubectl get all -n sejm-whiz
+
+# Monitor pipeline processing (real-time logs)
+curl -N http://192.168.0.200:30800/api/logs/stream
+
+# Check health endpoints
+curl http://192.168.0.200:30800/health
+
+# View monitoring dashboard
+firefox http://192.168.0.200:30800/dashboard
 ```
 
-Monitor GPU usage:
+### Component Monitoring
+
+Check individual components:
 ```bash
-ssh root@p7 "kubectl exec -n sejm-whiz deployment/sejm-whiz-processor-gpu -- nvidia-smi"
+# Processor status and logs
+kubectl get pods -n sejm-whiz -l app=sejm-whiz-processor-gpu
+kubectl logs -f -n sejm-whiz deployment/sejm-whiz-processor-gpu
+
+# Database status and documents
+kubectl exec -n sejm-whiz deployment/postgresql-pgvector -- psql -U sejm_whiz_user -d sejm_whiz -c "SELECT COUNT(*) FROM legal_documents;"
+
+# GPU utilization
+kubectl exec -n sejm-whiz deployment/sejm-whiz-processor-gpu -- nvidia-smi
+
+# Redis cache status
+kubectl exec -n sejm-whiz deployment/redis -- redis-cli info memory
 ```
+
+### Metrics Collection
+
+If Prometheus is installed, metrics are automatically collected at:
+- `/metrics` endpoint on processor (port 8080)
+- ServiceMonitor and PodMonitor configured
+- Alert rules for failures and resource usage
 
 ## Troubleshooting
 

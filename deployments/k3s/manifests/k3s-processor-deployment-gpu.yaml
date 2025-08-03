@@ -24,13 +24,6 @@ spec:
       containers:
       - name: processor
         image: sejm-whiz-processor:optimized
-        resources:
-          requests:
-            memory: "2Gi"
-            cpu: "1"
-          limits:
-            memory: "5Gi"
-            cpu: "2"
         env:
         # NVIDIA GPU environment variables (from working example)
         - name: NVIDIA_VISIBLE_DEVICES
@@ -64,6 +57,35 @@ spec:
           value: "/app/.cache"
         - name: TRANSFORMERS_CACHE
           value: "/app/.cache"
+        ports:
+        - name: metrics
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 2
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+            nvidia.com/gpu: 1
+          limits:
+            memory: "6Gi"
+            cpu: "3"
+            nvidia.com/gpu: 1
         volumeMounts:
         - name: model-cache
           mountPath: /app/.cache
