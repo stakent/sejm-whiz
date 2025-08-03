@@ -221,6 +221,41 @@ class ProcessingStepInfo(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class Processing(BaseModel):
+    """Legislative processing model for tracking bill/law changes."""
+
+    id: int
+    term: int
+    number: int
+    print_number: str = Field(..., alias="printNumber")
+    title: str
+    description: Optional[str] = None
+    document_type: str = Field(..., alias="documentType")
+    document_date: Optional[date] = Field(None, alias="documentDate")
+    receipt_date: Optional[date] = Field(None, alias="receiptDate")
+    origin: Optional[str] = None
+    rcl_number: Optional[str] = Field(None, alias="rclNumber")
+    urgent: bool = False
+    current_stage: ProcessingStage = Field(..., alias="currentStage")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @property
+    def is_active(self) -> bool:
+        """Check if processing is still active."""
+        return self.current_stage not in [
+            ProcessingStage.ENACTED,
+            ProcessingStage.REJECTED
+        ]
+
+    @property
+    def days_in_processing(self) -> Optional[int]:
+        """Calculate days since receipt date."""
+        if self.receipt_date is None:
+            return None
+        return (date.today() - self.receipt_date).days
+
+
 class Proceeding(BaseModel):
     """Parliamentary proceeding model (full Sejm assembly session)."""
 
