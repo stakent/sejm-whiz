@@ -40,7 +40,7 @@ This is a Python project structured as a Polylith workspace implementing an AI-d
 
 ## System Architecture
 
-### Implementation Status (Phase 4-5 Complete with Deployment Issues)
+### Implementation Status
 
 ```mermaid
 graph TD
@@ -93,7 +93,7 @@ graph TD
     style N fill:#90EE90
     style O fill:#90EE90
     style P fill:#90EE90
-    style Q fill:#FFE4B5
+    style Q fill:#90EE90
 ```
 
 ### Production Architecture Goals
@@ -204,33 +204,67 @@ This project demonstrates the Polylith Architecture - a components-first approac
 
 **Developer Experience**: Polylith is designed around developer experience, supporting REPL-driven development workflows that make coding both joyful and interactive.
 
-### Implemented Components (Phase 1-4 Complete)
+### Component Status
+
+**Note on Integration Status**: While many components are fully implemented and tested, integration into the running system varies. Components marked as "integrated" are actively processing data in production. Those marked as "built" are complete but not yet connected to the live pipeline.
 
 **Data Integration & Processing:**
-- `database` - PostgreSQL + pgvector operations with Alembic migrations (WIP - deployed but no data ingestion yet)
-- `eli_api` - ELI API integration with comprehensive legal document parsing, batch processing controls, and security features
-- `sejm_api` - Sejm Proceedings API integration with comprehensive validation, rate limiting, and security features
-- `text_processing` - Polish legal text processing with cleaning, normalization, tokenization, and entity extraction
-- `document_ingestion` - Document processing pipeline and ingestion workflows
+- `database` - PostgreSQL + pgvector operations with Alembic migrations
+  - Status: Fully integrated, 168 documents stored
+  - Integration: Active in production pipeline
+- `eli_api` - ELI API integration with legal document parsing
+  - Status: Built and tested, pipeline step defined
+  - Integration Gap: Pipeline exists but never called, no ELI documents in database
+- `sejm_api` - Sejm Proceedings API integration with rate limiting
+  - Status: Fully integrated, actively ingesting data
+  - Integration: Processing 168 proceedings successfully
+- `text_processing` - Polish legal text processing
+  - Status: Fully integrated in pipeline
+  - Integration: Processing all documents before storage
+- `document_ingestion` - Document processing pipeline
+  - Status: Fully integrated
+  - Integration: Orchestrating Sejm → Text → Embeddings → Database flow
 
 **AI & Machine Learning:**
-- `embeddings` - HerBERT embeddings with comprehensive Polish BERT implementation, bag-of-embeddings approach, batch processing, similarity calculations, and GPU optimization
-- `vector_db` - Vector database operations with pgvector for semantic similarity search and embeddings storage
-- `legal_nlp` - Advanced legal document analysis with multi-act amendment detection, semantic analysis, and relationship extraction
-- `prediction_models` - ML models for law change predictions with ensemble methods, similarity-based predictors, and classification models
-- `semantic_search` - Embedding-based search and similarity with cross-register matching for legal vs parliamentary language
+- `embeddings` - HerBERT embeddings with Polish BERT
+  - Status: Fully integrated, GPU-optimized
+  - Integration: Generating embeddings for all documents (95 stored)
+- `vector_db` - Vector database operations with pgvector
+  - Status: Fully integrated
+  - Integration: Storing embeddings in PostgreSQL
+- `legal_nlp` - Legal document analysis with amendment detection
+  - Status: Built and tested
+  - Integration Gap: Not imported in any running service, legal concepts not being extracted
+- `prediction_models` - ML models for law change predictions
+  - Status: Built and tested
+  - Integration Gap: No prediction endpoints in API, models not trained or serving
+- `semantic_search` - Embedding-based search with cross-register matching
+  - Status: Built and tested
+  - Integration Gap: No search endpoints in API, not querying stored embeddings
 
 **Infrastructure:**
-- `redis` - Caching and queue management for background tasks and embedding operations
+- `redis` - Caching and queue management
+  - Status: Deployed and running
+  - Integration Gap: Not configured in applications, no cache operations or job queues active
 
 **Application Framework:**
-- `web_api` (base) - FastAPI web server base with comprehensive error handling, CORS support, health endpoints, and API documentation
-- `data_pipeline` (base) - Data processing base with pipeline orchestration, batch processing, and error handling
-- `api_server` (project) - Main web API server combining web_api base with FastAPI application, health endpoints, and API documentation
-- `data_processor` (project) - Batch processing project combining data_pipeline base with ingestion components
-- `web_ui` (project) - Web monitoring dashboard with real-time log streaming, multi-page interface, and production deployment
+- `web_api` (base) - FastAPI web server base
+  - Status: Fully integrated
+  - Integration: Serving health endpoints and basic API
+- `data_pipeline` (base) - Data processing base
+  - Status: Fully integrated
+  - Integration: Orchestrating data flow successfully
+- `api_server` (project) - Main web API server
+  - Status: Deployed with minimal functionality
+  - Integration Gap: Only imports web_api base, no AI/ML components connected, no functional endpoints beyond health
+- `data_processor` (project) - Batch processing project
+  - Status: Partially integrated
+  - Integration: Only runs Sejm pipeline, ELI pipeline defined but unused
+- `web_ui` (project) - Web monitoring dashboard
+  - Status: Deployed and accessible
+  - Integration Gap: Monitoring features incomplete, no real-time data connection
 
-### Planned Components (Phase 5)
+### Planned Components
 - `legal_graph` - Legal act dependency mapping and cross-reference analysis
 - `user_preferences` - User interest profiling and subscription management
 - `notification_system` - Multi-channel notification delivery
@@ -414,32 +448,53 @@ The project includes a comprehensive web interface for monitoring and interactin
 - **Deployment**: Multi-stage Docker build with k3s deployment manifests
 - **Container**: Production-ready containerization following data processor pattern
 
-## Project Status & Development Phases
+## Project Status
 
-**✅ Phase 1-5 Implementation Complete with Deployment Issues**
-- All core components implemented and tested (900+ tests passing)
-- Web UI fully deployed and operational (http://192.168.0.200:30800/)
-- PostgreSQL + pgvector database deployed and stable (2d uptime)
-- GPU-enabled k3s deployment partially working
-- Comprehensive test coverage across all components
+**Current System Capabilities:**
+- **Data Ingestion**: Successfully ingesting Sejm proceedings via API (168 documents)
+- **Text Processing**: Polish legal text normalization and tokenization operational
+- **Embeddings Generation**: HerBERT Polish BERT generating embeddings on GPU (95 embeddings)
+- **Storage**: PostgreSQL with pgvector storing documents and embeddings
+- **Testing**: 772 unit tests passing across all components
 
-**🚀 Current State**:
-- **k3s Cluster**: Running on p7 host with GTX 1060 GPU
-- **Database**: PostgreSQL with pgvector extension deployed (no data yet - processor failing)
-- **Web UI**: Fully operational with real-time monitoring dashboard
-- **Processor**: Implementation complete but deployment failing (database connection config issue)
-- **Model Cache**: 10Gi persistent volume for HerBERT models
+**Integration Gaps - Built but Not Connected:**
+- **ELI API**: Pipeline defined but never executed (0 ELI documents ingested)
+- **Legal NLP**: Not analyzing documents for legal concepts or amendments
+- **Prediction Models**: No model training or inference running
+- **Semantic Search**: Not serving search queries against stored embeddings
+- **Redis Cache**: Running but not utilized by applications
+- **API Server**: Only serving health checks, no functional endpoints
 
-**🔧 Active Issues**:
-- Data processor CrashLoopBackOff due to localhost database config instead of k8s service name
-- Some components implemented but not yet deployed to production
+**Deployment Infrastructure:**
+- **k3s Cluster**: Single-node deployment with GPU support
+- **Database**: PostgreSQL 17 with pgvector extension (168 Sejm proceedings, 95 embeddings, 0 ELI documents)
+- **Redis**: Deployed but not connected to applications
+- **Web UI**: Deployed at port 30801, limited monitoring capability
+- **Data Processor**: Running Sejm pipeline only, ELI pipeline unused
+- **API Server**: Running but serving minimal functionality
+- **Storage**: 10Gi persistent volume for HerBERT model caching
 
-**🚧 Phase 5 Planned (Advanced Features)**
-- Legal dependency graphing
-- User personalization system
-- Interactive dashboard
-- Advanced ML training pipelines
-- Multi-cloud deployment support
+**Active Data Flow:**
+```
+Sejm API → Text Processing → Embeddings (GPU) → Database Storage
+```
+
+**Disconnected Components:**
+```
+ELI API ✗ (pipeline defined but not called)
+Legal NLP ✗ (not imported in any service)
+Prediction Models ✗ (no endpoints or training)
+Semantic Search ✗ (no search endpoints)
+Redis Cache ✗ (not configured in apps)
+```
+
+**Next Development Phase:**
+- Complete monitoring infrastructure setup
+- Implement legal dependency graphing
+- Add user personalization system
+- Develop interactive dashboard
+- Create ML training pipelines
+- Extend multi-cloud deployment support
 
 See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `deployments/k3s/README.md` for deployment instructions.
 
