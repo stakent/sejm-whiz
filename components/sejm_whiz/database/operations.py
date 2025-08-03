@@ -23,8 +23,8 @@ class DocumentOperations:
         document_type: str,
         embedding: Optional[List[float]] = None,
         **kwargs,
-    ) -> LegalDocument:
-        """Create a new legal document."""
+    ) -> UUID:
+        """Create a new legal document and return its UUID."""
         with get_db_session() as session:
             document = LegalDocument(
                 title=title,
@@ -36,7 +36,8 @@ class DocumentOperations:
             session.add(document)
             session.flush()
             session.refresh(document)
-            return document
+            document_id = document.id  # Extract UUID before session closes
+            return document_id
 
     @staticmethod
     def get_document_by_id(document_id: UUID) -> Optional[LegalDocument]:
@@ -415,7 +416,7 @@ class AnalyticsOperations:
             # Multi-act amendments
             stats["multi_act_amendments"] = (
                 session.query(LegalAmendment)
-                .filter(LegalAmendment.affects_multiple_acts == True)
+                .filter(LegalAmendment.affects_multiple_acts)
                 .count()
             )
 
