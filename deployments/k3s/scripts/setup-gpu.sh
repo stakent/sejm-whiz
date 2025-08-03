@@ -75,9 +75,24 @@ else
 fi
 
 echo "✅ GPU-enabled sejm-whiz deployment complete!"
+
+# 12. Optional: Deploy Web UI
+echo ""
+read -p "🌐 Deploy Web UI monitoring dashboard? (y/N): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "🌐 Deploying Web UI..."
+    ./deployments/k3s/scripts/setup-web-ui.sh
+    echo "✅ Web UI deployment complete!"
+    echo "📱 Access Web UI at: http://192.168.0.200:30800/"
+else
+    echo "⏭️  Skipping Web UI deployment"
+fi
+
 echo ""
 echo "📋 Next steps:"
 echo "  - Monitor pod logs: ssh root@p7 'kubectl logs -n sejm-whiz deployment/sejm-whiz-processor-gpu -f'"
 echo "  - Check GPU utilization: ssh root@p7 'kubectl exec -n sejm-whiz $POD_NAME -- nvidia-smi'"
 echo "  - Scale deployment: ssh root@p7 'kubectl scale deployment sejm-whiz-processor-gpu --replicas=1 -n sejm-whiz'"
+echo "  - Deploy Web UI separately: ./deployments/k3s/scripts/setup-web-ui.sh"
 echo "  - Clean up: ssh root@p7 'rm -rf /tmp/sejm-whiz'"
