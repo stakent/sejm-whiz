@@ -39,6 +39,22 @@ spec:
           value: "compute,utility"
         - name: CUDA_VISIBLE_DEVICES
           value: "0"
+        # Database connection
+        - name: DATABASE_HOST
+          value: "postgresql-pgvector.sejm-whiz"
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_NAME
+          value: "sejm_whiz"
+        - name: DATABASE_USER
+          value: "sejm_whiz"
+        - name: DATABASE_PASSWORD
+          value: "sejm_whiz_password"
+        # Redis connection
+        - name: REDIS_HOST
+          value: "redis.sejm-whiz"
+        - name: REDIS_PORT
+          value: "6379"
         # Application-specific environment
         - name: EMBEDDING_DEVICE
           value: "cuda"
