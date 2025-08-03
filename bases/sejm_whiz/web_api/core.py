@@ -134,25 +134,37 @@ def configure_routes(app: FastAPI) -> None:
         """Stream data processor logs in real-time."""
         async def log_generator() -> AsyncGenerator[str, None]:
             kubectl_available = False
+            pod_selector = None
             
-            # First, check if kubectl is available and has pods
-            try:
-                check_process = await asyncio.create_subprocess_exec(
-                    "kubectl", "get", "pods", "-l", "app=data-processor",
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                stdout, stderr = await check_process.communicate()
-                if check_process.returncode == 0 and b"No resources found" not in stdout:
-                    kubectl_available = True
-            except (FileNotFoundError, OSError):
-                kubectl_available = False
+            # Try GPU processor first, then CPU processor
+            processor_labels = [
+                "app=sejm-whiz-processor-gpu",
+                "app=sejm-whiz-processor-cpu", 
+                "app=data-processor"
+            ]
             
-            if kubectl_available:
+            # Check which processor pods are available
+            for label in processor_labels:
+                try:
+                    check_process = await asyncio.create_subprocess_exec(
+                        "kubectl", "get", "pods", "-n", "sejm-whiz", "-l", label,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await check_process.communicate()
+                    if check_process.returncode == 0 and b"No resources found" not in stdout and stdout.strip():
+                        kubectl_available = True
+                        pod_selector = label
+                        yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found processor pods with label: {label}\n\n"
+                        break
+                except (FileNotFoundError, OSError):
+                    continue
+            
+            if kubectl_available and pod_selector:
                 try:
                     # Stream logs from Kubernetes pod
                     process = await asyncio.create_subprocess_exec(
-                        "kubectl", "logs", "-f", "-l", "app=data-processor", "--tail=100",
+                        "kubectl", "logs", "-f", "-n", "sejm-whiz", "-l", pod_selector, "--tail=50",
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE
                     )
@@ -163,6 +175,7 @@ def configure_routes(app: FastAPI) -> None:
                         return
                 except Exception as e:
                     logger.warning(f"Failed to stream from kubectl: {e}")
+                    yield f"data: {datetime.utcnow().isoformat()} - dashboard - ERROR - Failed to stream logs: {e}\n\n"
             
             # Check for local log file
             log_file = Path("/var/log/sejm-whiz/data-processor.log")
@@ -236,25 +249,35 @@ def configure_routes(app: FastAPI) -> None:
     async def processor_status():
         """Get the current status of the data processor."""
         try:
-            # Try to get pod status from Kubernetes
-            result = subprocess.run(
-                ["kubectl", "get", "pods", "-l", "app=data-processor", "-o", "json"],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
+            # Try GPU processor first, then CPU processor
+            processor_labels = [
+                "app=sejm-whiz-processor-gpu",
+                "app=sejm-whiz-processor-cpu", 
+                "app=data-processor"
+            ]
             
-            if result.returncode == 0:
-                import json
-                pods_data = json.loads(result.stdout)
-                if pods_data.get("items"):
-                    pod = pods_data["items"][0]
-                    return {
-                        "status": pod["status"]["phase"],
-                        "pod_name": pod["metadata"]["name"],
-                        "started_at": pod["status"].get("startTime"),  # This is already a string from kubectl JSON
-                        "container_statuses": pod["status"].get("containerStatuses", [])
-                    }
+            for label in processor_labels:
+                result = subprocess.run(
+                    ["kubectl", "get", "pods", "-n", "sejm-whiz", "-l", label, "-o", "json"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                
+                if result.returncode == 0:
+                    import json
+                    pods_data = json.loads(result.stdout)
+                    if pods_data.get("items"):
+                        pod = pods_data["items"][0]
+                        processor_type = "GPU" if "gpu" in label else "CPU" if "cpu" in label else "Unknown"
+                        return {
+                            "status": pod["status"]["phase"],
+                            "processor_type": processor_type,
+                            "pod_name": pod["metadata"]["name"],
+                            "started_at": pod["status"].get("startTime"),
+                            "container_statuses": pod["status"].get("containerStatuses", []),
+                            "label_selector": label
+                        }
         except Exception as e:
             logger.error(f"Error getting processor status: {e}")
         
