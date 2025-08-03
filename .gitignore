@@ -216,4 +216,10 @@ local_settings.py
   *.bin
   pytorch_model.bin
   model.safetensors
-  *.safetensors
+  *.safetensors.claude/settings.local.json
+
+# Claude
+.claude/settings.json
+.claude/memory/
+.claude/logs/
+!.claude/agents/
