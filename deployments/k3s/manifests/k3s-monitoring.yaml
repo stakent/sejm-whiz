@@ -1,0 +1,79 @@
+# ServiceMonitor for Prometheus metrics collection
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sejm-whiz-processor-metrics
+  namespace: sejm-whiz
+  labels:
+    app: sejm-whiz-processor-gpu
+spec:
+  selector:
+    matchLabels:
+      app: sejm-whiz-processor-gpu
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+---
+# ConfigMap for Prometheus rules
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sejm-whiz-prometheus-rules
+  namespace: sejm-whiz
+data:
+  rules.yml: |
+    groups:
+    - name: sejm-whiz.rules
+      rules:
+      - alert: ProcessorDown
+        expr: up{job="sejm-whiz-processor-gpu"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Sejm-Whiz processor is down"
+          description: "The processor has been down for more than 2 minutes"
+      
+      - alert: HighGPUMemoryUsage
+        expr: gpu_memory_used_bytes / gpu_memory_total_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High GPU memory usage"
+          description: "GPU memory usage is above 90% for 5 minutes"
+      
+      - alert: PipelineFailureRate
+        expr: rate(pipeline_failures_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High pipeline failure rate"
+          description: "Pipeline failure rate is above 10% over 5 minutes"
+      
+      - alert: DatabaseConnectionError
+        expr: database_connection_errors_total > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection errors detected"
+          description: "Database connection errors in the last minute"
+---
+# PodMonitor for detailed pod metrics
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: sejm-whiz-pod-metrics
+  namespace: sejm-whiz
+spec:
+  selector:
+    matchLabels:
+      app: sejm-whiz-processor-gpu
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 15s
