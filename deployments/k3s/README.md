@@ -15,11 +15,28 @@ deployments/k3s/
 ├── scripts/            # Deployment and validation scripts
 │   ├── setup-gpu.sh    # Main GPU deployment script
 │   ├── setup-web-ui.sh # Web UI deployment script
+│   ├── run-migrations.sh # Database migration script
 │   └── gpu_validation.py # GPU validation and testing script
 └── helm/               # Helm charts (future)
 ```
 
 ## Quick Start
+
+### Prerequisites - Database Setup
+
+Before deploying the processor, ensure the database is properly initialized:
+
+```bash
+# Run database migrations to create required tables
+./deployments/k3s/scripts/run-migrations.sh
+```
+
+This will create all necessary tables including:
+- `legal_documents` - Main document storage
+- `document_embeddings` - Vector embeddings with pgvector
+- `legal_amendments` - Amendment tracking
+- `cross_references` - Document relationships
+- `prediction_models` - ML model metadata
 
 ### GPU-Enabled Deployment
 
