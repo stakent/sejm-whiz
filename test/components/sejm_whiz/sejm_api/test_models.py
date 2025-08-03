@@ -9,7 +9,7 @@ from sejm_whiz.sejm_api.models import (
     Deputy,
     Committee,
     Interpellation,
-    Proceeding,
+    Processing,
     VotingResult,
     DeputyStatus,
     ProcessingStage,
@@ -284,11 +284,12 @@ class TestSejmApiModels:
         assert interpellation.reply == "Odpowiedź ministra..."
         assert interpellation.reply_date == date(2023, 2, 15)
 
-    def test_proceeding_model(self):
-        """Test Proceeding model creation and validation."""
+    def test_processing_model(self):
+        """Test Processing model creation and validation."""
         processing_data = {
             "id": 1,
             "term": 10,
+            "number": 123,
             "printNumber": "123",
             "title": "Ustawa o zmianie ustawy o podatku dochodowym",
             "description": "Projekt ustawy zmieniającej przepisy podatkowe",
@@ -301,49 +302,52 @@ class TestSejmApiModels:
             "currentStage": "pierwsze_czytanie",
         }
 
-        proceeding = Proceeding.model_validate(processing_data)
+        processing = Processing.model_validate(processing_data)
 
-        assert proceeding.id == 1
-        assert proceeding.term == 10
-        assert proceeding.print_number == "123"
-        assert proceeding.title == "Ustawa o zmianie ustawy o podatku dochodowym"
+        assert processing.id == 1
+        assert processing.term == 10
+        assert processing.number == 123
+        assert processing.print_number == "123"
+        assert processing.title == "Ustawa o zmianie ustawy o podatku dochodowym"
         assert (
-            proceeding.description == "Projekt ustawy zmieniającej przepisy podatkowe"
+            processing.description == "Projekt ustawy zmieniającej przepisy podatkowe"
         )
-        assert proceeding.document_type == "rządowy projekt ustawy"
-        assert proceeding.document_date == date(2023, 1, 10)
-        assert proceeding.receipt_date == date(2023, 1, 15)
-        assert proceeding.origin == "Rada Ministrów"
-        assert proceeding.rcl_number == "RC-123"
-        assert proceeding.urgent is False
-        assert proceeding.current_stage == ProcessingStage.FIRST_READING
+        assert processing.document_type == "rządowy projekt ustawy"
+        assert processing.document_date == date(2023, 1, 10)
+        assert processing.receipt_date == date(2023, 1, 15)
+        assert processing.origin == "Rada Ministrów"
+        assert processing.rcl_number == "RC-123"
+        assert processing.urgent is False
+        assert processing.current_stage == ProcessingStage.FIRST_READING
 
-    def test_proceeding_is_active_property(self):
-        """Test Proceeding is_active property."""
+    def test_processing_is_active_property(self):
+        """Test Processing is_active property."""
         # Active processing
         processing_data = {
             "id": 1,
             "term": 10,
+            "number": 123,
             "printNumber": "123",
             "title": "Test",
+            "documentType": "projekt ustawy",
             "currentStage": "pierwsze_czytanie",
         }
 
-        proceeding = Proceeding.model_validate(processing_data)
-        assert proceeding.is_active is True
+        processing = Processing.model_validate(processing_data)
+        assert processing.is_active is True
 
         # Enacted processing (not active)
         processing_data["currentStage"] = "uchwalone"
-        proceeding = Proceeding.model_validate(processing_data)
-        assert proceeding.is_active is False
+        processing = Processing.model_validate(processing_data)
+        assert processing.is_active is False
 
         # Rejected processing (not active)
         processing_data["currentStage"] = "odrzucone"
-        proceeding = Proceeding.model_validate(processing_data)
-        assert proceeding.is_active is False
+        processing = Processing.model_validate(processing_data)
+        assert processing.is_active is False
 
-    def test_proceeding_days_in_processing_property(self):
-        """Test Proceeding days_in_processing property."""
+    def test_processing_days_in_processing_property(self):
+        """Test Processing days_in_processing property."""
         from datetime import datetime, timedelta
 
         # Processing with receipt date
@@ -351,18 +355,21 @@ class TestSejmApiModels:
         processing_data = {
             "id": 1,
             "term": 10,
+            "number": 123,
             "printNumber": "123",
             "title": "Test",
+            "documentType": "projekt ustawy",
+            "currentStage": "pierwsze_czytanie",
             "receiptDate": receipt_date.isoformat(),
         }
 
-        proceeding = Proceeding.model_validate(processing_data)
-        assert proceeding.days_in_processing == 30
+        processing = Processing.model_validate(processing_data)
+        assert processing.days_in_processing == 30
 
         # Processing without receipt date
         processing_data["receiptDate"] = None
-        proceeding = Proceeding.model_validate(processing_data)
-        assert proceeding.days_in_processing is None
+        processing = Processing.model_validate(processing_data)
+        assert processing.days_in_processing is None
 
     def test_voting_option_model(self):
         """Test VotingOption model creation and validation."""

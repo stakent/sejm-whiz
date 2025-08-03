@@ -7,6 +7,7 @@ from .models import (
     Deputy,
     Committee,
     Interpellation,
+    Processing,
     Proceeding,
     VotingResult,
     DeputyStatus,
@@ -38,6 +39,7 @@ __all__ = [
     "Deputy",
     "Committee",
     "Interpellation",
+    "Processing",
     "Proceeding",
     # Enums
     "VotingResult",
