@@ -16,13 +16,13 @@ postgresql:
       enabled: true
       storageClass: "local-path"  # k3s default storage class
       size: 10Gi
-      
+
     resources:
       requests:
         memory: "256Mi"
         cpu: "250m"
       limits:
-        memory: "1Gi" 
+        memory: "1Gi"
         cpu: "1000m"
 
     initdb:

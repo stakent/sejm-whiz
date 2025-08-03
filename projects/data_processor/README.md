@@ -19,7 +19,7 @@ The data_processor project implements a configurable data pipeline system for ba
 ### Available Pipeline Steps
 
 1. **SejmDataIngestionStep**: Fetches parliamentary proceedings from Sejm API
-2. **ELIDataIngestionStep**: Fetches legal documents from ELI API  
+2. **ELIDataIngestionStep**: Fetches legal documents from ELI API
 3. **TextProcessingStep**: Cleans and processes text content
 4. **EmbeddingGenerationStep**: Generates embeddings using HerBERT
 5. **DatabaseStorageStep**: Stores processed data and embeddings in databases

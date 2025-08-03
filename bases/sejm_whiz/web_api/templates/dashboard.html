@@ -325,7 +325,7 @@
             }
 
             eventSource = new EventSource('/api/logs/stream');
-            
+
             eventSource.onopen = function() {
                 isConnected = true;
                 updateConnectionStatus(true);
@@ -343,7 +343,7 @@
                 isConnected = false;
                 updateConnectionStatus(false);
                 addLogLine('Connection lost. Attempting to reconnect...', 'error');
-                
+
                 // Attempt to reconnect after 5 seconds
                 setTimeout(() => {
                     if (!isConnected) {
@@ -355,11 +355,11 @@
 
         function addLogLine(line, type = '') {
             const logContent = document.getElementById('logContent');
-            
+
             // Create log line element
             const logLine = document.createElement('div');
             logLine.className = 'log-line';
-            
+
             // Apply color based on log level
             if (line.includes('ERROR') || type === 'error') {
                 logLine.className += ' log-error';
@@ -370,9 +370,9 @@
             } else if (type === 'success') {
                 logLine.className += ' log-success';
             }
-            
+
             logLine.textContent = line;
-            
+
             // Add to buffer and maintain max lines
             logBuffer.push(logLine);
             if (logBuffer.length > maxLogLines) {
@@ -381,9 +381,9 @@
                     removed.parentNode.removeChild(removed);
                 }
             }
-            
+
             logContent.appendChild(logLine);
-            
+
             // Auto-scroll if enabled
             if (autoScroll) {
                 logContent.scrollTop = logContent.scrollHeight;
@@ -407,20 +407,20 @@
             } else if (logLine.includes('database_storage')) {
                 stats.currentPipeline = 'Database Storage';
             }
-            
+
             // Count processed documents
             const docMatch = logLine.match(/stored_(\w+)_documents.*?(\d+)/);
             if (docMatch) {
                 stats.docsProcessed += parseInt(docMatch[2]);
             }
-            
+
             stats.lastUpdate = new Date();
         }
 
         function updateStats() {
             document.getElementById('docsProcessed').textContent = stats.docsProcessed;
             document.getElementById('currentPipeline').textContent = stats.currentPipeline;
-            document.getElementById('lastUpdate').textContent = 
+            document.getElementById('lastUpdate').textContent =
                 stats.lastUpdate.toLocaleTimeString();
         }
 
@@ -429,7 +429,7 @@
             const statusIndicator = document.getElementById('statusIndicator');
             const statusText = document.getElementById('statusText');
             const toggleBtn = document.getElementById('connectionToggle');
-            
+
             if (connected) {
                 statusEl.className = 'connection-status connected';
                 statusEl.innerHTML = 'Connected';
@@ -454,7 +454,7 @@
 
         function toggleAutoScroll() {
             autoScroll = !autoScroll;
-            document.getElementById('autoScrollText').textContent = 
+            document.getElementById('autoScrollText').textContent =
                 `Auto-scroll: ${autoScroll ? 'ON' : 'OFF'}`;
         }
 
@@ -474,10 +474,10 @@
             try {
                 const response = await fetch('/api/processor/status');
                 const data = await response.json();
-                
+
                 const statusIndicator = document.getElementById('statusIndicator');
                 const statusText = document.getElementById('statusText');
-                
+
                 if (data.status === 'Running') {
                     statusIndicator.className = 'status-indicator status-running';
                     statusText.textContent = 'Running';
@@ -497,10 +497,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             connectToLogStream();
             fetchProcessorStatus();
-            
+
             // Update processor status every 30 seconds
             setInterval(fetchProcessorStatus, 30000);
-            
+
             // Update last update time every second
             setInterval(() => {
                 const lastUpdateEl = document.getElementById('lastUpdate');

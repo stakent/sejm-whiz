@@ -32,9 +32,9 @@ class SejmDataIngestionStep(PipelineStep):
 
         # Extract parameters from input data
         session_id = data.get("session_id")
-        date_range = data.get("date_range")
+        # date_range = data.get("date_range")  # Reserved for future filtering
 
-        # Fetch proceeding sittings for the session
+        # Fetch proceeding sittings for the session (limit to prevent infinite processing)
         if session_id:
             proceedings = await self.client.get_proceeding_sittings(
                 term=int(session_id)
@@ -42,6 +42,13 @@ class SejmDataIngestionStep(PipelineStep):
         else:
             # Default to current term proceeding sittings
             proceedings = await self.client.get_proceeding_sittings()
+
+        # Limit to first 5 proceedings to prevent infinite processing
+        if len(proceedings) > 5:
+            self.logger.info(
+                f"Limiting proceedings from {len(proceedings)} to 5 for processing"
+            )
+            proceedings = proceedings[:5]
 
         return {
             **data,
@@ -142,16 +149,25 @@ class EmbeddingGenerationStep(PipelineStep):
         if "processed_sejm_proceedings" in data:
             proceedings = data["processed_sejm_proceedings"]
             proceedings_with_embeddings = []
+            total_proceedings = len(proceedings)
 
-            for proceeding in proceedings:
+            self.logger.info(
+                f"Generating embeddings for {total_proceedings} proceedings"
+            )
+
+            for i, proceeding in enumerate(proceedings):
                 text = proceeding.get("processed_content", "")
                 if text:
+                    self.logger.info(f"Processing proceeding {i+1}/{total_proceedings}")
                     embedding = self.generator.generate_bag_embedding(text)
                     proceedings_with_embeddings.append(
                         {**proceeding, "embedding": embedding}
                     )
 
             embeddings_data["sejm_proceedings_embeddings"] = proceedings_with_embeddings
+            self.logger.info(
+                f"Completed embedding generation for {len(proceedings_with_embeddings)} proceedings"
+            )
 
         # Generate embeddings for ELI documents
         if "processed_eli_documents" in data:

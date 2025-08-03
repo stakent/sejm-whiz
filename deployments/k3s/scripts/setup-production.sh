@@ -20,10 +20,10 @@ wait_for_deployment() {
 check_pod_health() {
     local app_label=$1
     echo "🔍 Checking health of pods with label app=$app_label..."
-    
+
     # Wait for pods to be running
     kubectl wait --for=condition=Ready pod -l app=$app_label -n $NAMESPACE --timeout=300s
-    
+
     # Check readiness probe
     local pod_name=$(kubectl get pods -n $NAMESPACE -l app=$app_label -o jsonpath='{.items[0].metadata.name}')
     echo "✅ Pod $pod_name is ready"
@@ -32,10 +32,10 @@ check_pod_health() {
 # Function to setup monitoring
 setup_monitoring() {
     echo "📊 Setting up monitoring and metrics collection..."
-    
+
     # Apply monitoring configuration
     kubectl apply -f "$MANIFESTS_DIR/k3s-monitoring.yaml"
-    
+
     # Create metrics collection service if not exists
     if ! kubectl get service prometheus-server -n monitoring 2>/dev/null; then
         echo "⚠️  Prometheus not found. Consider installing kube-prometheus-stack:"
@@ -47,9 +47,9 @@ setup_monitoring() {
 # Function to verify database connectivity
 verify_database() {
     echo "🗄️  Verifying database connectivity..."
-    
+
     local postgres_pod=$(kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=postgresql-pgvector -o jsonpath='{.items[0].metadata.name}')
-    
+
     if [ -n "$postgres_pod" ]; then
         kubectl exec -n $NAMESPACE $postgres_pod -- psql -U sejm_whiz_user -d sejm_whiz -c "SELECT 1;" > /dev/null
         echo "✅ Database connectivity verified"
@@ -62,9 +62,9 @@ verify_database() {
 # Function to test GPU availability
 test_gpu() {
     echo "🔧 Testing GPU availability..."
-    
+
     local processor_pod=$(kubectl get pods -n $NAMESPACE -l app=sejm-whiz-processor-gpu -o jsonpath='{.items[0].metadata.name}')
-    
+
     if [ -n "$processor_pod" ]; then
         kubectl exec -n $NAMESPACE $processor_pod -- nvidia-smi --query-gpu=name,memory.total,memory.used --format=csv,noheader 2>/dev/null
         echo "✅ GPU access verified"
@@ -77,7 +77,7 @@ test_gpu() {
 # Function to setup error recovery
 setup_error_recovery() {
     echo "🔄 Setting up error recovery mechanisms..."
-    
+
     # Add restart policy and backoff limits to existing deployments
     kubectl patch deployment sejm-whiz-processor-gpu -n $NAMESPACE -p '{
         "spec": {
@@ -88,17 +88,17 @@ setup_error_recovery() {
             }
         }
     }'
-    
+
     echo "✅ Error recovery mechanisms configured"
 }
 
 # Function to validate deployment
 validate_deployment() {
     echo "✅ Validating production deployment..."
-    
+
     # Check all deployments are ready
     local deployments=("postgresql-pgvector" "redis" "sejm-whiz-processor-gpu" "sejm-whiz-web-ui")
-    
+
     for deployment in "${deployments[@]}"; do
         if kubectl get deployment $deployment -n $NAMESPACE &>/dev/null; then
             wait_for_deployment $deployment
@@ -106,11 +106,11 @@ validate_deployment() {
             echo "⚠️  Deployment $deployment not found, skipping..."
         fi
     done
-    
+
     # Verify core services
     verify_database
     test_gpu
-    
+
     # Check web UI health
     echo "🌐 Checking Web UI health..."
     local web_ui_pod=$(kubectl get pods -n $NAMESPACE -l app=sejm-whiz-web-ui -o jsonpath='{.items[0].metadata.name}')
@@ -123,19 +123,19 @@ validate_deployment() {
 # Main execution
 main() {
     echo "🔧 Production setup starting..."
-    
+
     # Ensure namespace exists
     kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
-    
+
     # Setup monitoring
     setup_monitoring
-    
+
     # Setup error recovery
     setup_error_recovery
-    
+
     # Validate deployment
     validate_deployment
-    
+
     echo ""
     echo "🎉 Production setup completed successfully!"
     echo ""

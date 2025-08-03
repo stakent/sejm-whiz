@@ -4,7 +4,7 @@ import numpy as np
 from typing import List, Optional, Union
 import logging
 
-from .herbert_embedder import HerBERTEmbedder, get_herbert_embedder, EmbeddingResult
+from .herbert_embedder import get_herbert_embedder, EmbeddingResult
 from .config import EmbeddingConfig, get_embedding_config
 
 logger = logging.getLogger(__name__)

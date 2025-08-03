@@ -90,7 +90,7 @@ uv sync --dev
 # Add production dependency
 uv add requests httpx
 
-# Add development dependency  
+# Add development dependency
 uv add --dev pytest pytest-asyncio
 
 # Add with specific version
@@ -144,7 +144,7 @@ uv run poly create component --name your_component
 # Create new base
 uv run poly create base --name your_base
 
-# Create new project  
+# Create new project
 uv run poly create project --name your_project
 
 # Run tests
@@ -757,7 +757,7 @@ uv audit
 
 **✅ Recently Completed:**
 1. ✅ **COMPLETED**: Embeddings Component - HerBERT Polish BERT implementation
-2. ✅ **COMPLETED**: Legal NLP Component - Multi-act amendment detection and semantic analysis  
+2. ✅ **COMPLETED**: Legal NLP Component - Multi-act amendment detection and semantic analysis
 3. ✅ **COMPLETED**: Prediction Models Component - ML pipeline for law change predictions
 4. ✅ **COMPLETED**: Semantic Search Component - Document retrieval and ranking system with cross-register matching
 5. ✅ **COMPLETED**: Web API Base - FastAPI application factory with comprehensive features
@@ -796,7 +796,7 @@ uv audit
 5. Run existing tests to understand patterns:
    - `uv run pytest test/bases/sejm_whiz/web_api/ -v`
    - `uv run pytest test/components/sejm_whiz/sejm_api/ -v`
-   - `uv run pytest test/components/sejm_whiz/eli_api/ -v`  
+   - `uv run pytest test/components/sejm_whiz/eli_api/ -v`
    - `uv run pytest test/components/sejm_whiz/vector_db/ -v`
    - `uv run pytest test/components/sejm_whiz/text_processing/ -v`
    - `uv run pytest test/components/sejm_whiz/embeddings/ -v`

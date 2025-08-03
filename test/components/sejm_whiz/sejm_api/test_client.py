@@ -7,7 +7,6 @@ import httpx
 from sejm_whiz.sejm_api.client import SejmApiClient
 from sejm_whiz.sejm_api.models import (
     Session,
-    ProceedingSitting,
     Proceeding,
     Voting,
     Deputy,

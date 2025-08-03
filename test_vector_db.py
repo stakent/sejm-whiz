@@ -3,7 +3,6 @@
 
 import sys
 import os
-from typing import List
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -193,7 +192,7 @@ def test_sample_workflow():
         "embedding": normalize_embedding([0.1] * 768),
     }
 
-    print(f"Sample document:")
+    print("Sample document:")
     print(f"  Title: {sample_doc['title']}")
     print(f"  Type: {sample_doc['document_type']}")
     print(f"  Domain: {sample_doc['legal_domain']}")

@@ -11,7 +11,7 @@ def _try_import_spacy():
         from spacy.lang.pl import Polish
 
         return True, spacy, Polish
-    except (ImportError, ValueError) as e:
+    except (ImportError, ValueError):
         # ValueError can occur due to numpy compatibility issues
         return False, None, None
 

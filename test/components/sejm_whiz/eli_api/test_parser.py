@@ -408,9 +408,9 @@ class TestMultiActAmendmentDetector:
 
         for affected_acts, content, expected_impact in test_cases:
             impact = detector._assess_impact(affected_acts, content)
-            assert impact == expected_impact, (
-                f"Expected {expected_impact}, got {impact} for {len(affected_acts)} acts"
-            )
+            assert (
+                impact == expected_impact
+            ), f"Expected {expected_impact}, got {impact} for {len(affected_acts)} acts"
 
     def test_omnibus_indicator_detection(self, detector, sample_document):
         """Test detection of omnibus legislation indicators."""

@@ -3,7 +3,6 @@
 
 import sys
 import os
-from typing import List
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -12,9 +11,6 @@ from components.sejm_whiz.database import (
     DatabaseConfig,
     get_database_config,
     check_database_health,
-    init_database,
-    DocumentOperations,
-    VectorOperations,
 )
 
 

@@ -23,7 +23,6 @@ from components.sejm_whiz.redis import (
     check_redis_health,
     get_redis_cache,
     get_redis_queue,
-    JobPriority,
 )
 from components.sejm_whiz.document_ingestion import (
     get_ingestion_config,
@@ -57,7 +56,7 @@ class IntegrationTestSuite:
             Art. 2. Pełną zdolność do czynności prawnych nabywa się z chwilą uzyskania pełnoletności.
             Art. 3. § 1. Pełnoletność rozpoczyna się z chwilą ukończenia osiemnastego roku życia.
             § 2. Małoletni, który ukończył szesnasty rok życia, może przez oświadczenie złożone przed sądem opiekuńczym uzyskać pełnoletność, jeżeli zawarł związek małżeński.
-            
+
             Rozdział I - Osoby fizyczne
             Art. 8. Osoba fizyczna ma zdolność prawną w zakresie stosunków prawnych prawa cywilnego.
             Art. 9. § 1. Każdy człowiek ma niezbywalne i nieoddawalne prawo do życia oraz do swobodnego rozwoju swojej osobowości.
@@ -251,7 +250,7 @@ class IntegrationTestSuite:
             # Test legal structure extraction
             if processed_doc.metadata and "structure" in processed_doc.metadata:
                 structure = processed_doc.metadata["structure"]
-                print(f"✅ Legal structure extracted:")
+                print("✅ Legal structure extracted:")
                 print(f"   Articles: {len(structure.articles)}")
                 print(f"   Paragraphs: {len(structure.paragraphs)}")
                 print(f"   References: {len(structure.references)}")
@@ -291,11 +290,11 @@ class IntegrationTestSuite:
 
             # Test simple text embedding
             test_text = "Ustawa o prawach człowieka i obywatela."
-            print(f"🔄 Generating embedding for test text...")
+            print("🔄 Generating embedding for test text...")
 
             embedding_result = embedder.embed_text(test_text)
 
-            print(f"✅ Generated embedding:")
+            print("✅ Generated embedding:")
             print(f"   Dimensions: {embedding_result.embedding.shape}")
             print(f"   Model: {embedding_result.model_name}")
             print(f"   Processing time: {embedding_result.processing_time:.3f}s")
@@ -310,7 +309,7 @@ class IntegrationTestSuite:
                 document_type=self.sample_document["document_type"],
             )
 
-            print(f"✅ Legal document embedding generated:")
+            print("✅ Legal document embedding generated:")
             print(f"   Dimensions: {legal_embedding.embedding.shape}")
             print(f"   Quality score: {legal_embedding.quality_score:.2f}")
 
@@ -395,7 +394,7 @@ class IntegrationTestSuite:
             )
 
             if embedding_result:
-                print(f"✅ Step 3: Embedding generated and stored")
+                print("✅ Step 3: Embedding generated and stored")
                 print(f"   Embedding dimensions: {embedding_result.embedding.shape}")
                 print(f"   Quality score: {embedding_result.quality_score:.2f}")
             else:
@@ -496,7 +495,7 @@ async def main():
             print(f"\n💥 Failed components: {', '.join(failed_components)}")
             sys.exit(1)
         else:
-            print(f"\n🎯 Integration test suite completed successfully!")
+            print("\n🎯 Integration test suite completed successfully!")
             sys.exit(0)
 
     except KeyboardInterrupt:

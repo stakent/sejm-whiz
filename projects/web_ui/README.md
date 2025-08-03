@@ -18,7 +18,7 @@ This project provides a comprehensive web interface with multiple pages for moni
 
 Uses the `web_api` base from the Polylith workspace to provide:
 - FastAPI application framework
-- CORS middleware configuration  
+- CORS middleware configuration
 - Error handling and structured responses
 - Health check endpoints
 

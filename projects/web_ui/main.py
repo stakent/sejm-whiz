@@ -4,20 +4,17 @@
 import asyncio
 import subprocess
 from datetime import datetime
-from pathlib import Path
 from typing import AsyncGenerator
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
-from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
 app = FastAPI(
-    title="Sejm Whiz Web UI", 
+    title="Sejm Whiz Web UI",
     description="Web interface for monitoring Sejm Whiz data processing pipeline",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 # Configure CORS
@@ -29,15 +26,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def root():
     """Redirect to home page for better user experience."""
     return RedirectResponse(url="/home")
 
+
 @app.get("/health")
 async def health():
     """Health check endpoint."""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat(), "version": "0.1.0"}
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "0.1.0",
+    }
+
 
 @app.get("/home", response_class=HTMLResponse)
 async def home():
@@ -119,31 +123,31 @@ async def home():
                 AI-driven legal prediction system using Polish Parliament data
             </p>
             <p style="color: #4a5568; margin-top: 20px;">
-                Monitor parliamentary proceedings and legal documents to predict future law changes 
+                Monitor parliamentary proceedings and legal documents to predict future law changes
                 with multi-act amendment detection and cross-reference analysis.
             </p>
             <a href="/dashboard" class="btn">📊 View Dashboard</a>
         </div>
-        
+
         <div class="features">
             <div class="feature-card">
                 <h3>🏛️ Sejm Data Processing</h3>
-                <p>Real-time ingestion and processing of Polish Parliament proceedings, 
+                <p>Real-time ingestion and processing of Polish Parliament proceedings,
                    debates, and voting records using advanced NLP techniques.</p>
             </div>
             <div class="feature-card">
                 <h3>⚖️ Legal Document Analysis</h3>
-                <p>Integration with ELI API for effective law data, analyzing legal 
+                <p>Integration with ELI API for effective law data, analyzing legal
                    documents and tracking amendments across multiple acts.</p>
             </div>
             <div class="feature-card">
                 <h3>🤖 AI Predictions</h3>
-                <p>Machine learning models using bag of embeddings with HerBERT 
+                <p>Machine learning models using bag of embeddings with HerBERT
                    for semantic similarity and legal change prediction.</p>
             </div>
             <div class="feature-card">
                 <h3>🔍 Semantic Search</h3>
-                <p>Vector-based search using PostgreSQL + pgvector for finding 
+                <p>Vector-based search using PostgreSQL + pgvector for finding
                    related legal documents and cross-references.</p>
             </div>
         </div>
@@ -151,6 +155,7 @@ async def home():
 </body>
 </html>"""
     return HTMLResponse(content=html_content)
+
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard():
@@ -211,7 +216,7 @@ async def dashboard():
         .status-value { font-size: 1.8em; font-weight: bold; color: #2d3748; }
         .log-container {
             background: #1a202c; border-radius: 12px; padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             height: 500px; display: flex; flex-direction: column;
         }
         .log-header {
@@ -311,7 +316,7 @@ async def dashboard():
         function connectToLogStream() {
             if (eventSource) eventSource.close();
             eventSource = new EventSource('/api/logs/stream');
-            
+
             eventSource.onopen = function() {
                 isConnected = true;
                 document.getElementById('connectionStatus').innerHTML = '✅ Connected';
@@ -341,7 +346,7 @@ async def dashboard():
             if (line.includes('ERROR') || type === 'error') logLine.style.color = '#fc8181';
             logLine.textContent = line;
             logContent.appendChild(logLine);
-            
+
             // Ensure auto-scroll works reliably
             if (autoScroll) {
                 // Use requestAnimationFrame for smoother scrolling
@@ -365,7 +370,7 @@ async def dashboard():
             autoScroll = !autoScroll;
             const btn = document.getElementById('autoScrollBtn');
             const text = document.getElementById('autoScrollText');
-            
+
             if (autoScroll) {
                 text.textContent = '🔄 Auto-scroll: ON';
                 btn.className = 'btn btn-autoscroll-on';
@@ -401,56 +406,75 @@ async def dashboard():
 </html>"""
     return HTMLResponse(content=html_content)
 
+
 @app.get("/api/logs/stream")
 async def stream_logs():
     """Stream real processor logs from Kubernetes."""
+
     async def log_generator() -> AsyncGenerator[str, None]:
         kubectl_available = False
         pod_selector = None
-        
+
         # Try GPU processor first, then CPU processor
         processor_labels = [
             "app=sejm-whiz-processor-gpu",
-            "app=sejm-whiz-processor-cpu", 
-            "app=data-processor"
+            "app=sejm-whiz-processor-cpu",
+            "app=data-processor",
         ]
-        
+
         # Check which processor pods are available
         for label in processor_labels:
             try:
                 check_process = await asyncio.create_subprocess_exec(
-                    "kubectl", "get", "pods", "-n", "sejm-whiz", "-l", label,
+                    "kubectl",
+                    "get",
+                    "pods",
+                    "-n",
+                    "sejm-whiz",
+                    "-l",
+                    label,
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                    stderr=asyncio.subprocess.PIPE,
                 )
                 stdout, stderr = await check_process.communicate()
-                if check_process.returncode == 0 and b"No resources found" not in stdout and stdout.strip():
+                if (
+                    check_process.returncode == 0
+                    and b"No resources found" not in stdout
+                    and stdout.strip()
+                ):
                     kubectl_available = True
                     pod_selector = label
                     yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found processor pods with label: {label}\n\n"
                     break
             except (FileNotFoundError, OSError):
                 continue
-        
+
         if kubectl_available and pod_selector:
             try:
                 # Stream logs from Kubernetes pod
                 process = await asyncio.create_subprocess_exec(
-                    "kubectl", "logs", "-f", "-n", "sejm-whiz", "-l", pod_selector, "--tail=50",
+                    "kubectl",
+                    "logs",
+                    "-f",
+                    "-n",
+                    "sejm-whiz",
+                    "-l",
+                    pod_selector,
+                    "--tail=50",
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
+                    stderr=asyncio.subprocess.PIPE,
                 )
-                
+
                 if process.stdout:
                     async for line in process.stdout:
                         yield f"data: {line.decode('utf-8')}\n\n"
                     return
             except Exception as e:
                 yield f"data: {datetime.utcnow().isoformat()} - dashboard - ERROR - Failed to stream logs: {e}\n\n"
-        
+
         # Fallback: Generate demo logs
         yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - No live processor found, showing demo logs\n\n"
-        
+
         batch_num = 1
         while True:
             logs = [
@@ -466,12 +490,13 @@ async def stream_logs():
                 await asyncio.sleep(1)
             batch_num += 1
             await asyncio.sleep(3)
-    
+
     return StreamingResponse(
         log_generator(),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )
+
 
 @app.get("/api/processor/status")
 async def processor_status():
@@ -480,41 +505,61 @@ async def processor_status():
         # Try GPU processor first, then CPU processor
         processor_labels = [
             "app=sejm-whiz-processor-gpu",
-            "app=sejm-whiz-processor-cpu", 
-            "app=data-processor"
+            "app=sejm-whiz-processor-cpu",
+            "app=data-processor",
         ]
-        
+
         for label in processor_labels:
             result = subprocess.run(
-                ["kubectl", "get", "pods", "-n", "sejm-whiz", "-l", label, "-o", "json"],
+                [
+                    "kubectl",
+                    "get",
+                    "pods",
+                    "-n",
+                    "sejm-whiz",
+                    "-l",
+                    label,
+                    "-o",
+                    "json",
+                ],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
-            
+
             if result.returncode == 0:
                 import json
+
                 pods_data = json.loads(result.stdout)
                 if pods_data.get("items"):
                     pod = pods_data["items"][0]
-                    processor_type = "GPU" if "gpu" in label else "CPU" if "cpu" in label else "Unknown"
+                    processor_type = (
+                        "GPU"
+                        if "gpu" in label
+                        else "CPU"
+                        if "cpu" in label
+                        else "Unknown"
+                    )
                     return {
                         "status": pod["status"]["phase"],
                         "processor_type": processor_type,
                         "pod_name": pod["metadata"]["name"],
                         "started_at": pod["status"].get("startTime"),
-                        "container_statuses": pod["status"].get("containerStatuses", []),
-                        "label_selector": label
+                        "container_statuses": pod["status"].get(
+                            "containerStatuses", []
+                        ),
+                        "label_selector": label,
                     }
-    except Exception as e:
+    except Exception:
         pass
-    
+
     # Fallback status
     return {
         "status": "unknown",
         "message": "Unable to determine processor status",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
     }
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

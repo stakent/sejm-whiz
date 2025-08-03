@@ -7,7 +7,6 @@ import re
 
 from .models import (
     Session,
-    ProceedingSitting,
     CommitteeSitting,
     Proceeding,
     Voting,

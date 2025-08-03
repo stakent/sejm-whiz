@@ -5,14 +5,11 @@ import logging
 import re
 import numpy as np
 import traceback
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from transformers import (
     AutoTokenizer,
     AutoModel,
-    BertTokenizer,
-    BertModel,
-    RobertaTokenizer,
 )
 from huggingface_hub import hf_hub_download, list_repo_files
 import time
