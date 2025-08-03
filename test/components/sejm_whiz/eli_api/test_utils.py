@@ -69,9 +69,9 @@ class TestSanitizeQuery:
 
         for input_query, expected in test_cases:
             result = sanitize_query(input_query)
-            assert result == expected, (
-                f"Input: {input_query!r}, Expected: {expected!r}, Got: {result!r}"
-            )
+            assert (
+                result == expected
+            ), f"Input: {input_query!r}, Expected: {expected!r}, Got: {result!r}"
 
     def test_dangerous_patterns(self):
         """Test removal of dangerous patterns."""
@@ -91,9 +91,9 @@ class TestSanitizeQuery:
         for query in dangerous_queries:
             result = sanitize_query(query)
             # Should not contain the original dangerous pattern
-            assert query.lower() not in result.lower(), (
-                f"Dangerous pattern not removed: {query}"
-            )
+            assert (
+                query.lower() not in result.lower()
+            ), f"Dangerous pattern not removed: {query}"
 
     def test_control_characters(self):
         """Test removal of control characters."""
@@ -149,9 +149,9 @@ class TestNormalizeDocumentType:
 
         for input_type, expected in test_cases:
             result = normalize_document_type(input_type)
-            assert result == expected, (
-                f"Input: {input_type}, Expected: {expected}, Got: {result}"
-            )
+            assert (
+                result == expected
+            ), f"Input: {input_type}, Expected: {expected}, Got: {result}"
 
     def test_invalid_types(self):
         """Test handling of invalid document types."""
@@ -263,9 +263,9 @@ class TestParseDateString:
 
         for input_date, expected in test_cases:
             result = parse_date_string(input_date)
-            assert result == expected, (
-                f"Input: {input_date}, Expected: {expected}, Got: {result}"
-            )
+            assert (
+                result == expected
+            ), f"Input: {input_date}, Expected: {expected}, Got: {result}"
 
     def test_invalid_dates(self):
         """Test handling of invalid dates."""
@@ -308,9 +308,9 @@ class TestFormatEliId:
 
         for input_id, expected in test_cases:
             result = format_eli_id(input_id)
-            assert result == expected, (
-                f"Input: {input_id}, Expected: {expected}, Got: {result}"
-            )
+            assert (
+                result == expected
+            ), f"Input: {input_id}, Expected: {expected}, Got: {result}"
 
     def test_invalid_input(self):
         """Test handling of invalid input."""
@@ -385,9 +385,9 @@ class TestIsAmendmentDocument:
         ]
 
         for text in amendment_texts:
-            assert is_amendment_document(text) is True, (
-                f"Should detect amendment: {text}"
-            )
+            assert (
+                is_amendment_document(text) is True
+            ), f"Should detect amendment: {text}"
 
     def test_non_amendment_documents(self):
         """Test non-amendment documents."""
@@ -399,9 +399,9 @@ class TestIsAmendmentDocument:
         ]
 
         for text in non_amendment_texts:
-            assert is_amendment_document(text) is False, (
-                f"Should not detect amendment: {text}"
-            )
+            assert (
+                is_amendment_document(text) is False
+            ), f"Should not detect amendment: {text}"
 
     def test_title_and_content(self):
         """Test using both title and content."""

@@ -5,7 +5,7 @@ redis:
     repository: redis
     tag: "7.2-alpine"
     pullPolicy: IfNotPresent
-  
+
   # Resource limits
   resources:
     limits:
@@ -14,32 +14,32 @@ redis:
     requests:
       cpu: 100m
       memory: 128Mi
-  
+
   # Persistence configuration
   persistence:
     enabled: true
     size: 5Gi
     storageClass: "local-path"
     accessMode: ReadWriteOnce
-  
+
   # Redis configuration
   config:
     # Memory management
     maxmemory: "256mb"
     maxmemory_policy: "allkeys-lru"
-    
+
     # Persistence settings
     save: "900 1 300 10 60 10000"  # RDB snapshots
     appendonly: "yes"              # AOF persistence
     appendfsync: "everysec"        # AOF sync frequency
-    
+
     # Security
     requirepass: "redis_password"
-    
+
     # Performance
     timeout: 300
     tcp_keepalive: 60
-    
+
     # Job queue specific settings
     hash_max_ziplist_entries: 512
     hash_max_ziplist_value: 64

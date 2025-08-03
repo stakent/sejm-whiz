@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 
-from sejm_whiz.embeddings import get_herbert_embedder, get_batch_processor, BatchJob
+from sejm_whiz.embeddings import get_herbert_embedder, get_batch_processor
 from sejm_whiz.vector_db import get_vector_operations
 from sejm_whiz.text_processing import process_legal_document
 from sejm_whiz.database.models import LegalDocument

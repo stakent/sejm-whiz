@@ -34,10 +34,10 @@ spec:
         - |
           echo "Setting up database connection..."
           export DATABASE_URL="postgresql://sejm_whiz_user:sejm_whiz_password@postgresql-pgvector.$NAMESPACE:5432/sejm_whiz"
-          
+
           echo "Running Alembic migrations..."
           cd /app
-          
+
           # First, ensure alembic is configured correctly
           if [ -f components/sejm_whiz/database/alembic.ini ]; then
               cd components/sejm_whiz/database
@@ -48,10 +48,10 @@ spec:
               echo "Error: alembic.ini not found"
               exit 1
           fi
-          
+
           # Run migrations
           python -m alembic upgrade head
-          
+
           echo "Migrations completed successfully!"
         env:
         - name: DATABASE_HOST

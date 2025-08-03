@@ -57,7 +57,7 @@ spec:
         readinessProbe:
           exec:
             command:
-            - /bin/sh  
+            - /bin/sh
             - -c
             - pg_isready -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }}
           initialDelaySeconds: 5

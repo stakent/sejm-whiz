@@ -223,3 +223,4 @@ local_settings.py
 .claude/memory/
 .claude/logs/
 !.claude/agents/
+models/

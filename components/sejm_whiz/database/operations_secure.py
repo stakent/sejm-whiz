@@ -379,7 +379,7 @@ class SecureVectorOperations:
 
                 # Build parameterized query using text() with bound parameters
                 base_query = text("""
-                    SELECT d.*, 
+                    SELECT d.*,
                            (1 - (d.embedding <=> :query_embedding)) as similarity
                     FROM legal_documents d
                     WHERE d.embedding IS NOT NULL

@@ -63,10 +63,10 @@ def configure_static_files(app: FastAPI) -> None:
     base_dir = Path(__file__).parent
     static_dir = base_dir / "static"
     templates_dir = base_dir / "templates"
-    
+
     static_dir.mkdir(exist_ok=True)
     templates_dir.mkdir(exist_ok=True)
-    
+
     # Mount static files
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
@@ -90,7 +90,9 @@ def configure_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=422,
             content=ErrorResponse(
-                error="ValidationError", detail=str(exc), timestamp=datetime.utcnow().isoformat()
+                error="ValidationError",
+                detail=str(exc),
+                timestamp=datetime.utcnow().isoformat(),
             ).model_dump(),
         )
 
@@ -112,7 +114,7 @@ def configure_routes(app: FastAPI) -> None:
     base_dir = Path(__file__).parent
     templates_dir = base_dir / "templates"
     templates = Jinja2Templates(directory=str(templates_dir))
-    
+
     @app.get("/health", response_model=HealthResponse)
     async def health_check():
         return HealthResponse(status="healthy", timestamp=datetime.utcnow().isoformat())
@@ -120,55 +122,73 @@ def configure_routes(app: FastAPI) -> None:
     @app.get("/")
     async def root():
         return {"message": "Sejm Whiz API", "version": "0.1.0", "docs": "/docs"}
-    
+
     @app.get("/dashboard", response_class=HTMLResponse)
     async def dashboard(request: Request):
         """Serve the monitoring dashboard."""
         return templates.TemplateResponse(
             "dashboard.html",
-            {"request": request, "title": "Sejm Whiz Data Processor Monitor"}
+            {"request": request, "title": "Sejm Whiz Data Processor Monitor"},
         )
-    
+
     @app.get("/api/logs/stream")
     async def stream_logs() -> StreamingResponse:
         """Stream data processor logs in real-time."""
+
         async def log_generator() -> AsyncGenerator[str, None]:
             kubectl_available = False
             pod_selector = None
-            
+
             # Try GPU processor first, then CPU processor
             processor_labels = [
                 "app=sejm-whiz-processor-gpu",
-                "app=sejm-whiz-processor-cpu", 
-                "app=data-processor"
+                "app=sejm-whiz-processor-cpu",
+                "app=data-processor",
             ]
-            
+
             # Check which processor pods are available
             for label in processor_labels:
                 try:
                     check_process = await asyncio.create_subprocess_exec(
-                        "kubectl", "get", "pods", "-n", "sejm-whiz", "-l", label,
+                        "kubectl",
+                        "get",
+                        "pods",
+                        "-n",
+                        "sejm-whiz",
+                        "-l",
+                        label,
                         stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
+                        stderr=asyncio.subprocess.PIPE,
                     )
                     stdout, stderr = await check_process.communicate()
-                    if check_process.returncode == 0 and b"No resources found" not in stdout and stdout.strip():
+                    if (
+                        check_process.returncode == 0
+                        and b"No resources found" not in stdout
+                        and stdout.strip()
+                    ):
                         kubectl_available = True
                         pod_selector = label
                         yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found processor pods with label: {label}\n\n"
                         break
                 except (FileNotFoundError, OSError):
                     continue
-            
+
             if kubectl_available and pod_selector:
                 try:
                     # Stream logs from Kubernetes pod
                     process = await asyncio.create_subprocess_exec(
-                        "kubectl", "logs", "-f", "-n", "sejm-whiz", "-l", pod_selector, "--tail=50",
+                        "kubectl",
+                        "logs",
+                        "-f",
+                        "-n",
+                        "sejm-whiz",
+                        "-l",
+                        pod_selector,
+                        "--tail=50",
                         stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
+                        stderr=asyncio.subprocess.PIPE,
                     )
-                    
+
                     if process.stdout:
                         async for line in process.stdout:
                             yield f"data: {line.decode('utf-8')}\n\n"
@@ -176,16 +196,18 @@ def configure_routes(app: FastAPI) -> None:
                 except Exception as e:
                     logger.warning(f"Failed to stream from kubectl: {e}")
                     yield f"data: {datetime.utcnow().isoformat()} - dashboard - ERROR - Failed to stream logs: {e}\n\n"
-            
+
             # Check for local log file
             log_file = Path("/var/log/sejm-whiz/data-processor.log")
             if log_file.exists():
                 try:
                     # Tail the log file
                     process = await asyncio.create_subprocess_exec(
-                        "tail", "-f", str(log_file),
+                        "tail",
+                        "-f",
+                        str(log_file),
                         stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
+                        stderr=asyncio.subprocess.PIPE,
                     )
                     if process.stdout:
                         async for line in process.stdout:
@@ -193,10 +215,10 @@ def configure_routes(app: FastAPI) -> None:
                         return
                 except Exception as e:
                     logger.warning(f"Failed to tail log file: {e}")
-            
+
             # Fallback: Generate sample/demo logs for development
             yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - No live logs available, showing demo logs\n\n"
-            
+
             sample_logs = [
                 f"{datetime.utcnow().isoformat()} - data_processor - INFO - Starting data processor",
                 f"{datetime.utcnow().isoformat()} - data_processor - INFO - Initializing pipeline components",
@@ -213,11 +235,11 @@ def configure_routes(app: FastAPI) -> None:
                 f"{datetime.utcnow().isoformat()} - database_storage - INFO - Stored 8 ELI documents",
                 f"{datetime.utcnow().isoformat()} - data_processor - INFO - Pipeline completed successfully",
             ]
-            
+
             for log in sample_logs:
                 yield f"data: {log}\n\n"
                 await asyncio.sleep(0.5)
-            
+
             # Continue with simulated real-time logs
             batch_num = 1
             while True:
@@ -232,19 +254,19 @@ def configure_routes(app: FastAPI) -> None:
                 for log in logs:
                     yield f"data: {log}\n\n"
                     await asyncio.sleep(1)
-                
+
                 batch_num += 1
                 await asyncio.sleep(3)
-        
+
         return StreamingResponse(
             log_generator(),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
-            }
+            },
         )
-    
+
     @app.get("/api/processor/status")
     async def processor_status():
         """Get the current status of the data processor."""
@@ -252,40 +274,59 @@ def configure_routes(app: FastAPI) -> None:
             # Try GPU processor first, then CPU processor
             processor_labels = [
                 "app=sejm-whiz-processor-gpu",
-                "app=sejm-whiz-processor-cpu", 
-                "app=data-processor"
+                "app=sejm-whiz-processor-cpu",
+                "app=data-processor",
             ]
-            
+
             for label in processor_labels:
                 result = subprocess.run(
-                    ["kubectl", "get", "pods", "-n", "sejm-whiz", "-l", label, "-o", "json"],
+                    [
+                        "kubectl",
+                        "get",
+                        "pods",
+                        "-n",
+                        "sejm-whiz",
+                        "-l",
+                        label,
+                        "-o",
+                        "json",
+                    ],
                     capture_output=True,
                     text=True,
-                    timeout=5
+                    timeout=5,
                 )
-                
+
                 if result.returncode == 0:
                     import json
+
                     pods_data = json.loads(result.stdout)
                     if pods_data.get("items"):
                         pod = pods_data["items"][0]
-                        processor_type = "GPU" if "gpu" in label else "CPU" if "cpu" in label else "Unknown"
+                        processor_type = (
+                            "GPU"
+                            if "gpu" in label
+                            else "CPU"
+                            if "cpu" in label
+                            else "Unknown"
+                        )
                         return {
                             "status": pod["status"]["phase"],
                             "processor_type": processor_type,
                             "pod_name": pod["metadata"]["name"],
                             "started_at": pod["status"].get("startTime"),
-                            "container_statuses": pod["status"].get("containerStatuses", []),
-                            "label_selector": label
+                            "container_statuses": pod["status"].get(
+                                "containerStatuses", []
+                            ),
+                            "label_selector": label,
                         }
         except Exception as e:
             logger.error(f"Error getting processor status: {e}")
-        
+
         # Fallback status
         return {
             "status": "unknown",
             "message": "Unable to determine processor status",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
 

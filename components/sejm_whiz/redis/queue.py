@@ -2,10 +2,9 @@
 
 import json
 import uuid
-import time
 import logging
 from enum import Enum
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict
 

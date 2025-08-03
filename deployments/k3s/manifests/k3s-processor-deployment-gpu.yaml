@@ -81,11 +81,11 @@ spec:
           requests:
             memory: "2Gi"
             cpu: "1"
-            nvidia.com/gpu: 1
+            # nvidia.com/gpu: 1  # Temporarily disabled until NVIDIA Container Toolkit is properly configured
           limits:
             memory: "6Gi"
             cpu: "3"
-            nvidia.com/gpu: 1
+            # nvidia.com/gpu: 1  # Temporarily disabled until NVIDIA Container Toolkit is properly configured
         volumeMounts:
         - name: model-cache
           mountPath: /app/.cache

@@ -251,7 +251,7 @@ Each component follows Polylith's principle of being "small, reusable bricks, th
   - Create memory-efficient training pipelines for GTX 1060 constraints
   - **Implement multi-act relationship embedding training**
   - **Build omnibus bill impact prediction model training**
-  
+
 - **Expected Training Times on GTX 1060 6GB**:
   - Polish BERT fine-tuning for legal domain: 6-8 hours (reduced complexity vs. attention models)
   - Bag embeddings generation for existing corpus: 2-3 hours
@@ -702,7 +702,7 @@ Each predicted change includes:
 **Learning Curve**: Team needs to understand Polylith concepts
 - **Mitigation**: Provide training on component-based architecture and Polylith tooling
 
-**Component Design Complexity**: Designing proper component boundaries requires careful planning  
+**Component Design Complexity**: Designing proper component boundaries requires careful planning
 - **Mitigation**: Start with larger components and refactor into smaller ones as patterns emerge
 
 **Dependency Management**: Complex inter-component dependencies can create coupling

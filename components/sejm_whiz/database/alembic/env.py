@@ -26,7 +26,6 @@ target_metadata = Base.metadata
 db_config = get_database_config()
 
 # Override with environment variables for port forwarding
-import os
 
 if os.getenv("DATABASE_HOST") and os.getenv("DATABASE_PORT"):
     db_url = f"postgresql://{db_config.username}:{db_config.password}@{os.getenv('DATABASE_HOST')}:{os.getenv('DATABASE_PORT')}/{db_config.database}?sslmode={db_config.ssl_mode}"

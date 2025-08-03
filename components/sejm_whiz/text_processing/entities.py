@@ -12,7 +12,7 @@ def _try_import_spacy():
         import spacy
 
         return True, spacy
-    except (ImportError, ValueError) as e:
+    except (ImportError, ValueError):
         # ValueError can occur due to numpy compatibility issues
         return False, None
 

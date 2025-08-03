@@ -8,10 +8,10 @@ data:
   01-create-extensions.sql: |
     CREATE EXTENSION IF NOT EXISTS vector;
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-    
+
     -- Grant permissions for vector operations
     GRANT ALL ON SCHEMA public TO {{ .Values.postgresql.auth.username }};
-    
+
   02-create-indexes.sql: |
     -- Initial setup complete
     -- Specific indexes will be created by Alembic migrations

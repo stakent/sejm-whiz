@@ -35,7 +35,7 @@ data:
         annotations:
           summary: "Sejm-Whiz processor is down"
           description: "The processor has been down for more than 2 minutes"
-      
+
       - alert: HighGPUMemoryUsage
         expr: gpu_memory_used_bytes / gpu_memory_total_bytes > 0.9
         for: 5m
@@ -44,7 +44,7 @@ data:
         annotations:
           summary: "High GPU memory usage"
           description: "GPU memory usage is above 90% for 5 minutes"
-      
+
       - alert: PipelineFailureRate
         expr: rate(pipeline_failures_total[5m]) > 0.1
         for: 2m
@@ -53,7 +53,7 @@ data:
         annotations:
           summary: "High pipeline failure rate"
           description: "Pipeline failure rate is above 10% over 5 minutes"
-      
+
       - alert: DatabaseConnectionError
         expr: database_connection_errors_total > 0
         for: 1m
