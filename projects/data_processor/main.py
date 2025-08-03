@@ -207,7 +207,7 @@ class DatabaseStorageStep(PipelineStep):
             stored_ids = []
 
             for proceeding in proceedings:
-                # Create document record
+                # Create document record (returns UUID)
                 proceeding_id = self.db.create_document(
                     title=proceeding.get("title", "Sejm Proceeding"),
                     content=proceeding.get("processed_content", ""),
@@ -219,10 +219,15 @@ class DatabaseStorageStep(PipelineStep):
 
                 # Store embedding in vector database
                 if "embedding" in proceeding:
-                    self.vector_db.store_embedding(
-                        document_id=proceeding_id,
-                        embedding=proceeding["embedding"].embedding,
-                        metadata={"type": "sejm_proceeding", **proceeding},
+                    self.vector_db.create_document_embedding(
+                        document_id=proceeding_id,  # Now proceeding_id is already a UUID
+                        embedding=proceeding["embedding"].document_embedding.tolist(),
+                        model_name="allegro/herbert-base-cased",
+                        model_version="1.0",
+                        embedding_method="bag_of_embeddings",
+                        token_count=len(proceeding["embedding"].tokens)
+                        if hasattr(proceeding["embedding"], "tokens")
+                        else None,
                     )
 
                 stored_ids.append(proceeding_id)
@@ -235,7 +240,7 @@ class DatabaseStorageStep(PipelineStep):
             stored_ids = []
 
             for document in documents:
-                # Create document record
+                # Create document record (returns UUID)
                 document_id = self.db.create_document(
                     title=document.get("title", "ELI Document"),
                     content=document.get("processed_content", ""),
@@ -247,10 +252,15 @@ class DatabaseStorageStep(PipelineStep):
 
                 # Store embedding in vector database
                 if "embedding" in document:
-                    self.vector_db.store_embedding(
-                        document_id=document_id,
-                        embedding=document["embedding"].embedding,
-                        metadata={"type": "eli_document", **document},
+                    self.vector_db.create_document_embedding(
+                        document_id=document_id,  # Now document_id is already a UUID
+                        embedding=document["embedding"].document_embedding.tolist(),
+                        model_name="allegro/herbert-base-cased",
+                        model_version="1.0",
+                        embedding_method="bag_of_embeddings",
+                        token_count=len(document["embedding"].tokens)
+                        if hasattr(document["embedding"], "tokens")
+                        else None,
                     )
 
                 stored_ids.append(document_id)

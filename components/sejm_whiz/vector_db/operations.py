@@ -313,6 +313,31 @@ class VectorDBOperations:
             logger.error(f"Failed to count documents: {e}")
             raise
 
+    def store_embedding(
+        self,
+        document_id: UUID,
+        embedding: List[float],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> UUID:
+        """Store embedding for a document (wrapper around create_document_embedding)."""
+        # Extract model info from metadata if available
+        model_name = "allegro/herbert-base-cased"
+        model_version = "1.0"
+        embedding_method = "bag_of_embeddings"
+
+        if metadata:
+            model_name = metadata.get("model_name", model_name)
+            model_version = metadata.get("model_version", model_version)
+            embedding_method = metadata.get("embedding_method", embedding_method)
+
+        return self.create_document_embedding(
+            document_id=document_id,
+            embedding=embedding,
+            model_name=model_name,
+            model_version=model_version,
+            embedding_method=embedding_method,
+        )
+
 
 # Global operations instance
 _vector_ops: Optional[VectorDBOperations] = None

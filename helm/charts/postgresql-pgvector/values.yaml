@@ -11,6 +11,12 @@ postgresql:
     password: sejm_whiz_password
     postgresPassword: postgres_admin_password
 
+  ssl:
+    enabled: true
+    certificatesSecret: ""
+    certFilename: ""
+    certKeyFilename: ""
+
   primary:
     persistence:
       enabled: true

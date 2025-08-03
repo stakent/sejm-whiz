@@ -35,6 +35,10 @@ spec:
               key: postgres-password
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
+        {{- if .Values.postgresql.ssl.enabled }}
+        - name: POSTGRES_INITDB_ARGS
+          value: "--auth-host=md5 --auth-local=md5"
+        {{- end }}
         ports:
         - name: postgresql
           containerPort: 5432

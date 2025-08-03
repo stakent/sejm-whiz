@@ -63,7 +63,9 @@ class DatabaseConfig(BaseSettings):
             database="sejm_whiz",
             username="sejm_whiz_user",
             password=os.getenv("POSTGRES_PASSWORD", "sejm_whiz_password"),
-            ssl_mode="require",
+            ssl_mode=os.getenv(
+                "DATABASE_SSL_MODE", "prefer"
+            ),  # Allow env override, default to prefer for k3s
         )
 
     @classmethod

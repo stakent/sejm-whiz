@@ -32,6 +32,9 @@ spec:
           value: "compute,utility"
         - name: CUDA_VISIBLE_DEVICES
           value: "0"
+        # Deployment environment
+        - name: DEPLOYMENT_ENV
+          value: "k3s"
         # Database connection
         - name: DATABASE_HOST
           value: "postgresql-pgvector.sejm-whiz"
@@ -43,6 +46,8 @@ spec:
           value: "sejm_whiz_user"
         - name: DATABASE_PASSWORD
           value: "sejm_whiz_password"
+        - name: DATABASE_SSL_MODE
+          value: "disable"
         # Redis connection
         - name: REDIS_HOST
           value: "redis.sejm-whiz"
@@ -89,10 +94,22 @@ spec:
         volumeMounts:
         - name: model-cache
           mountPath: /app/.cache
+        - name: source-code
+          mountPath: /app
+        - name: components
+          mountPath: /app/components
       volumes:
       - name: model-cache
         persistentVolumeClaim:
           claimName: sejm-whiz-model-cache
+      - name: source-code
+        hostPath:
+          path: /tmp/sejm-whiz
+          type: DirectoryOrCreate
+      - name: components
+        hostPath:
+          path: /tmp/sejm-whiz/components
+          type: Directory
 ---
 apiVersion: v1
 kind: Service
