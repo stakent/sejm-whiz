@@ -245,7 +245,7 @@ class Processing(BaseModel):
         """Check if processing is still active."""
         return self.current_stage not in [
             ProcessingStage.ENACTED,
-            ProcessingStage.REJECTED
+            ProcessingStage.REJECTED,
         ]
 
     @property

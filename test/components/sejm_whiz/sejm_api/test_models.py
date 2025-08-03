@@ -10,7 +10,6 @@ from sejm_whiz.sejm_api.models import (
     Committee,
     Interpellation,
     Processing,
-    Proceeding,
     VotingResult,
     DeputyStatus,
     ProcessingStage,
