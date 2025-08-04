@@ -255,6 +255,135 @@
         .log-container::-webkit-scrollbar-thumb:hover {
             background: #718096;
         }
+
+        /* Services Grid Styles */
+        .services-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .services-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .services-header h2 {
+            color: #2d3748;
+            font-size: 1.5em;
+            margin: 0;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .service-card {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .service-card.running {
+            border-left-color: #48bb78;
+            background: #f0fff4;
+        }
+
+        .service-card.stopped {
+            border-left-color: #f56565;
+            background: #fffafa;
+        }
+
+        .service-card.loading {
+            border-left-color: #a0aec0;
+            background: #f7fafc;
+            text-align: center;
+            color: #718096;
+        }
+
+        .service-name {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .service-status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .service-status-indicator.running {
+            background: #48bb78;
+        }
+
+        .service-status-indicator.stopped {
+            background: #f56565;
+        }
+
+        .service-details {
+            font-size: 0.9em;
+            color: #718096;
+            line-height: 1.4;
+        }
+
+        .service-type {
+            display: inline-block;
+            background: #edf2f7;
+            color: #4a5568;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-bottom: 8px;
+        }
+
+        .service-type.database {
+            background: #e6fffa;
+            color: #234e52;
+        }
+
+        .service-type.cache {
+            background: #fef5e7;
+            color: #744210;
+        }
+
+        .service-type.processor {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .service-type.api {
+            background: #ede9fe;
+            color: #5b21b6;
+        }
+
+        .service-type.web {
+            background: #ecfdf5;
+            color: #14532d;
+        }
     </style>
 </head>
 <body>
@@ -273,8 +402,10 @@
                 </div>
             </div>
             <div class="status-card">
-                <h3>Documents Processed</h3>
-                <div class="status-value" id="docsProcessed">0</div>
+                <h3>Services Running</h3>
+                <div class="status-value">
+                    <span id="runningServices">0</span>/<span id="totalServices">0</span>
+                </div>
             </div>
             <div class="status-card">
                 <h3>Current Pipeline</h3>
@@ -283,6 +414,16 @@
             <div class="status-card">
                 <h3>Last Update</h3>
                 <div class="status-value" id="lastUpdate">-</div>
+            </div>
+        </div>
+
+        <div class="services-container">
+            <div class="services-header">
+                <h2>Docker Services Status</h2>
+                <button class="btn btn-secondary" onclick="refreshServices()">Refresh</button>
+            </div>
+            <div id="servicesGrid" class="services-grid">
+                <div class="service-card loading">Loading services...</div>
             </div>
         </div>
 
@@ -480,7 +621,7 @@
 
                 if (data.status === 'Running') {
                     statusIndicator.className = 'status-indicator status-running';
-                    statusText.textContent = 'Running';
+                    statusText.textContent = `Running (${data.processor_type || 'CPU'})`;
                 } else if (data.status === 'unknown') {
                     statusIndicator.className = 'status-indicator status-unknown';
                     statusText.textContent = 'Unknown';
@@ -493,13 +634,72 @@
             }
         }
 
+        // Fetch services status
+        async function fetchServicesStatus() {
+            try {
+                const response = await fetch('/api/services/status');
+                const data = await response.json();
+
+                // Update summary counts
+                document.getElementById('runningServices').textContent = data.running_services || 0;
+                document.getElementById('totalServices').textContent = data.total_services || 0;
+
+                // Update services grid
+                updateServicesGrid(data.services || []);
+            } catch (error) {
+                console.error('Error fetching services status:', error);
+                const servicesGrid = document.getElementById('servicesGrid');
+                servicesGrid.innerHTML = '<div class="service-card loading">Error loading services</div>';
+            }
+        }
+
+        function updateServicesGrid(services) {
+            const servicesGrid = document.getElementById('servicesGrid');
+
+            if (services.length === 0) {
+                servicesGrid.innerHTML = '<div class="service-card loading">No services found</div>';
+                return;
+            }
+
+            servicesGrid.innerHTML = services.map(service => {
+                const statusClass = service.status === 'running' ? 'running' : 'stopped';
+                const statusIndicatorClass = service.status === 'running' ? 'running' : 'stopped';
+
+                return `
+                    <div class="service-card ${statusClass}">
+                        <div class="service-name">${service.name}</div>
+                        <div class="service-type ${service.service_type}">${service.service_type}</div>
+                        <div class="service-status">
+                            <div class="service-status-indicator ${statusIndicatorClass}"></div>
+                            <span>${service.status}</span>
+                        </div>
+                        <div class="service-details">
+                            <div><strong>Image:</strong> ${service.image}</div>
+                            ${service.ports ? `<div><strong>Ports:</strong> ${service.ports}</div>` : ''}
+                            <div><strong>Status:</strong> ${service.status_detail}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function refreshServices() {
+            const servicesGrid = document.getElementById('servicesGrid');
+            servicesGrid.innerHTML = '<div class="service-card loading">Refreshing services...</div>';
+            fetchServicesStatus();
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             connectToLogStream();
             fetchProcessorStatus();
+            fetchServicesStatus();
 
             // Update processor status every 30 seconds
             setInterval(fetchProcessorStatus, 30000);
+
+            // Update services status every 30 seconds
+            setInterval(fetchServicesStatus, 30000);
 
             // Update last update time every second
             setInterval(() => {

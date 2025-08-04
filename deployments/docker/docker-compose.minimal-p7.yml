@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: sejm-whiz-postgres-dev
+    environment:
+      POSTGRES_DB: sejm_whiz
+      POSTGRES_USER: sejm_whiz_user
+      POSTGRES_PASSWORD: sejm_whiz_password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-create-extensions.sql
+    networks:
+      - sejm-whiz-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sejm_whiz_user -d sejm_whiz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and queues
+  redis:
+    image: redis:7.2-alpine
+    container_name: sejm-whiz-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - sejm-whiz-dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Minimal API Server for dashboard only
+  api-server:
+    image: python:3.12-slim-bookworm
+    container_name: sejm-whiz-api-server-dev
+    ports:
+      - "8001:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEPLOYMENT_ENV=docker-compose
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sejm_whiz
+      - DATABASE_USER=sejm_whiz_user
+      - DATABASE_PASSWORD=sejm_whiz_password
+      - DATABASE_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ../../:/app
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    working_dir: /app
+    networks:
+      - sejm-whiz-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      bash -c "
+        pip install --no-cache-dir 'fastapi[standard]' uvicorn jinja2 pydantic python-multipart &&
+        cd /app/deployments/docker &&
+        python dashboard_app.py
+      "
+
+volumes:
+  postgres_data_dev:
+    name: sejm-whiz-postgres-data-dev
+  redis_data_dev:
+    name: sejm-whiz-redis-data-dev
+
+networks:
+  sejm-whiz-dev:
+    name: sejm-whiz-dev
+    driver: bridge
