@@ -12,7 +12,7 @@ postgresql:
     postgresPassword: postgres_admin_password
 
   ssl:
-    enabled: true
+    enabled: false
     certificatesSecret: ""
     certFilename: ""
     certKeyFilename: ""
