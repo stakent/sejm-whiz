@@ -27,6 +27,8 @@ This is a Python project structured as a Polylith workspace implementing an AI-d
 
 **Microservices Architecture Template**: Demonstrates how to structure complex AI applications using Polylith principles, serving as a reference implementation for component-based AI system design.
 
+📋 **[View Implementation Status & Progress →](IMPLEMENTATION_PLAN.md)**
+
 ## Key Technical Features
 
 - **Multi-Act Amendment Detection**: Identifies complex omnibus legislation and cascading legal changes
