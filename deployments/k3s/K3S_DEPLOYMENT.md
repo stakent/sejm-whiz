@@ -76,7 +76,7 @@ helm install redis ./helm/charts/redis \
 
 ### API Server Deployment
 
-```bash
+````bash
 # Build and push Docker image to local registry or registry accessible by k3s
 
 ### Option 1: Using k3s Built-in Registry (Recommended for Development)
@@ -102,7 +102,7 @@ sudo k3s ctr images import /tmp/sejm-whiz-processor.tar
 
 # Verify images are available
 sudo k3s ctr images ls | grep sejm-whiz
-```
+````
 
 ### Option 2: Using Local Docker Registry
 
@@ -166,6 +166,7 @@ image:
 The project includes two Docker images for different services:
 
 **Dockerfile.api** (for web API server):
+
 ```dockerfile
 FROM python:3.12-slim-bookworm AS base
 
@@ -198,6 +199,7 @@ CMD ["python", "-m", "uvicorn", "bases.web_api.main:app", "--host", "0.0.0.0", "
 ```
 
 **projects/data_processor/Dockerfile** (GPU-enabled data processing):
+
 - Located in `projects/data_processor/Dockerfile`
 - Uses NVIDIA CUDA 12.2 base image for GPU support
 - Installs Python 3.12 via uv
@@ -212,11 +214,14 @@ kubectl run test-pod --image=sejm-whiz-api:latest --rm -it --restart=Never -- /b
 # Or check with k3s directly
 sudo k3s ctr images ls | grep sejm-whiz
 ```
+
 # Then deploy the API server
+
 helm install sejm-whiz-api ./helm/charts/sejm-whiz-api \
-  --namespace sejm-whiz \
-  --values ./helm/charts/sejm-whiz-api/values.yaml
-```
+--namespace sejm-whiz \
+--values ./helm/charts/sejm-whiz-api/values.yaml
+
+````
 
 ### Data Processor Deployment
 
@@ -225,7 +230,7 @@ helm install sejm-whiz-api ./helm/charts/sejm-whiz-api \
 helm install sejm-whiz-processor ./helm/charts/sejm-whiz-processor \
   --namespace sejm-whiz \
   --values ./helm/charts/sejm-whiz-processor/values.yaml
-```
+````
 
 ## GPU Configuration for GTX 1060
 
@@ -373,9 +378,9 @@ helm rollback postgresql-pgvector 1 --namespace sejm-whiz
 ### Common Issues
 
 1. **Pod stuck in Pending**: Check node resources and scheduling constraints
-2. **Database connection failed**: Verify service DNS and credentials
-3. **GPU not available**: Check NVIDIA device plugin and node labels
-4. **Storage issues**: Check PVC status and local-path provisioner
+1. **Database connection failed**: Verify service DNS and credentials
+1. **GPU not available**: Check NVIDIA device plugin and node labels
+1. **Storage issues**: Check PVC status and local-path provisioner
 
 ### Debug Commands
 
