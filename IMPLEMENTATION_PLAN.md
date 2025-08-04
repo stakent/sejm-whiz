@@ -1260,144 +1260,132 @@ Implementation status has been thoroughly reviewed. Current status reflects actu
 
 **KEY FINDING**: Pipeline is 95% functional (Sejm API → Text Processing → GPU Embeddings working) but fails at final database storage step due to localhost configuration issue.
 
-### 🚧 **Phase 1: Infrastructure & Core Setup - MOSTLY WIP**
-- Database setup with PostgreSQL + pgvector 🚧 **WIP** - schema exists but **ZERO data stored** (empty tables)
-- Container environment with Docker and k3s 🚧 **WIP** (critical deployment failures)
-- Development environment with uv and Polylith ✅ **DONE**
+### 🚧 **Phase 1: Infrastructure & Core Setup - WIP**
+- Database setup with PostgreSQL + pgvector 🚧 **WIP** - CrashLoopBackOff due to SSL certificate configuration issues
+- Container environment with Docker and k3s 🚧 **WIP** - k3s cluster operational but critical services failing
+- Development environment with uv and Polylith ✅ **DONE** - fully functional local development environment
 
-### 🚧 **Phase 2: Core API Components - ALL WIP**
-- **Step 2.1: sejm_api Component** 🚧 **WIP**
-  - ✅ API calls working (200 OK from https://api.sejm.gov.pl/sejm/term10/proceedings)
-  - ✅ Processing 51→5 proceedings successfully
-  - ❌ End-to-end failure at database storage step
-  - Status: 95% functional but requires full pipeline completion
+### 🚧 **Phase 2: Core API Components - IMPLEMENTED BUT NOT DEPLOYED**
+- **Step 2.1: sejm_api Component** 📋 **PLANNED** (Implementation complete, deployment verification needed)
+  - ✅ Implementation complete with 248 tests passing
+  - ✅ Comprehensive security features and rate limiting
+  - ❌ Deployment verification blocked by infrastructure issues
+  - Status: Ready for deployment once infrastructure stabilized
 
-- **Step 2.2: eli_api Component** 🚧 **WIP**
-  - ✅ Implementation complete (5 files: client.py, models.py, parser.py, utils.py)
-  - ✅ Pipeline step exists but not currently deployed
-  - ❌ Not tested in production deployment
-  - Status: Code complete but requires production verification
+- **Step 2.2: eli_api Component** 📋 **PLANNED** (Implementation complete, deployment verification needed)
+  - ✅ Implementation complete with 119 tests passing
+  - ✅ Advanced security features and batch processing
+  - ❌ Production deployment not attempted
+  - Status: Ready for deployment integration
 
-- **Step 2.3: vector_db Component** 🚧 **WIP**
-  - ✅ 6 implementation files, pgvector integration
-  - ❌ Database connection issues prevent verification
-  - ❌ No actual data stored (empty tables)
-  - Status: Schema complete but requires functional verification
+- **Step 2.3: vector_db Component** 📋 **PLANNED** (Implementation complete, deployment verification needed)
+  - ✅ Implementation complete with 66 tests passing
+  - ✅ pgvector integration and UUID support
+  - ❌ Cannot verify due to PostgreSQL deployment issues
+  - Status: Ready for deployment once database operational
 
-### 🚧 **Phase 3: Data Processing Components - ALL WIP**
-- **Step 3.1: text_processing Component** 🚧 **WIP**
-  - ✅ 7 implementation files, working in production pipeline
-  - ✅ Successfully processing Sejm proceedings text
-  - ❌ End-to-end pipeline fails at database storage
-  - Status: 95% functional but requires complete pipeline
+### 📋 **Phase 3: Data Processing Components - IMPLEMENTED BUT NOT DEPLOYED**
+- **Step 3.1: text_processing Component** 📋 **PLANNED** (Implementation complete, deployment verification needed)
+  - ✅ Implementation complete with 79 tests passing
+  - ✅ Polish legal text processing pipeline operational in local testing
+  - ❌ Production deployment verification blocked by infrastructure issues
+  - Status: Ready for deployment once infrastructure stabilized
 
-- **Step 3.2: embeddings Component** 🚧 **WIP**
-  - ✅ 8 implementation files, HerBERT working on GPU
-  - ✅ **VERIFIED**: GPU usage 712MiB, generating embeddings (865, 198, 39, 184, 245 per doc)
-  - ✅ Processing Polish legal text with bag-of-embeddings approach
-  - ❌ Generated embeddings not stored (database connection failure)
-  - Status: GPU processing working but pipeline requires completion
+- **Step 3.2: embeddings Component** 📋 **PLANNED** (Implementation complete, deployment verification needed)
+  - ✅ Implementation complete with comprehensive GPU optimization
+  - ✅ HerBERT Polish BERT integration with bag-of-embeddings approach
+  - ❌ Production GPU deployment not verified due to infrastructure issues
+  - Status: Ready for deployment with GPU support
 
-- **Step 3.3: legal_nlp Component** 🚧 **WIP**
-  - ✅ 4 implementation files (core.py, semantic_analyzer.py, etc.)
-  - ❌ Not integrated into current production pipeline
-  - ❌ No end-to-end verification
-  - Advanced legal document analysis with multi-act amendment detection
-  - Comprehensive semantic field analysis and conceptual density metrics
-  - Legal entity relationship extraction with confidence scoring
-  - Production-ready with sophisticated Polish legal document processing
-  - **Status**: Implemented and tested but not yet deployed to production
+- **Step 3.3: legal_nlp Component** 📋 **PLANNED** (Implementation complete, not integrated)
+  - ✅ Implementation complete with 45+ tests passing
+  - ✅ Advanced legal document analysis with multi-act amendment detection
+  - ✅ Comprehensive semantic field analysis and conceptual density metrics
+  - ❌ Not integrated into any deployed service
+  - Status: Complete implementation ready for service integration
 
-### ✅ **Phase 4: ML Components - COMPLETED**
-- **Step 4.1: prediction_models Component** 🚧 **WIP**
-  - Complete ML pipeline with ensemble methods, similarity-based predictors, and classification models
-  - Comprehensive configuration system with GPU/CPU optimization
-  - Legal document-specific feature extraction and processing
-  - Production-ready with model persistence and evaluation metrics
-  - Integration with embeddings and vector database components
-  - **Status**: Implemented and tested but not yet deployed to production
+### 📋 **Phase 4: ML Components - IMPLEMENTED BUT NOT DEPLOYED**
+- **Step 4.1: prediction_models Component** 📋 **PLANNED** (Implementation complete, not deployed)
+  - ✅ Complete ML pipeline with ensemble methods, similarity-based predictors, and classification models
+  - ✅ Comprehensive configuration system with GPU/CPU optimization
+  - ✅ Legal document-specific feature extraction and processing
+  - ❌ No deployment integration or API endpoints
+  - Status: Ready for API integration and deployment
 
-- **Step 4.2: semantic_search Component** 🚧 **WIP**
-  - Complete semantic search pipeline with cross-register matching
-  - HerBERT-powered embedding search with pgvector integration
-  - Multi-factor relevance ranking and query processing
-  - Legal domain specialization for Polish legal system
-  - Production-ready with comprehensive test coverage across 7 modules
-  - **Status**: Implemented and tested but not yet deployed to production
+- **Step 4.2: semantic_search Component** 📋 **PLANNED** (Implementation complete, not deployed)
+  - ✅ Complete semantic search pipeline with cross-register matching
+  - ✅ HerBERT-powered embedding search with pgvector integration
+  - ✅ Comprehensive test coverage across 7 modules
+  - ❌ No API endpoints or deployment integration
+  - Status: Ready for API integration and deployment
 
-### ✅ **Phase 5: Project Assembly - COMPLETED**
-- **Step 5.1: web_api Base** ✅ **DONE**
-  - FastAPI application factory with comprehensive configuration
-  - CORS middleware, error handling, and health endpoints
-  - Production-ready with structured responses and API documentation
-  - **Web Dashboard**: Complete monitoring interface with real-time log streaming and multi-page navigation
-  - Successfully deployed and verified working in production
+### 🚧 **Phase 5: Project Assembly - IMPLEMENTED BUT DEPLOYMENT ISSUES**
+- **Step 5.1: web_api Base** 🚧 **WIP** (Implementation complete, deployment verification needed)
+  - ✅ FastAPI application factory with comprehensive configuration
+  - ✅ CORS middleware, error handling, and health endpoints
+  - ✅ Production-ready with structured responses and API documentation
+  - ❌ Deployment verification blocked by infrastructure issues
+  - Status: Implementation complete, ready for deployment verification
 
-- **Step 5.2: api_server Project** 🚧 **WIP**
-  - Main web API server using web_api base
-  - FastAPI application with uvicorn server configuration
-  - Health check endpoints and API documentation
-  - Production-ready server with comprehensive error handling
-  - **Complete Web Interface**: Multi-page application with home, dashboard, API docs, and health pages
-  - **Status**: Implemented but not yet deployed to k3s production
+- **Step 5.2: api_server Project** 📋 **PLANNED** (Implementation complete, not deployed)
+  - ✅ Main web API server using web_api base
+  - ✅ FastAPI application with uvicorn server configuration
+  - ✅ Complete Web Interface: Multi-page application with home, dashboard, API docs, and health pages
+  - ❌ Not deployed to k3s production environment
+  - Status: Ready for k3s deployment
 
-- **Step 5.3: data_processor Project** 🚧 **WIP**
-  - data_pipeline base with pipeline orchestration and batch processing
-  - Comprehensive data processing pipeline with modular steps
-  - Integration with all ingestion components (Sejm API, ELI API, text processing, embeddings)
-  - Pre-configured pipelines for different data sources
-  - Error handling, metrics collection, and comprehensive documentation
-  - **Status**: Deployed but failing due to database connection configuration issue (CrashLoopBackOff)
+- **Step 5.3: data_processor Project** 🚧 **WIP** (Deployed but failing)
+  - ✅ Implementation complete with comprehensive data processing pipeline
+  - ✅ Integration with all ingestion components
+  - ❌ k3s deployment failing (pods in Completed state, database connection issues)
+  - Status: Deployment exists but not functional, requires infrastructure fixes
 
-- **Step 5.4: web_ui Project** ✅ **DONE**
-  - Complete web monitoring dashboard using web_api base
-  - Multi-page interface: Home, Dashboard, API Docs, Health
-  - Real-time log streaming with Server-Sent Events (SSE)
-  - Fixed top navigation with visual page indicators
-  - Interactive controls: pause/resume streaming, clear logs, auto-scroll
-  - Modern responsive design with gradient styling and blur effects
-  - Production deployment with multi-stage Docker build
-  - k3s NodePort service on port 30800 (accessible at http://192.168.0.200:30800/)
-  - Successfully deployed, verified working, monitored (health endpoint responding)
-  - No external dependencies (embedded HTML templates)
+- **Step 5.4: web_ui Project** 🚧 **WIP** (Deployed but not accessible)
+  - ✅ Implementation complete with multi-page interface
+  - ✅ Real-time log streaming and modern responsive design
+  - ❌ k3s deployment not accessible (0/1 Unknown status, ports 30800/30801 not responding)
+  - Status: Deployed but service not functional, requires deployment troubleshooting
 
 ### 📊 **Current Metrics (Updated)**
 
 #### **Implementation Status Summary**
-- **Total tests passing**: 900+ across all components
+- **Total tests passing**: 772+ across all components (comprehensive unit test coverage)
 - **Components status**: 11 components implemented
-  - **DONE (4)**: sejm_api, eli_api, vector_db, text_processing, embeddings, web_api
-  - **WIP (7)**: database, legal_nlp, prediction_models, semantic_search, redis, document_ingestion, data_pipeline
+  - **DONE (0)**: None meet full criteria (designed, implemented, tested, deployed, verified, monitored, documented)
+  - **WIP (4)**: database, redis, data_pipeline, web_api (partial deployment success)
+  - **PLANNED (7)**: sejm_api, eli_api, vector_db, text_processing, embeddings, legal_nlp, prediction_models, semantic_search, document_ingestion (implementation complete, deployment needed)
 - **Projects status**: 3 projects implemented
-  - **DONE (1)**: web_ui (fully deployed and operational)
-  - **WIP (2)**: api_server (implemented, not deployed), data_processor (deployed, failing)
-- **Deployment status**: Partial k3s deployment
-  - **Working**: PostgreSQL + pgvector (2d uptime), Redis (6h uptime), Web UI (accessible)
-  - **Failing**: Data processor (CrashLoopBackOff due to database config)
-  - **Missing**: API server, standalone component deployments
+  - **DONE (0)**: None meet full deployment and verification criteria
+  - **WIP (2)**: data_processor (deployed but failing), web_ui (deployed but not accessible)
+  - **PLANNED (1)**: api_server (implemented, ready for deployment)
+- **Deployment status**: k3s cluster with critical failures
+  - **Working**: Redis (1/1 Ready)
+  - **Failing**: PostgreSQL (CrashLoopBackOff), Data processor (Completed/Failed), Web UI (0/1 Unknown)
+  - **Missing**: API server deployment, functional end-to-end pipeline
 
 #### **Production Verification**
-- **Database**: PostgreSQL + pgvector deployed with schema but no data (processor failing)
-- **Web UI**: Accessible at http://192.168.0.200:30800/ with real-time monitoring
-- **GPU Processing**: HerBERT embeddings working (712MiB GPU usage, 38% utilization)
-- **Core Components**: Text processing, embeddings, and database integration verified
-- **Security**: Advanced protection implemented across all components
-- **Test Coverage**: >90% across implemented components with comprehensive integration testing
+- **Database**: PostgreSQL deployment failing (CrashLoopBackOff due to SSL certificate issues)
+- **Web UI**: Not accessible (deployment exists but service not responding)
+- **GPU Processing**: Not verified in production (deployment issues prevent testing)
+- **Core Components**: Implementation complete but deployment verification blocked
+- **Security**: Advanced protection implemented in code but not deployed
+- **Test Coverage**: >90% unit test coverage but no production deployment verification
 
-### 🎯 **Next Immediate Steps**
-1. **🔧 URGENT**: Fix data processor database connection (use k8s service names instead of localhost)
-2. **📦 DEPLOY**: Deploy api_server project to k3s with proper service configuration
-3. **📦 DEPLOY**: Deploy remaining WIP components to production for verification
-4. **🔍 VERIFY**: End-to-end testing of complete pipeline with deployed components
-5. **📊 MONITOR**: Set up comprehensive monitoring for all deployed services
-6. **📋 PLAN**: legal_graph component for dependency mapping and cross-reference analysis
-7. **📋 PLAN**: user_preferences component for user interest profiling
-8. **📋 PLAN**: notification_system component for multi-channel delivery
+### 🎯 **Critical Issues Requiring Immediate Attention**
+1. **🔧 URGENT**: Fix PostgreSQL SSL certificate configuration (CrashLoopBackOff)
+2. **🔧 URGENT**: Restore Web UI service accessibility (0/1 Unknown status)
+3. **🔧 URGENT**: Fix data processor deployment connectivity (database connection)
+4. **📦 DEPLOY**: Deploy api_server project to k3s environment
+5. **🔍 VERIFY**: Verify all services can start and communicate in k3s environment
+6. **🔍 VERIFY**: End-to-end testing of complete pipeline once infrastructure is stable
+7. **📊 MONITOR**: Implement monitoring for deployed services health and performance
 
-#### **Critical Issues to Address**
-- **Database Connection Config**: Data processor trying to connect to localhost instead of postgresql-pgvector.sejm-whiz
-- **Missing Deployments**: Several working components not yet deployed to production environment
-- **Integration Testing**: End-to-end pipeline testing needed with all components deployed
+#### **Root Cause Analysis**
+- **PostgreSQL Failure**: SSL certificate configuration preventing database startup
+- **Service Connectivity**: Applications may be using incorrect service names or ports
+- **Deployment Configuration**: k3s manifests may have configuration issues
+- **Network Policies**: Potential network connectivity issues between services
+- **Resource Constraints**: Possible resource allocation issues on single-node k3s cluster
 
 ---
 
