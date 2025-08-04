@@ -1942,18 +1942,21 @@ sejm-whiz-processor-dev    Up                (processing logs)
 
 **Enhanced Web Interface Features:**
 
-- **Dashboard**: `http://p7:8001/dashboard` - Real-time container monitoring with live updates
+- **Dashboard**: `http://p7:8001/dashboard` - Real-time container monitoring with enhanced auto-scrolling
 - **API Status**: `http://p7:8001/api/services/status` - JSON container status for programmatic access
 - **Live Logs**: `http://p7:8001/api/logs/stream` - Server-Sent Events streaming from all containers
-- **Processing Pipeline**: Simulated data processor generating realistic processing logs every 30 seconds
+- **Processing Pipeline**: Data processor generating realistic processing logs with proper timestamps
+- **Auto-Scroll UX**: Latest log entries automatically stay at bottom with scroll-to-bottom button
+- **Control Interface**: Fixed Clear/Auto-scroll/Pause buttons positioned at top of Live Logs window
 
 #### ✅ **Technical Implementation Achievements**
 
 - **Docker Socket Access**: API server container configured with Docker CLI and socket access
-- **Real-Time Updates**: Dashboard refreshes every 30 seconds with live container status
+- **Enhanced Auto-Scroll**: Flexbox layout with smooth scrolling using requestAnimationFrame
 - **Log Aggregation**: Unified log streaming from PostgreSQL, Redis, API server, and processor containers
 - **Container Health**: Visual indicators showing running/stopped status with detailed information
 - **Production Deployment**: One-command deployment with `deploy-p7-simple.sh` script
+- **Fixed Timestamps**: Proper date/time display in processing logs instead of literal shell variables
 
 #### ✅ **Enhanced Monitoring Capabilities**
 
@@ -1966,10 +1969,12 @@ sejm-whiz-processor-dev    Up                (processing logs)
 
 **Log Streaming Features:**
 
-- **Multi-Container Logs**: Unified streaming from all 4 containers
-- **Processing Simulation**: Data processor shows realistic pipeline activity
+- **Multi-Container Logs**: Unified streaming from all 4 containers with proper timestamps
+- **Processing Simulation**: Data processor shows realistic pipeline activity with actual date/time
 - **Error Handling**: Graceful handling of container connection issues
 - **Performance**: Efficient polling with 10-second intervals for new logs
+- **User Experience**: Auto-scroll keeps latest logs visible with manual scroll detection
+- **Visual Feedback**: Scroll-to-bottom button appears when user scrolls away from latest logs
 
 ### 🏗️ **Complete Development Environment**
 
@@ -1997,7 +2002,8 @@ curl http://p7:8001/api/services/status
 
 # Live Log Streaming Test
 curl -N http://p7:8001/api/logs/stream
-# ✅ Real-time logs streaming from all containers including processing simulation
+# ✅ Real-time logs streaming from all containers with proper timestamps:
+# "Mon Aug  4 18:08:59 UTC 2025: Starting data processing cycle"
 ```
 
 **System Status**: **Production-ready Docker Compose environment** with enhanced real-time monitoring dashboard operational on p7 server.

@@ -102,25 +102,25 @@ services:
         condition: service_healthy
     restart: unless-stopped
     command: >
-      bash -c "
+      bash -c '
         pip install --no-cache-dir psycopg2-binary sqlalchemy requests python-dotenv &&
-        echo '🚀 Starting Sejm Whiz Data Processor...' &&
+        echo "🚀 Starting Sejm Whiz Data Processor..." &&
         while true; do
-          echo '📋 $(date): Starting data processing cycle' &&
-          echo '🔍 $(date): Checking Sejm API for new data...' &&
+          echo "📋 $(date): Starting data processing cycle" &&
+          echo "🔍 $(date): Checking Sejm API for new data..." &&
           sleep 5 &&
-          echo '📄 $(date): Found 3 new proceedings to process' &&
-          echo '🧹 $(date): Processing text data...' &&
+          echo "📄 $(date): Found 3 new proceedings to process" &&
+          echo "🧹 $(date): Processing text data..." &&
           sleep 3 &&
-          echo '🔗 $(date): Generating embeddings...' &&
+          echo "🔗 $(date): Generating embeddings..." &&
           sleep 4 &&
-          echo '💾 $(date): Storing processed data in database...' &&
+          echo "💾 $(date): Storing processed data in database..." &&
           sleep 2 &&
-          echo '✅ $(date): Processing cycle completed successfully' &&
-          echo '⏳ $(date): Waiting 30 seconds before next cycle...' &&
+          echo "✅ $(date): Processing cycle completed successfully" &&
+          echo "⏳ $(date): Waiting 30 seconds before next cycle..." &&
           sleep 30
         done
-      "
+      '
 
 volumes:
   postgres_data_dev:
