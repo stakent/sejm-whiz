@@ -81,7 +81,11 @@ class ELIDataIngestionStep(PipelineStep):
                 document_type=category, limit=10
             )
 
-        return {**data, "eli_documents": documents, "step_completed": "eli_ingestion"}
+        return {
+            **data,
+            "eli_documents": documents.documents,
+            "step_completed": "eli_ingestion",
+        }
 
 
 class TextProcessingStep(PipelineStep):
@@ -122,9 +126,14 @@ class TextProcessingStep(PipelineStep):
             processed_documents = []
 
             for document in documents:
-                processed_text = self.processor.clean_text(document.get("content", ""))
+                # Convert LegalDocument to dict and extract content
+                document_dict = document.model_dump()
+                content = (
+                    document.content if hasattr(document, "content") else document.title
+                )
+                processed_text = self.processor.clean_text(content)
                 processed_documents.append(
-                    {**document, "processed_content": processed_text}
+                    {**document_dict, "processed_content": processed_text}
                 )
 
             processed_data["processed_eli_documents"] = processed_documents

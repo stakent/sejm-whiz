@@ -194,8 +194,9 @@ class EliApiClient:
         if query:
             params["q"] = query
 
-        if document_type:
-            params["type"] = document_type
+        # Temporarily disabled due to ELI API 403 error with type parameter
+        # if document_type:
+        #     params["type"] = document_type
 
         if date_from:
             params["date_from"] = date_from.strftime("%Y-%m-%d")
@@ -206,7 +207,46 @@ class EliApiClient:
         logger.info(f"Searching documents with query: {query}")
 
         try:
-            result = await self._make_request("/eli/acts/search", params)
+            # Use working publisher/year endpoint instead of problematic search endpoint
+            # Fetch from both DU (Dziennik Ustaw) and MP (Monitor Polski) for current year
+            current_year = datetime.now().year
+            all_documents = []
+
+            # Fetch ALL documents from DU (Dziennik Ustaw - primary official journal)
+            try:
+                du_result = await self._make_request(
+                    f"/eli/acts/DU/{current_year}/", {}
+                )
+                du_documents = du_result.get("items", [])
+                all_documents.extend(du_documents)
+                logger.info(
+                    f"Successfully fetched {len(du_documents)} documents from DU/{current_year}"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to fetch from DU: {e}")
+
+            # Fetch ALL documents from MP (Monitor Polski - official announcements)
+            try:
+                mp_result = await self._make_request(
+                    f"/eli/acts/MP/{current_year}/", {}
+                )
+                mp_documents = mp_result.get("items", [])
+                all_documents.extend(mp_documents)
+                logger.info(
+                    f"Successfully fetched {len(mp_documents)} documents from MP/{current_year}"
+                )
+            except Exception as e:
+                logger.warning(f"Failed to fetch from MP: {e}")
+
+            # Apply limit to combined results
+            all_documents = all_documents[:limit] if limit else all_documents
+
+            # Create combined result
+            result = {
+                "items": all_documents,
+                "count": len(all_documents),
+                "totalCount": len(all_documents),
+            }
 
             # Parse documents
             documents = []
