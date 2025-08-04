@@ -123,16 +123,22 @@ bases/web_api/
 - [x] Health Check Endpoint with structured response model
 - [x] Web UI Dashboard with real-time log streaming and monitoring
 
-### Step 5.2: Create api_server Project 🚧 MINIMAL INTEGRATION
+### Step 5.2: Create api_server Project 🚧 WIP - SEMANTIC SEARCH IMPLEMENTED
 
-**Status**: API server deployed and health endpoints work, but only imports web_api base. No AI/ML components connected.
+**Status**: API server deployed with semantic search endpoint implementation. Search functionality ready, pending ML dependency deployment.
 
-**Integration Gap**: API server is essentially a health check server rather than a functional API. Missing:
+**Completed Integration**:
+
+- [x] `/api/v1/search` - Semantic search endpoint (GET & POST) ✅ **IMPLEMENTED**
+- [x] Component integration (semantic_search) ✅ **INTEGRATED**
+- [x] Request/response models with Pydantic validation ✅ **IMPLEMENTED**
+- [x] Error handling and graceful fallback ✅ **IMPLEMENTED**
+
+**Remaining Integration**:
 
 - [ ] `/api/v1/predictions` - Get law change predictions
-- [ ] `/api/v1/search` - Semantic search endpoint
 - [ ] `/api/v1/documents` - Legal document management
-- [ ] Component integration (semantic_search, prediction_models, legal_nlp)
+- [ ] ML dependencies deployment (torch, transformers) for full search functionality
 
 **Current Endpoints**:
 
@@ -140,6 +146,19 @@ bases/web_api/
 - [x] `GET /health` - Health check endpoint
 - [x] `GET /docs` - Interactive API documentation
 - [x] `GET /dashboard` - Real-time monitoring interface
+- [x] `GET /api/v1/search` - Semantic search with query parameters ✅ **NEW**
+- [x] `POST /api/v1/search` - Semantic search with JSON body ✅ **NEW**
+
+**Semantic Search Implementation Details**:
+
+- ✅ **API Layer**: Full REST API with GET/POST endpoints
+- ✅ **Request Models**: `SearchRequest` with query, limit, threshold, document_type
+- ✅ **Response Models**: `SearchResponse` with results, processing time, metadata
+- ✅ **Search Engine**: `SemanticSearchEngine` with HerBERT embeddings
+- ✅ **Error Handling**: Graceful 503 response when ML dependencies unavailable
+- ✅ **Integration**: semantic_search component properly imported in api_server
+- ✅ **Deployment**: Successfully deployed to p7 server at `http://p7:8001/api/v1/search`
+- 🚧 **Dependencies**: PyTorch/transformers installation pending for full functionality
 
 ### Step 5.3: Create data_processor Project ✅ INTEGRATED
 
@@ -291,16 +310,16 @@ ______________________________________________________________________
 
 **High Priority**:
 
-1. **Connect ML Components to API**: Add prediction and search endpoints to api_server
+1. ~~**Connect ML Components to API**: Add prediction and search endpoints to api_server~~ 🚧 **WIP**
 1. **Complete Component Integration**: Import and use legal_nlp, prediction_models, semantic_search
 1. **Redis Configuration**: Connect applications to Redis for caching and queues
 
 **Integration Status Summary**:
 
 - **Data Flow**: ✅ Sejm API → Text Processing → GPU Embeddings → Database (1771+ documents)
-- **API Endpoints**: ❌ Only health checks, missing functional endpoints
-- **ML Components**: ❌ Built but not exposed through API
-- **Semantic Search**: ❌ Embeddings stored but not searchable via API
+- **API Endpoints**: 🚧 **Search endpoint implemented, deployment dependencies pending**
+- **ML Components**: 🚧 **Built and partially integrated into API**
+- **Semantic Search**: 🚧 **API endpoint ready, ML dependencies needed for full functionality**
 
 ### 📈 **Production Metrics**
 
