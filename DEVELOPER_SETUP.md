@@ -235,12 +235,79 @@ uv run python projects/web_ui/main.py
 - **Navigation**: Single-page application feel with fixed top navigation
 - **Deployment**: Multi-stage Docker build with k3s deployment manifests
 
-**Development Notes:**
+**Development Workflows:**
+
+*Local Development:*
 - Proper Polylith project structure using `web_api` base
 - No external frontend dependencies required
 - Dashboard works in both local development and Kubernetes environments
-- For k3s deployment, access via NodePort: http://192.168.0.200:30800/
-- Production-ready containerization following data processor pattern
+- For rapid iteration: `uv run uvicorn projects.web_ui.main:app --host 0.0.0.0 --port 8000 --reload`
+
+*K3s Hot Reload Development:*
+- **Speed**: ~5 seconds per change (eliminating 10+ minute Docker rebuilds)
+- **URLs**: Production (http://192.168.0.200:30800/) and Development (http://192.168.0.200:30801/)
+- **Workflow**:
+  1. Edit files locally in `projects/web_ui/`
+  2. Run: `./deployments/k3s/scripts/sync-web-ui.sh` (~1 second)
+  3. Changes appear instantly via uvicorn auto-reload
+- **Benefits**: Volume mounts eliminate container rebuilds, uvicorn hot-restarts on file changes
+- **Key Files**:
+  - `deployments/k3s/manifests/k3s-web-ui-deployment-dev.yaml` - Development deployment with volume mounts
+  - `deployments/k3s/scripts/setup-web-ui-dev.sh` - One-time setup script
+  - `deployments/k3s/scripts/sync-web-ui.sh` - Fast sync for changes
+
+#### K3s Data Processor Hot Reload Scripts
+
+For data processor development with Kubernetes hot reload (run from repo root directory):
+
+**Configuration:**
+The scripts use centralized configuration from `config.sh`:
+```bash
+# config.sh - Single source of truth for hot reload configuration
+export MOUNT_PATH="/tmp/sejm-whiz"
+export NAMESPACE="sejm-whiz"
+export APP_LABEL="app=sejm-whiz-processor-gpu"
+export WATCH_PATTERN="*.py$|*.html$|*.css$|*.js$|*.jinja2$|*.j2$"
+```
+
+**Manual Sync and Restart:**
+```bash
+# Using default configuration from config.sh
+./sync-and-restart.sh
+
+# Override specific settings via environment variables
+MOUNT_PATH="/custom/path" ./sync-and-restart.sh
+NAMESPACE="my-namespace" ./sync-and-restart.sh
+```
+
+**Automatic File Watching:**
+```bash
+# Watch files matching patterns in config.sh and auto-sync on changes
+./watch-and-sync.sh
+
+# Override watch pattern for specific use cases
+WATCH_PATTERN="*.py$" ./watch-and-sync.sh  # Python only
+WATCH_PATTERN="*" ./watch-and-sync.sh      # All files
+```
+
+**Configuration Parameters:**
+- `REPO_PATH` - Local repository path (auto-detected via `pwd`)
+- `MOUNT_PATH` - Remote mount/sync path (set in config.sh)
+- `NAMESPACE` - Kubernetes namespace (set in config.sh)
+- `APP_LABEL` - Pod selector label (set in config.sh)
+- `WATCH_PATTERN` - File patterns to watch (set in config.sh, includes web UI files)
+
+**Benefits:**
+- **DRY Configuration**: Single config.sh file maintains all settings
+- **Auto-Detection**: Repository path automatically detected from current directory
+- **Web UI Support**: Watches Python, HTML, CSS, JS, and template files
+- **Fast Iteration**: Automatic syncing with comprehensive file watching
+- **Pod Management**: Automatic pod restart and log tailing
+- **Flexible Overrides**: Environment variables can override config.sh settings
+
+*Production Deployment:*
+- Production-ready containerization with multi-stage Docker builds
+- Separate production and development environments for proper service isolation
 
 # Run specific test file
 uv run pytest test/components/sejm_whiz/sejm_api/test_client.py -v
