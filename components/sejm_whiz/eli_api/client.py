@@ -132,7 +132,7 @@ class EliApiClient:
                 response = await self._client.get(url, params=params)
 
                 if response.status_code == 429:  # Rate limited
-                    retry_after = int(response.headers.get("Retry-After", 60))
+                    retry_after = int(response.headers.get("Retry-After", "60"))
                     logger.warning(f"Rate limited, waiting {retry_after}s")
                     await asyncio.sleep(retry_after)
                     continue
