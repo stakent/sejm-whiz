@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class EliApiConfig:
     """Configuration for ELI API client."""
 
-    base_url: str = "https://api.sejm.gov.pl/eli"
+    base_url: str = "https://api.sejm.gov.pl"
     rate_limit: int = 10  # requests per second
     timeout: int = 30
     max_retries: int = 3
@@ -206,11 +206,11 @@ class EliApiClient:
         logger.info(f"Searching documents with query: {query}")
 
         try:
-            result = await self._make_request("/search", params)
+            result = await self._make_request("/eli/acts/search", params)
 
             # Parse documents
             documents = []
-            for doc_data in result.get("documents", []):
+            for doc_data in result.get("items", []):
                 try:
                     document = LegalDocument.from_api_response(doc_data)
                     documents.append(document)
@@ -220,7 +220,7 @@ class EliApiClient:
 
             search_result = DocumentSearchResult(
                 documents=documents,
-                total=result.get("total", len(documents)),
+                total=result.get("totalCount", len(documents)),
                 offset=offset,
                 limit=limit,
             )

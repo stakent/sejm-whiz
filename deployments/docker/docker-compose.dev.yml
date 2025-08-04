@@ -144,13 +144,6 @@ services:
     restart: unless-stopped
     # GPU runtime support (controlled by DEV_USE_GPU environment variable)
     runtime: ${DEV_GPU_RUNTIME:-}  # Set to 'nvidia' for GPU support
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: ${DEV_GPU_DRIVER:-}  # Set to 'nvidia' for GPU support
-              count: ${DEV_GPU_COUNT:-0}   # Number of GPUs to use
-              capabilities: [gpu]
     # Uncomment to run processor interactively for debugging
     # tty: true
     # stdin_open: true
