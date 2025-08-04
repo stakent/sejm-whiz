@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: sejm-whiz-postgres
+    environment:
+      POSTGRES_DB: sejm_whiz
+      POSTGRES_USER: sejm_whiz_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sejm_whiz_password}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-create-extensions.sql
+    networks:
+      - sejm-whiz
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sejm_whiz_user -d sejm_whiz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # Redis for caching and queues
+  redis:
+    image: redis:7.2-alpine
+    container_name: sejm-whiz-redis
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sejm-whiz
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # Web UI for monitoring dashboard
+  web-ui:
+    build:
+      context: ../../
+      dockerfile: projects/web_ui/Dockerfile
+    container_name: sejm-whiz-web-ui
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sejm_whiz
+      - DATABASE_USER=sejm_whiz_user
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-sejm_whiz_password}
+      - DATABASE_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - sejm-whiz
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Data processor with GPU support (if available)
+  processor:
+    build:
+      context: ../../
+      dockerfile: projects/data_processor/Dockerfile
+    container_name: sejm-whiz-processor
+    environment:
+      - DEPLOYMENT_ENV=docker-compose
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sejm_whiz
+      - DATABASE_USER=sejm_whiz_user
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-sejm_whiz_password}
+      - DATABASE_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - EMBEDDING_DEVICE=${EMBEDDING_DEVICE:-cuda}  # Default to GPU for production
+      - EMBEDDING_MODEL_CACHE_DIR=/app/.cache
+      - HF_HOME=/app/.cache
+      - TRANSFORMERS_CACHE=/app/.cache
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+    volumes:
+      - model_cache:/app/.cache
+    networks:
+      - sejm-whiz
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '3.0'
+          memory: 6G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    # Uncomment if you have NVIDIA Container Runtime configured
+    # runtime: nvidia
+
+volumes:
+  postgres_data:
+    name: sejm-whiz-postgres-data
+  redis_data:
+    name: sejm-whiz-redis-data
+  model_cache:
+    name: sejm-whiz-model-cache
+
+networks:
+  sejm-whiz:
+    name: sejm-whiz
+    driver: bridge

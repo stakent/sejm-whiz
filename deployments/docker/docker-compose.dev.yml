@@ -1,0 +1,136 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: sejm-whiz-postgres-dev
+    environment:
+      POSTGRES_DB: sejm_whiz
+      POSTGRES_USER: sejm_whiz_user
+      POSTGRES_PASSWORD: sejm_whiz_password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-create-extensions.sql
+    networks:
+      - sejm-whiz-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sejm_whiz_user -d sejm_whiz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and queues
+  redis:
+    image: redis:7.2-alpine
+    container_name: sejm-whiz-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - sejm-whiz-dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Web UI for monitoring dashboard
+  web-ui:
+    build:
+      context: ../../
+      dockerfile: projects/web_ui/Dockerfile
+    container_name: sejm-whiz-web-ui-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sejm_whiz
+      - DATABASE_USER=sejm_whiz_user
+      - DATABASE_PASSWORD=sejm_whiz_password
+      - DATABASE_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      # Mount source code for hot reload in development
+      - ../../components:/app/components
+      - ../../projects/web_ui:/app/projects/web_ui
+      - ../../bases:/app/bases
+    networks:
+      - sejm-whiz-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Data processor (configurable GPU/CPU for development)
+  processor:
+    build:
+      context: ../../
+      dockerfile: ${PROCESSOR_DOCKERFILE:-projects/data_processor/Dockerfile}
+      target: ${PROCESSOR_BUILD_TARGET:-}  # Use full build for GPU, base for CPU-only
+    container_name: sejm-whiz-processor-dev
+    environment:
+      - DEPLOYMENT_ENV=docker-compose
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sejm_whiz
+      - DATABASE_USER=sejm_whiz_user
+      - DATABASE_PASSWORD=sejm_whiz_password
+      - DATABASE_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - EMBEDDING_DEVICE=${DEV_EMBEDDING_DEVICE:-cuda}  # Default to GPU for development
+      - EMBEDDING_MODEL_CACHE_DIR=/app/.cache
+      - HF_HOME=/app/.cache
+      - TRANSFORMERS_CACHE=/app/.cache
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+    volumes:
+      # Mount source code for development
+      - ../../components:/app/components
+      - ../../projects/data_processor:/app/projects/data_processor
+      - ../../bases:/app/bases
+      - model_cache_dev:/app/.cache
+    networks:
+      - sejm-whiz-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    # GPU runtime support (controlled by DEV_USE_GPU environment variable)
+    runtime: ${DEV_GPU_RUNTIME:-}  # Set to 'nvidia' for GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: ${DEV_GPU_DRIVER:-}  # Set to 'nvidia' for GPU support
+              count: ${DEV_GPU_COUNT:-0}   # Number of GPUs to use
+              capabilities: [gpu]
+    # Uncomment to run processor interactively for debugging
+    # tty: true
+    # stdin_open: true
+
+volumes:
+  postgres_data_dev:
+    name: sejm-whiz-postgres-data-dev
+  redis_data_dev:
+    name: sejm-whiz-redis-data-dev
+  model_cache_dev:
+    name: sejm-whiz-model-cache-dev
+
+networks:
+  sejm-whiz-dev:
+    name: sejm-whiz-dev
+    driver: bridge
