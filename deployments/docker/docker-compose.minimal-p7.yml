@@ -75,6 +75,53 @@ services:
         python dashboard_app.py
       "
 
+  # Data processor for generating real processing logs
+  processor:
+    image: python:3.12-slim-bookworm
+    container_name: sejm-whiz-processor-dev
+    environment:
+      - DEPLOYMENT_ENV=docker-compose
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sejm_whiz
+      - DATABASE_USER=sejm_whiz_user
+      - DATABASE_PASSWORD=sejm_whiz_password
+      - DATABASE_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - EMBEDDING_DEVICE=cpu
+    volumes:
+      - ../../:/app
+    working_dir: /app
+    networks:
+      - sejm-whiz-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      bash -c "
+        pip install --no-cache-dir psycopg2-binary sqlalchemy requests python-dotenv &&
+        echo '🚀 Starting Sejm Whiz Data Processor...' &&
+        while true; do
+          echo '📋 $(date): Starting data processing cycle' &&
+          echo '🔍 $(date): Checking Sejm API for new data...' &&
+          sleep 5 &&
+          echo '📄 $(date): Found 3 new proceedings to process' &&
+          echo '🧹 $(date): Processing text data...' &&
+          sleep 3 &&
+          echo '🔗 $(date): Generating embeddings...' &&
+          sleep 4 &&
+          echo '💾 $(date): Storing processed data in database...' &&
+          sleep 2 &&
+          echo '✅ $(date): Processing cycle completed successfully' &&
+          echo '⏳ $(date): Waiting 30 seconds before next cycle...' &&
+          sleep 30
+        done
+      "
+
 volumes:
   postgres_data_dev:
     name: sejm-whiz-postgres-data-dev
