@@ -3,6 +3,7 @@
 > **Portfolio Project**: Advanced AI system demonstrating production-ready architecture for legal document analysis and change prediction using Polish parliamentary data.
 
 **Goal**: Predict changes in Polish law using data from Sejm (Polish Parliament) APIs
+
 - **ELI API**: Effective law data from https://api.sejm.gov.pl/eli/openapi/
 - **Sejm Proceedings API**: Parliamentary proceedings from https://api.sejm.gov.pl/sejm/openapi/
 
@@ -177,6 +178,7 @@ graph TD
 ```
 
 **Legend:**
+
 - 🟢 Green: Fully implemented and deployed components/projects
 - 🟡 Orange: Implemented but deployment issues or planned components
 
@@ -211,6 +213,7 @@ This project demonstrates the Polylith Architecture - a components-first approac
 **Assessment Criteria**: Components are marked as **DONE** only when they are designed, implemented, unit tested, successfully deployed, verified working in deployment environment, monitored, and documented.
 
 **Data Integration & Processing:**
+
 - `database` - PostgreSQL + pgvector operations with Alembic migrations
   - Status: **WIP** - Schema designed and implemented, deployment failing (CrashLoopBackOff)
   - Issues: SSL certificate configuration preventing database startup
@@ -229,6 +232,7 @@ This project demonstrates the Polylith Architecture - a components-first approac
   - Integration Gap: Pipeline orchestration implemented but not successfully deployed
 
 **AI & Machine Learning:**
+
 - `embeddings` - HerBERT embeddings with Polish BERT
   - Status: **WIP** - Implementation complete with GPU optimization, deployment issues prevent verification
   - Integration Gap: GPU processing implemented but pipeline deployment failing
@@ -246,11 +250,13 @@ This project demonstrates the Polylith Architecture - a components-first approac
   - Integration Gap: Search functionality implemented but not exposed through deployed API
 
 **Infrastructure:**
+
 - `redis` - Caching and queue management
   - Status: **WIP** - Implementation complete, deployed and running (1/1 Ready) but not integrated
   - Integration Gap: Service running but not configured in applications
 
 **Application Framework:**
+
 - `web_api` (base) - FastAPI web server base
   - Status: **WIP** - Implementation complete with comprehensive features, deployment verification needed
   - Integration Gap: Base implemented but full application deployment not verified
@@ -268,6 +274,7 @@ This project demonstrates the Polylith Architecture - a components-first approac
   - Integration Gap: k3s deployment exists but service not responding
 
 ### Planned Components
+
 - `legal_graph` - Legal act dependency mapping and cross-reference analysis
 - `user_preferences` - User interest profiling and subscription management
 - `notification_system` - Multi-channel notification delivery
@@ -277,16 +284,19 @@ This project demonstrates the Polylith Architecture - a components-first approac
 ## Technology Stack & Technical Decisions
 
 **Core Technologies:**
+
 - **Language**: Python 3.12+ (modern async/await, type hints)
 - **Architecture**: Polylith monorepo with components and projects
 - **Package Management**: uv with polylith-cli (fast, reliable dependency resolution)
 
 **AI/ML Stack:**
+
 - **ML Framework**: PyTorch with CUDA support (GPU acceleration)
 - **Embedding Models**: HerBERT (Polish BERT) - specialized for Polish legal language
 - **Vector Database**: PostgreSQL 17 with pgvector extension (production-ready vector similarity)
 
 **Infrastructure:**
+
 - **Web Framework**: FastAPI with async support (high performance, automatic OpenAPI docs)
 - **Database**: PostgreSQL 17 (ACID compliance, advanced indexing)
 - **Cache**: Redis 7+ (distributed caching, job queues)
@@ -294,6 +304,7 @@ This project demonstrates the Polylith Architecture - a components-first approac
 - **Container**: Docker with NVIDIA Container Toolkit
 
 **Why These Choices:**
+
 - **Polylith**: Enables component-based development and testing
 - **pgvector**: Production-ready vector similarity without additional vector database complexity
 - **HerBERT**: State-of-the-art Polish language model, specifically trained for legal/formal Polish
@@ -303,11 +314,13 @@ This project demonstrates the Polylith Architecture - a components-first approac
 ## Performance Characteristics
 
 **Embedding Generation:**
+
 - HerBERT processing: ~500 documents/minute on GTX 1060 6GB
 - Batch processing optimized for GPU memory constraints
-- Semantic similarity search: <100ms for 10K document corpus
+- Semantic similarity search: \<100ms for 10K document corpus
 
 **System Scalability:**
+
 - Component isolation enables horizontal scaling
 - Vector search optimized with HNSW indexing
 - Redis caching reduces API call overhead by 80%
@@ -315,6 +328,7 @@ This project demonstrates the Polylith Architecture - a components-first approac
 ## Quick Start
 
 ### Prerequisites
+
 - Python 3.12+
 - NVIDIA GPU with CUDA 12.2+ (for embeddings)
 - PostgreSQL 17 with pgvector extension
@@ -324,24 +338,27 @@ This project demonstrates the Polylith Architecture - a components-first approac
 ### Installation
 
 1. **Clone and install dependencies**:
+
    ```bash
    git clone https://github.com/stakent/sejm-whiz.git
    cd sejm-whiz
    uv sync --dev
    ```
 
-2. **Check workspace status**:
+1. **Check workspace status**:
+
    ```bash
    uv run poly info
    ```
 
-3. **Run comprehensive tests**:
+1. **Run comprehensive tests**:
+
    ```bash
    # Full test suite
    uv run poly test
 
    # Database integration tests
-   uv run python test_database.py
+   uv run python test/components/sejm_whiz/database/test_database.py
 
    # AI/ML component tests
    uv run pytest test/components/sejm_whiz/embeddings/ -v
@@ -349,7 +366,8 @@ This project demonstrates the Polylith Architecture - a components-first approac
    uv run pytest test/components/sejm_whiz/semantic_search/ -v
    ```
 
-4. **Start services locally**:
+1. **Start services locally**:
+
    ```bash
    # Web UI monitoring dashboard (recommended)
    uv run python projects/web_ui/main.py
@@ -362,7 +380,8 @@ This project demonstrates the Polylith Architecture - a components-first approac
    uv run python projects/data_processor/main.py
    ```
 
-5. **Deploy to k3s** (production deployment):
+1. **Deploy to k3s** (production deployment):
+
    ```bash
    # Deploy data processor with GPU support
    ./deployments/k3s/scripts/setup-gpu.sh
@@ -377,6 +396,7 @@ This project demonstrates the Polylith Architecture - a components-first approac
 ## Development Workflow
 
 ### Component Development
+
 ```bash
 # Create new component
 uv run poly create component <name>
@@ -389,6 +409,7 @@ uv run poly deps
 ```
 
 ### Polylith Workspace Commands
+
 - `uv run poly info` - Show workspace summary and health
 - `uv run poly check` - Validate the Polylith workspace integrity
 - `uv run poly sync` - Update pyproject.toml with missing bricks
@@ -398,14 +419,18 @@ uv run poly deps
 ## Deployment
 
 ### k3s GPU Deployment (Current)
+
 The project includes production-ready k3s deployment with GPU support:
+
 - **Location**: `deployments/k3s/`
 - **Quick Deploy**: `./deployments/k3s/scripts/setup-gpu.sh`
 - **GPU Support**: NVIDIA CUDA 12.2 with runtime class
 - **Documentation**: See `deployments/k3s/README.md`
 
 ### Multi-Cloud Strategy (Planned)
+
 Following the hybrid deployment approach (`hybrid_deployment_summary.md`):
+
 - **AWS**: ECS Fargate + SageMaker (coming soon)
 - **OpenStack**: Heat templates for private cloud (planned)
 - **Universal**: Crossplane for cloud-agnostic deployment (future)
@@ -415,12 +440,14 @@ Following the hybrid deployment approach (`hybrid_deployment_summary.md`):
 The project includes a comprehensive web interface for monitoring and interacting with the data processing pipeline:
 
 ### Available Pages
+
 - **🏠 Home**: Landing page with project overview and feature descriptions
 - **📊 Dashboard**: Real-time monitoring of data processor with live log streaming
 - **📚 API Docs**: Interactive FastAPI/Swagger documentation with API testing
 - **❤️ Health**: System health status and service availability
 
 ### Dashboard Features
+
 - **Fixed Top Navigation**: Easy access to all pages with visual active page indicators
 - **Live Log Streaming**: Real-time logs from data processor with auto-scroll and color coding
 - **Status Monitoring**: Current pipeline stage, document counts, and processor health
@@ -429,19 +456,23 @@ The project includes a comprehensive web interface for monitoring and interactin
 - **Modern UI**: Gradient-styled interface with blur effects and responsive design
 
 ### Access URLs
+
 - **Local Development**:
+
   - Home: http://localhost:8000/ (redirects to /home)
   - Dashboard: http://localhost:8000/dashboard
   - API Docs: http://localhost:8000/docs
   - Health: http://localhost:8000/health
 
 - **k3s Production** (NodePort 30800):
+
   - Home: http://192.168.0.200:30800/
   - Dashboard: http://192.168.0.200:30800/dashboard
   - API Docs: http://192.168.0.200:30800/docs
   - Health: http://192.168.0.200:30800/health
 
 ### Technology Stack
+
 - **Architecture**: Dedicated Polylith project (`projects/web_ui/`) using `web_api` base
 - **Backend**: FastAPI with embedded HTML templates (no external dependencies)
 - **Frontend**: Vanilla JavaScript with Server-Sent Events (SSE) for real-time updates
@@ -454,6 +485,7 @@ The project includes a comprehensive web interface for monitoring and interactin
 ## Project Status
 
 **Current System Capabilities:**
+
 - **Data Ingestion**: Successfully ingesting Sejm proceedings via API (168 documents)
 - **Text Processing**: Polish legal text normalization and tokenization operational
 - **Embeddings Generation**: HerBERT Polish BERT generating embeddings on GPU (95 embeddings)
@@ -461,6 +493,7 @@ The project includes a comprehensive web interface for monitoring and interactin
 - **Testing**: 772 unit tests passing across all components
 
 **Integration Gaps - Built but Not Connected:**
+
 - **ELI API**: Pipeline defined but never executed (0 ELI documents ingested)
 - **Legal NLP**: Not analyzing documents for legal concepts or amendments
 - **Prediction Models**: No model training or inference running
@@ -469,6 +502,7 @@ The project includes a comprehensive web interface for monitoring and interactin
 - **API Server**: Only serving health checks, no functional endpoints
 
 **Deployment Infrastructure:**
+
 - **k3s Cluster**: Single-node deployment with GPU support - **WIP** (critical services failing)
 - **Database**: PostgreSQL 17 with pgvector - **WIP** (CrashLoopBackOff, SSL certificate issues)
 - **Redis**: Deployed and running (1/1 Ready) - **WIP** (not integrated with applications)
@@ -478,11 +512,13 @@ The project includes a comprehensive web interface for monitoring and interactin
 - **Storage**: 10Gi persistent volume configured - **WIP** (volume exists but applications not accessing)
 
 **Current Data Flow Status:**
+
 ```
 All pipelines: NOT FUNCTIONAL (deployment failures)
 ```
 
 **Deployment Issues Preventing Data Flow:**
+
 ```
 PostgreSQL: CrashLoopBackOff (SSL certificate configuration)
 Data Processor: Completed/Failed (cannot connect to database)
@@ -492,6 +528,7 @@ Redis: Running but not integrated with applications
 ```
 
 **Critical Issues Requiring Immediate Attention:**
+
 - Fix PostgreSQL SSL certificate configuration (CrashLoopBackOff)
 - Resolve data processor deployment connectivity issues
 - Restore Web UI service accessibility
@@ -500,6 +537,7 @@ Redis: Running but not integrated with applications
 - Complete integration of implemented components with deployed services
 
 **Next Development Phase (After Deployment Issues Resolved):**
+
 - Complete monitoring infrastructure setup
 - Implement legal dependency graphing
 - Add user personalization system
@@ -512,12 +550,14 @@ See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `deployments/k
 ## Hardware Requirements
 
 **Development:**
+
 - **GPU**: NVIDIA GeForce GTX 1060 6GB (minimum for HerBERT)
 - **CUDA**: Version 12.2 or compatible
 - **RAM**: 16GB+ (12GB+ available for embeddings processing)
 - **Storage**: NVMe SSD recommended for vector index performance
 
 **Production (k3s):**
+
 - **Node**: Single node k3s cluster (p7 host)
 - **CPU**: 8+ cores for concurrent API requests
 - **GPU**: GTX 1060 6GB with NVIDIA Container Toolkit
@@ -530,6 +570,7 @@ See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `deployments/k
 **Project Status**: This is primarily a portfolio project demonstrating AI system architecture. While the code is open source (MIT), external contributions are not actively sought during rapid development phases.
 
 **Architecture Principles**:
+
 - Components should be small, reusable, and focused on single responsibilities
 - Use the `sejm_whiz` namespace for all code
 - Follow component isolation principles - no circular dependencies
@@ -540,6 +581,6 @@ See `IMPLEMENTATION_PLAN.md` for detailed development roadmap and `deployments/k
 
 MIT License - see LICENSE file for details.
 
----
+______________________________________________________________________
 
 *This project demonstrates production-ready AI system architecture using modern Python tooling, component-based design, and specialized domain knowledge in legal document processing.*

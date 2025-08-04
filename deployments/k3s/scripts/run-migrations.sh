@@ -38,14 +38,12 @@ spec:
           echo "Running Alembic migrations..."
           cd /app
 
-          # First, ensure alembic is configured correctly
+          # Navigate to database component directory
           if [ -f components/sejm_whiz/database/alembic.ini ]; then
               cd components/sejm_whiz/database
               echo "Running migrations from components/sejm_whiz/database..."
-          elif [ -f alembic.ini ]; then
-              echo "Running migrations from current directory..."
           else
-              echo "Error: alembic.ini not found"
+              echo "Error: components/sejm_whiz/database/alembic.ini not found"
               exit 1
           fi
 
