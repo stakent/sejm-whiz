@@ -35,6 +35,7 @@ class DatabaseConfig(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        env_prefix = ""
 
     @property
     def database_url(self) -> str:
@@ -91,6 +92,16 @@ def get_database_config() -> DatabaseConfig:
 
     if deployment_env == "k3s":
         return DatabaseConfig.for_k3s()
+    elif deployment_env in ["docker-compose", "development"]:
+        # Use environment variables for Docker Compose and development
+        return DatabaseConfig(
+            host=os.getenv("DATABASE_HOST", "localhost"),
+            port=int(os.getenv("DATABASE_PORT", "5432")),
+            database=os.getenv("DATABASE_NAME", "sejm_whiz"),
+            username=os.getenv("DATABASE_USER", "sejm_whiz_user"),
+            password=os.getenv("DATABASE_PASSWORD", "sejm_whiz_password"),
+            ssl_mode=os.getenv("DATABASE_SSL_MODE", "prefer"),
+        )
     else:
         return DatabaseConfig.for_local_dev()
 

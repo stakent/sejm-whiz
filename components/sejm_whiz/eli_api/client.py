@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class EliApiConfig:
     """Configuration for ELI API client."""
 
-    base_url: str = "https://api.sejm.gov.pl/eli"
+    base_url: str = "https://api.sejm.gov.pl"
     rate_limit: int = 10  # requests per second
     timeout: int = 30
     max_retries: int = 3
@@ -132,7 +132,7 @@ class EliApiClient:
                 response = await self._client.get(url, params=params)
 
                 if response.status_code == 429:  # Rate limited
-                    retry_after = int(response.headers.get("Retry-After", 60))
+                    retry_after = int(response.headers.get("Retry-After", "60"))
                     logger.warning(f"Rate limited, waiting {retry_after}s")
                     await asyncio.sleep(retry_after)
                     continue
@@ -206,11 +206,11 @@ class EliApiClient:
         logger.info(f"Searching documents with query: {query}")
 
         try:
-            result = await self._make_request("/search", params)
+            result = await self._make_request("/eli/acts/search", params)
 
             # Parse documents
             documents = []
-            for doc_data in result.get("documents", []):
+            for doc_data in result.get("items", []):
                 try:
                     document = LegalDocument.from_api_response(doc_data)
                     documents.append(document)
@@ -220,7 +220,7 @@ class EliApiClient:
 
             search_result = DocumentSearchResult(
                 documents=documents,
-                total=result.get("total", len(documents)),
+                total=result.get("totalCount", len(documents)),
                 offset=offset,
                 limit=limit,
             )
