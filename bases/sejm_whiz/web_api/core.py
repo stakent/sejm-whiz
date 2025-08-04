@@ -186,65 +186,61 @@ def configure_routes(app: FastAPI) -> None:
         """Stream data processor logs in real-time."""
 
         async def log_generator() -> AsyncGenerator[str, None]:
-            kubectl_available = False
-            pod_selector = None
+            docker_available = False
+            container_name = None
 
-            # Try GPU processor first, then CPU processor
-            processor_labels = [
-                "app=sejm-whiz-processor-gpu",
-                "app=sejm-whiz-processor-cpu",
-                "app=data-processor",
+            # Try to find the processor container
+            processor_containers = [
+                "sejm-whiz-processor-dev",
+                "sejm-whiz-processor",
+                "processor",
             ]
 
-            # Check which processor pods are available
-            for label in processor_labels:
+            # Check which processor containers are available
+            for container in processor_containers:
                 try:
                     check_process = await asyncio.create_subprocess_exec(
-                        "kubectl",
-                        "get",
-                        "pods",
-                        "-n",
-                        "sejm-whiz",
-                        "-l",
-                        label,
+                        "docker",
+                        "ps",
+                        "--filter",
+                        f"name={container}",
+                        "--format",
+                        "{{.Names}}",
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
                     )
                     stdout, stderr = await check_process.communicate()
-                    if (
-                        check_process.returncode == 0
-                        and b"No resources found" not in stdout
-                        and stdout.strip()
-                    ):
-                        kubectl_available = True
-                        pod_selector = label
-                        yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found processor pods with label: {label}\n\n"
+                    if check_process.returncode == 0 and stdout.strip():
+                        docker_available = True
+                        container_name = container
+                        yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found processor container: {container}\n\n"
                         break
                 except (FileNotFoundError, OSError):
                     continue
 
-            if kubectl_available and pod_selector:
+            if docker_available and container_name:
                 try:
-                    # Stream logs from Kubernetes pod
+                    # Stream logs from Docker container
                     process = await asyncio.create_subprocess_exec(
-                        "kubectl",
+                        "docker",
                         "logs",
                         "-f",
-                        "-n",
-                        "sejm-whiz",
-                        "-l",
-                        pod_selector,
                         "--tail=50",
+                        container_name,
                         stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.STDOUT,
                     )
 
                     if process.stdout:
                         async for line in process.stdout:
-                            yield f"data: {line.decode('utf-8')}\n\n"
+                            decoded_line = line.decode(
+                                "utf-8", errors="replace"
+                            ).strip()
+                            if decoded_line:
+                                yield f"data: {decoded_line}\n\n"
                         return
                 except Exception as e:
-                    logger.warning(f"Failed to stream from kubectl: {e}")
+                    logger.warning(f"Failed to stream from docker: {e}")
                     yield f"data: {datetime.utcnow().isoformat()} - dashboard - ERROR - Failed to stream logs: {e}\n\n"
 
             # Check for local log file
@@ -321,25 +317,21 @@ def configure_routes(app: FastAPI) -> None:
     async def processor_status():
         """Get the current status of the data processor."""
         try:
-            # Try GPU processor first, then CPU processor
-            processor_labels = [
-                "app=sejm-whiz-processor-gpu",
-                "app=sejm-whiz-processor-cpu",
-                "app=data-processor",
+            # Try to find processor containers
+            processor_containers = [
+                "sejm-whiz-processor-dev",
+                "sejm-whiz-processor",
+                "processor",
             ]
 
-            for label in processor_labels:
+            for container_name in processor_containers:
                 result = subprocess.run(
                     [
-                        "kubectl",
-                        "get",
-                        "pods",
-                        "-n",
-                        "sejm-whiz",
-                        "-l",
-                        label,
-                        "-o",
-                        "json",
+                        "docker",
+                        "inspect",
+                        container_name,
+                        "--format",
+                        "{{json .}}",
                     ],
                     capture_output=True,
                     text=True,
@@ -349,26 +341,43 @@ def configure_routes(app: FastAPI) -> None:
                 if result.returncode == 0:
                     import json
 
-                    pods_data = json.loads(result.stdout)
-                    if pods_data.get("items"):
-                        pod = pods_data["items"][0]
-                        processor_type = (
-                            "GPU"
-                            if "gpu" in label
-                            else "CPU"
-                            if "cpu" in label
-                            else "Unknown"
-                        )
-                        return {
-                            "status": pod["status"]["phase"],
-                            "processor_type": processor_type,
-                            "pod_name": pod["metadata"]["name"],
-                            "started_at": pod["status"].get("startTime"),
-                            "container_statuses": pod["status"].get(
-                                "containerStatuses", []
-                            ),
-                            "label_selector": label,
-                        }
+                    container_data = json.loads(result.stdout)
+                    state = container_data.get("State", {})
+                    config = container_data.get("Config", {})
+
+                    # Determine processor type from environment variables
+                    env_vars = config.get("Env", [])
+                    processor_type = "CPU"  # Default
+                    for env_var in env_vars:
+                        if env_var.startswith("EMBEDDING_DEVICE="):
+                            device = env_var.split("=", 1)[1]
+                            if device.lower() in ["cuda", "gpu"]:
+                                processor_type = "GPU"
+                            break
+
+                    # Map Docker state to readable status
+                    if state.get("Running"):
+                        status = "Running"
+                    elif state.get("Paused"):
+                        status = "Paused"
+                    elif state.get("Restarting"):
+                        status = "Restarting"
+                    elif state.get("Dead"):
+                        status = "Dead"
+                    else:
+                        status = "Stopped"
+
+                    return {
+                        "status": status,
+                        "processor_type": processor_type,
+                        "container_name": container_name,
+                        "started_at": state.get("StartedAt"),
+                        "finished_at": state.get("FinishedAt"),
+                        "exit_code": state.get("ExitCode"),
+                        "pid": state.get("Pid"),
+                        "health": state.get("Health", {}).get("Status", "unknown"),
+                        "environment": "docker-compose",
+                    }
         except Exception as e:
             logger.error(f"Error getting processor status: {e}")
 
@@ -378,6 +387,109 @@ def configure_routes(app: FastAPI) -> None:
             "message": "Unable to determine processor status",
             "timestamp": datetime.utcnow().isoformat(),
         }
+
+    @app.get("/api/services/status")
+    async def services_status():
+        """Get the status of all Docker Compose services."""
+        try:
+            # Get all containers related to sejm-whiz
+            result = subprocess.run(
+                [
+                    "docker",
+                    "ps",
+                    "-a",
+                    "--filter",
+                    "name=sejm-whiz",
+                    "--format",
+                    "{{.Names}}\t{{.Status}}\t{{.Image}}\t{{.Ports}}\t{{.CreatedAt}}",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            services = []
+            if result.returncode == 0 and result.stdout.strip():
+                lines = result.stdout.strip().split("\n")
+                for line in lines:
+                    parts = line.split("\t")
+                    if len(parts) >= 4:
+                        name = parts[0]
+                        status = parts[1]
+                        image = parts[2]
+                        ports = parts[3]
+                        created = parts[4] if len(parts) > 4 else "Unknown"
+
+                        # Determine service type
+                        service_type = "unknown"
+                        if "postgres" in name.lower():
+                            service_type = "database"
+                        elif "redis" in name.lower():
+                            service_type = "cache"
+                        elif "processor" in name.lower():
+                            service_type = "processor"
+                        elif "api" in name.lower():
+                            service_type = "api"
+                        elif "web" in name.lower():
+                            service_type = "web"
+
+                        # Parse status
+                        running = "Up" in status
+
+                        services.append(
+                            {
+                                "name": name,
+                                "status": "running" if running else "stopped",
+                                "service_type": service_type,
+                                "image": image,
+                                "ports": ports,
+                                "created_at": created,
+                                "status_detail": status,
+                            }
+                        )
+
+            # Also check Docker Compose status if available
+            compose_status = {}
+            try:
+                compose_result = subprocess.run(
+                    ["docker", "compose", "ps", "--format", "json"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    cwd="/home/d/project/sejm-whiz/sejm-whiz-dev/deployments/docker",
+                )
+                if compose_result.returncode == 0:
+                    import json
+
+                    compose_data = json.loads(compose_result.stdout)
+                    if isinstance(compose_data, list):
+                        for service in compose_data:
+                            compose_status[service.get("Name", "")] = {
+                                "service": service.get("Service", ""),
+                                "state": service.get("State", ""),
+                                "health": service.get("Health", ""),
+                            }
+            except Exception as e:
+                logger.debug(f"Could not get docker compose status: {e}")
+
+            return {
+                "services": services,
+                "compose_status": compose_status,
+                "total_services": len(services),
+                "running_services": len(
+                    [s for s in services if s["status"] == "running"]
+                ),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting services status: {e}")
+            return {
+                "services": [],
+                "compose_status": {},
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
 
     # Semantic Search API endpoints
     if COMPONENTS_AVAILABLE:
