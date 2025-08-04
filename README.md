@@ -206,63 +206,64 @@ This project demonstrates the Polylith Architecture - a components-first approac
 
 ### Component Status
 
-**Note on Integration Status**: While many components are fully implemented and tested, integration into the running system varies. Components marked as "integrated" are actively processing data in production. Those marked as "built" are complete but not yet connected to the live pipeline.
+**Assessment Criteria**: Components are marked as **DONE** only when they are designed, implemented, unit tested, successfully deployed, verified working in deployment environment, monitored, and documented.
 
 **Data Integration & Processing:**
 - `database` - PostgreSQL + pgvector operations with Alembic migrations
-  - Status: Fully integrated, 168 documents stored
-  - Integration: Active in production pipeline
+  - Status: **WIP** - Schema designed and implemented, deployment failing (CrashLoopBackOff)
+  - Issues: SSL certificate configuration preventing database startup
+  - Data: No confirmed data storage due to deployment issues
 - `eli_api` - ELI API integration with legal document parsing
-  - Status: Built and tested, pipeline step defined
-  - Integration Gap: Pipeline exists but never called, no ELI documents in database
+  - Status: **WIP** - Implementation complete with 119 tests, not deployed to production
+  - Integration Gap: Pipeline defined but not executed in deployment
 - `sejm_api` - Sejm Proceedings API integration with rate limiting
-  - Status: Fully integrated, actively ingesting data
-  - Integration: Processing 168 proceedings successfully
+  - Status: **WIP** - Implementation complete with 248 tests, deployment issues prevent verification
+  - Integration Gap: Cannot verify data processing due to database deployment failure
 - `text_processing` - Polish legal text processing
-  - Status: Fully integrated in pipeline
-  - Integration: Processing all documents before storage
+  - Status: **WIP** - Implementation complete with 79 tests, not verified in production
+  - Integration Gap: Processing pipeline exists but deployment issues prevent end-to-end verification
 - `document_ingestion` - Document processing pipeline
-  - Status: Fully integrated
-  - Integration: Orchestrating Sejm → Text → Embeddings → Database flow
+  - Status: **WIP** - Implementation complete with 50+ tests, deployment not functional
+  - Integration Gap: Pipeline orchestration implemented but not successfully deployed
 
 **AI & Machine Learning:**
 - `embeddings` - HerBERT embeddings with Polish BERT
-  - Status: Fully integrated, GPU-optimized
-  - Integration: Generating embeddings for all documents (95 stored)
+  - Status: **WIP** - Implementation complete with GPU optimization, deployment issues prevent verification
+  - Integration Gap: GPU processing implemented but pipeline deployment failing
 - `vector_db` - Vector database operations with pgvector
-  - Status: Fully integrated
-  - Integration: Storing embeddings in PostgreSQL
+  - Status: **WIP** - Implementation complete with 66 tests, database deployment failing
+  - Integration Gap: Cannot verify vector operations due to PostgreSQL deployment issues
 - `legal_nlp` - Legal document analysis with amendment detection
-  - Status: Built and tested
-  - Integration Gap: Not imported in any running service, legal concepts not being extracted
+  - Status: **PLANNED** - Implementation complete with 45+ tests, not deployed or integrated
+  - Integration Gap: Component exists but not connected to any deployed service
 - `prediction_models` - ML models for law change predictions
-  - Status: Built and tested
-  - Integration Gap: No prediction endpoints in API, models not trained or serving
+  - Status: **PLANNED** - Implementation complete, no deployment or API integration
+  - Integration Gap: Models implemented but no inference endpoints or training pipeline deployed
 - `semantic_search` - Embedding-based search with cross-register matching
-  - Status: Built and tested
-  - Integration Gap: No search endpoints in API, not querying stored embeddings
+  - Status: **PLANNED** - Implementation complete with 70+ tests, no deployment integration
+  - Integration Gap: Search functionality implemented but not exposed through deployed API
 
 **Infrastructure:**
 - `redis` - Caching and queue management
-  - Status: Deployed and running
-  - Integration Gap: Not configured in applications, no cache operations or job queues active
+  - Status: **WIP** - Implementation complete, deployed and running (1/1 Ready) but not integrated
+  - Integration Gap: Service running but not configured in applications
 
 **Application Framework:**
 - `web_api` (base) - FastAPI web server base
-  - Status: Fully integrated
-  - Integration: Serving health endpoints and basic API
+  - Status: **WIP** - Implementation complete with comprehensive features, deployment verification needed
+  - Integration Gap: Base implemented but full application deployment not verified
 - `data_pipeline` (base) - Data processing base
-  - Status: Fully integrated
-  - Integration: Orchestrating data flow successfully
+  - Status: **WIP** - Implementation complete, deployment issues prevent verification
+  - Integration Gap: Pipeline orchestration implemented but deployment not functional
 - `api_server` (project) - Main web API server
-  - Status: Deployed with minimal functionality
-  - Integration Gap: Only imports web_api base, no AI/ML components connected, no functional endpoints beyond health
+  - Status: **PLANNED** - Implementation complete, not deployed to production environment
+  - Integration Gap: Project implemented but no k3s deployment attempted
 - `data_processor` (project) - Batch processing project
-  - Status: Partially integrated
-  - Integration: Only runs Sejm pipeline, ELI pipeline defined but unused
+  - Status: **WIP** - Implementation complete, deployment failing (pods in Completed/CrashLoopBackOff state)
+  - Integration Gap: Deployment exists but not functionally running
 - `web_ui` (project) - Web monitoring dashboard
-  - Status: Deployed and accessible
-  - Integration Gap: Monitoring features incomplete, no real-time data connection
+  - Status: **WIP** - Implementation complete, deployment not accessible (0/1 Unknown status)
+  - Integration Gap: k3s deployment exists but service not responding
 
 ### Planned Components
 - `legal_graph` - Legal act dependency mapping and cross-reference analysis
@@ -466,29 +467,37 @@ The project includes a comprehensive web interface for monitoring and interactin
 - **API Server**: Only serving health checks, no functional endpoints
 
 **Deployment Infrastructure:**
-- **k3s Cluster**: Single-node deployment with GPU support
-- **Database**: PostgreSQL 17 with pgvector extension (168 Sejm proceedings, 95 embeddings, 0 ELI documents)
-- **Redis**: Deployed but not connected to applications
-- **Web UI**: Deployed at port 30801, limited monitoring capability
-- **Data Processor**: Running Sejm pipeline only, ELI pipeline unused
-- **API Server**: Running but serving minimal functionality
-- **Storage**: 10Gi persistent volume for HerBERT model caching
+- **k3s Cluster**: Single-node deployment with GPU support - **WIP** (critical services failing)
+- **Database**: PostgreSQL 17 with pgvector - **WIP** (CrashLoopBackOff, SSL certificate issues)
+- **Redis**: Deployed and running (1/1 Ready) - **WIP** (not integrated with applications)
+- **Web UI**: Deployment not accessible - **WIP** (0/1 Unknown status, port 30800/30801 not responding)
+- **Data Processor**: Deployment failing - **WIP** (pods in Completed state, indicating failures)
+- **API Server**: Not deployed to k3s - **PLANNED**
+- **Storage**: 10Gi persistent volume configured - **WIP** (volume exists but applications not accessing)
 
-**Active Data Flow:**
+**Current Data Flow Status:**
 ```
-Sejm API → Text Processing → Embeddings (GPU) → Database Storage
-```
-
-**Disconnected Components:**
-```
-ELI API ✗ (pipeline defined but not called)
-Legal NLP ✗ (not imported in any service)
-Prediction Models ✗ (no endpoints or training)
-Semantic Search ✗ (no search endpoints)
-Redis Cache ✗ (not configured in apps)
+All pipelines: NOT FUNCTIONAL (deployment failures)
 ```
 
-**Next Development Phase:**
+**Deployment Issues Preventing Data Flow:**
+```
+PostgreSQL: CrashLoopBackOff (SSL certificate configuration)
+Data Processor: Completed/Failed (cannot connect to database)
+Web UI: Not accessible (service deployment issues)
+API Server: Not deployed to k3s
+Redis: Running but not integrated with applications
+```
+
+**Critical Issues Requiring Immediate Attention:**
+- Fix PostgreSQL SSL certificate configuration (CrashLoopBackOff)
+- Resolve data processor deployment connectivity issues
+- Restore Web UI service accessibility
+- Deploy API server to k3s environment
+- Verify end-to-end data pipeline functionality
+- Complete integration of implemented components with deployed services
+
+**Next Development Phase (After Deployment Issues Resolved):**
 - Complete monitoring infrastructure setup
 - Implement legal dependency graphing
 - Add user personalization system
