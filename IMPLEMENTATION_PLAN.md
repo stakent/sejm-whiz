@@ -1773,14 +1773,14 @@ ______________________________________________________________________
 
 ### Built but Not Integrated (Ready for Connection)
 
-| Component         | Status           | Integration Gap                 | Impact                      |
-| ----------------- | ---------------- | ------------------------------- | --------------------------- |
-| ELI API           | ✅ **INTEGRATED** | Successfully connected to DU/MP endpoints | 1771+ documents retrieved |
-| Legal NLP         | Complete, tested | Not imported anywhere           | No legal concept extraction |
-| Prediction Models | Complete, tested | No API endpoints                | No predictions available    |
-| Semantic Search   | Complete, tested | No API endpoints                | Embeddings not searchable   |
-| Redis             | Deployed         | Not configured in apps          | No caching or queues        |
-| API Server        | Running          | Only health endpoints           | No functional API           |
+| Component         | Status            | Integration Gap                           | Impact                      |
+| ----------------- | ----------------- | ----------------------------------------- | --------------------------- |
+| ELI API           | ✅ **INTEGRATED** | Successfully connected to DU/MP endpoints | 1771+ documents retrieved   |
+| Legal NLP         | Complete, tested  | Not imported anywhere                     | No legal concept extraction |
+| Prediction Models | Complete, tested  | No API endpoints                          | No predictions available    |
+| Semantic Search   | Complete, tested  | No API endpoints                          | Embeddings not searchable   |
+| Redis             | Deployed          | Not configured in apps                    | No caching or queues        |
+| API Server        | Running           | Only health endpoints                     | No functional API           |
 
 ### Integration Priority Tasks
 
@@ -2031,9 +2031,9 @@ curl -N http://p7:8001/api/logs/stream
 #### ✅ **Technical Issues Resolved**
 
 1. **ELI API 403 Errors**: Fixed by removing problematic query parameters and using direct publisher/year endpoints
-2. **Data Structure Mismatch**: Fixed `'tuple' object has no attribute 'get'` error in text processing step
-3. **Document Parsing**: Handling LegalDocument objects properly through pipeline steps
-4. **GPU Environment**: Full CUDA acceleration operational on p7 server
+1. **Data Structure Mismatch**: Fixed `'tuple' object has no attribute 'get'` error in text processing step
+1. **Document Parsing**: Handling LegalDocument objects properly through pipeline steps
+1. **GPU Environment**: Full CUDA acceleration operational on p7 server
 
 #### 📊 **Validation Results**
 
@@ -2045,7 +2045,7 @@ curl -N http://p7:8001/api/logs/stream
 
 # Complete Pipeline Success
 ✅ Sejm ingestion: 5 proceedings fetched
-✅ ELI ingestion: 1771 documents fetched, 10 parsed successfully  
+✅ ELI ingestion: 1771 documents fetched, 10 parsed successfully
 ✅ Text processing: All documents processed
 ✅ Embedding generation: GPU-accelerated, 20s total vs hours on CPU
 ❌ Database storage: Environment configuration issue (localhost vs p7)
