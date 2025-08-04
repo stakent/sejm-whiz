@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with pgvector extension (minimal config for CI)
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: sejm-whiz-postgres-ci
+    environment:
+      POSTGRES_DB: sejm_whiz
+      POSTGRES_USER: sejm_whiz_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    tmpfs:
+      - /var/lib/postgresql/data  # Use tmpfs for faster CI tests
+    volumes:
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-create-extensions.sql
+    networks:
+      - sejm-whiz-ci
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sejm_whiz_user -d sejm_whiz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  # Redis for caching and queues (minimal config for CI)
+  redis:
+    image: redis:7.2-alpine
+    container_name: sejm-whiz-redis-ci
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    tmpfs:
+      - /data  # Use tmpfs for faster CI tests
+    networks:
+      - sejm-whiz-ci
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  # Test runner service
+  test-runner:
+    build:
+      context: ../../
+      dockerfile: projects/data_processor/Dockerfile
+      target: builder  # Use builder stage with all dev dependencies
+    container_name: sejm-whiz-test-runner
+    environment:
+      - DEPLOYMENT_ENV=test
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sejm_whiz
+      - DATABASE_USER=sejm_whiz_user
+      - DATABASE_PASSWORD=test_password
+      - DATABASE_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - EMBEDDING_DEVICE=cpu  # Always use CPU in CI
+      - EMBEDDING_MODEL_CACHE_DIR=/tmp/.cache
+      - HF_HOME=/tmp/.cache
+      - TRANSFORMERS_CACHE=/tmp/.cache
+      - PYTHONPATH=/app
+    volumes:
+      - /tmp/.cache:/tmp/.cache  # Cache models in tmpfs
+    networks:
+      - sejm-whiz-ci
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Override entrypoint for testing
+    entrypoint: ["uv", "run", "poly", "test"]
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+
+  # Web UI health check service
+  web-ui-test:
+    build:
+      context: ../../
+      dockerfile: projects/web_ui/Dockerfile
+    container_name: sejm-whiz-web-ui-test
+    environment:
+      - ENVIRONMENT=test
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sejm_whiz
+      - DATABASE_USER=sejm_whiz_user
+      - DATABASE_PASSWORD=test_password
+      - DATABASE_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - sejm-whiz-ci
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Override entrypoint for health check
+    entrypoint: ["sh", "-c", "uv run python projects/web_ui/main.py & sleep 10 && curl -f http://localhost:8000/health"]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+networks:
+  sejm-whiz-ci:
+    name: sejm-whiz-ci
+    driver: bridge
