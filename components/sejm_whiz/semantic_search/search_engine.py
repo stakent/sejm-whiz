@@ -93,10 +93,10 @@ class SemanticSearchEngine:
             )
 
             # Generate query embedding
-            embedding_result = self.embedder.generate_embedding(clean_query_text)
-            if not embedding_result.success:
+            embedding_result = self.embedder.embed_text(clean_query_text)
+            if not hasattr(embedding_result, 'embedding'):
                 raise ValueError(
-                    f"Failed to generate query embedding: {embedding_result.error}"
+                    f"Failed to generate query embedding: invalid result format"
                 )
 
             query_embedding = embedding_result.embedding.tolist()

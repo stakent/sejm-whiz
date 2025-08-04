@@ -81,6 +81,7 @@ services:
       - "8001:8000"  # Different port to avoid conflict with web-ui
     environment:
       - ENVIRONMENT=development
+      - DEPLOYMENT_ENV=docker-compose
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_NAME=sejm_whiz
