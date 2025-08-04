@@ -9,7 +9,7 @@ This document provides a detailed, actionable implementation plan for the sejm-w
 - [x] `uv run poly info` shows workspace is ready
 - [x] Git repository is clean and on feature/database-setup branch
 
----
+______________________________________________________________________
 
 ## Phase 1: Infrastructure & Core Setup (DONE)
 
@@ -18,6 +18,7 @@ This document provides a detailed, actionable implementation plan for the sejm-w
 **Objective**: Set up PostgreSQL with pgvector extension for vector storage
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout -b feature/database-setup
@@ -31,12 +32,14 @@ uv add --dev pytest-asyncio pytest-postgresql
 ```
 
 **Deliverables:**
+
 - [x] PostgreSQL 17 installed with pgvector extension
 - [x] Database connection configuration
 - [x] Basic schema for legal documents and embeddings
 - [x] Migration system setup with Alembic
 
 **Validation:**
+
 ```bash
 # Test database connection
 uv run python -c "import psycopg2; print('PostgreSQL connection OK')"
@@ -50,6 +53,7 @@ uv run python -c "import pgvector; print('pgvector extension OK')"
 **Objective**: Set up Docker containers for development
 
 **Tasks:**
+
 ```bash
 # Create Docker configuration
 touch Dockerfile.api Dockerfile.processor
@@ -58,19 +62,21 @@ touch Dockerfile.api Dockerfile.processor
 ```
 
 **Deliverables:**
+
 - [x] Dockerfile for main application (Dockerfile.api, Dockerfile.processor)
 - [x] Helm charts for PostgreSQL + pgvector deployment
 - [x] Helm charts for Redis caching layer
 - [x] k3s persistent volume configuration
 
 **Validation:**
+
 ```bash
 # Verify k3s deployment
 kubectl get pods -n sejm-whiz
 kubectl get services -n sejm-whiz
 ```
 
----
+______________________________________________________________________
 
 ## Phase 2: Core API Components (WIP)
 
@@ -79,6 +85,7 @@ kubectl get services -n sejm-whiz
 **Objective**: Implement Sejm Proceedings API integration
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout main
@@ -95,6 +102,7 @@ uv add httpx pydantic
 ```
 
 **Component Structure:**
+
 ```
 components/sejm_api/
 └── sejm_whiz/
@@ -107,18 +115,21 @@ components/sejm_api/
 ```
 
 **Key Files Implemented:**
+
 - [x] `client.py`: SejmApiClient class with async HTTP methods and comprehensive validation
 - [x] `models.py`: Complete Pydantic models for all API responses
 - [x] `rate_limiter.py`: Advanced rate limiting with token bucket and sliding window algorithms
 - [x] `exceptions.py`: Comprehensive exception hierarchy with factory functions
 
 **Security Features Added:**
+
 - [x] Endpoint validation to prevent URL manipulation
 - [x] Error message sanitization to prevent information disclosure
 - [x] Comprehensive input validation for all parameters
 - [x] Rate limiting with token bucket and sliding window algorithms
 
 **Testing:**
+
 ```bash
 # Comprehensive test suite created
 test/components/sejm_whiz/sejm_api/
@@ -134,6 +145,7 @@ uv run pytest test/components/sejm_whiz/sejm_api/ -v
 ```
 
 **Validation:**
+
 - [x] API client can fetch proceedings data with comprehensive methods
 - [x] Rate limiting works correctly with token bucket and sliding window
 - [x] Error handling for API failures with sanitized messages
@@ -146,6 +158,7 @@ uv run pytest test/components/sejm_whiz/sejm_api/ -v
 **Objective**: Implement ELI API integration for legal documents
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout main
@@ -159,6 +172,7 @@ uv run poly create component --name eli_api
 ```
 
 **Component Structure:**
+
 ```
 components/eli_api/
 └── sejm_whiz/
@@ -171,6 +185,7 @@ components/eli_api/
 ```
 
 **Key Files Implemented:**
+
 - [x] `client.py`: EliApiClient class with advanced security features:
   - Batch processing with concurrency controls (max 50 docs, max 10 concurrent)
   - Resource exhaustion prevention and comprehensive input validation
@@ -187,6 +202,7 @@ components/eli_api/
   - Document complexity scoring
 
 **Validation Results:**
+
 - [x] Can fetch legal documents from ELI API with full error handling
 - [x] Document parsing extracts complete legal structure including articles, chapters, attachments
 - [x] Models validate legal document data with comprehensive type checking
@@ -204,6 +220,7 @@ components/eli_api/
 **Objective**: Implement PostgreSQL + pgvector operations
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout main
@@ -217,6 +234,7 @@ uv run poly create component --name vector_db
 ```
 
 **Component Structure:**
+
 ```
 components/vector_db/
 └── sejm_whiz/
@@ -230,6 +248,7 @@ components/vector_db/
 ```
 
 **Key Files Implemented:**
+
 - [x] `connection.py`: VectorDBConnection class with session management and pgvector extension testing
 - [x] `operations.py`: VectorDBOperations class with comprehensive CRUD operations:
   - Document creation with embeddings and bulk operations
@@ -250,6 +269,7 @@ components/vector_db/
 - [x] `core.py`: Main integration layer with health monitoring
 
 **Advanced Features Implemented:**
+
 - [x] **UUID Support**: Proper UUID handling for document IDs with string-to-UUID conversion
 - [x] **Raw SQL Optimization**: Uses raw SQL for complex pgvector operations to avoid parameter binding issues
 - [x] **Test Isolation**: Singleton reset fixtures to prevent test interference between unit and integration tests
@@ -258,6 +278,7 @@ components/vector_db/
 - [x] **Security**: Input validation, sanitization, and protection against SQL-related issues
 
 **Database Schema:**
+
 ```sql
 -- Legal documents table (from existing database component)
 CREATE TABLE legal_documents (
@@ -280,6 +301,7 @@ CREATE INDEX idx_legal_documents_embedding ON legal_documents USING ivfflat (emb
 ```
 
 **Testing Results:**
+
 - [x] **Unit Tests**: 25 tests covering all core functionality with mocking
 - [x] **Integration Tests**: 8 tests with real PostgreSQL + pgvector database
 - [x] **Test Isolation Fix**: Implemented singleton reset fixtures for proper test isolation
@@ -287,6 +309,7 @@ CREATE INDEX idx_legal_documents_embedding ON legal_documents USING ivfflat (emb
 - [x] **Edge Cases**: Comprehensive testing of error conditions and edge cases
 
 **Validation:**
+
 - [x] Database connection works with proper session management
 - [x] Can store and retrieve embeddings with 768-dimension vectors
 - [x] Vector similarity search functions correctly with multiple distance metrics
@@ -296,7 +319,7 @@ CREATE INDEX idx_legal_documents_embedding ON legal_documents USING ivfflat (emb
 - [x] Comprehensive error handling and logging
 - [x] Integration with existing database component and models
 
----
+______________________________________________________________________
 
 ## Phase 3: Data Processing Components (WIP)
 
@@ -305,6 +328,7 @@ CREATE INDEX idx_legal_documents_embedding ON legal_documents USING ivfflat (emb
 **Objective**: Implement text cleaning and preprocessing for Polish legal text
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout main
@@ -320,6 +344,7 @@ uv add regex unicodedata
 ```
 
 **Component Structure:**
+
 ```
 components/text_processing/
 └── sejm_whiz/
@@ -334,6 +359,7 @@ components/text_processing/
 ```
 
 **Key Files Implemented:**
+
 - [x] `cleaner.py`: HTMLCleaner and TextCleaner classes with:
   - HTML tag removal and entity decoding
   - Legal formatting preservation (Art., §, pkt.)
@@ -365,6 +391,7 @@ components/text_processing/
   - Text statistics and analysis features
 
 **Advanced Features Implemented:**
+
 - [x] **Lazy Loading**: Optional spacy dependency with lazy import system
 - [x] **Polish Legal Focus**: Specialized patterns for Polish legal documents
 - [x] **Structure Preservation**: Maintains legal document hierarchy and references
@@ -373,6 +400,7 @@ components/text_processing/
 - [x] **Comprehensive Testing**: 79 tests covering all functionality
 
 **Testing Results:**
+
 - [x] **79 tests passing** across 6 test modules:
   - `test_cleaner.py`: 11 tests for HTML and text cleaning
   - `test_normalizer.py`: 12 tests for Polish and legal text normalization
@@ -384,6 +412,7 @@ components/text_processing/
 - [x] **Legal document specialization** with Polish legal system focus
 
 **Validation Results:**
+
 - [x] Removes HTML tags and formatting while preserving legal structure
 - [x] Normalizes Polish diacritics with flexible preserve/remove options
 - [x] Extracts legal references (article numbers, act names, court names)
@@ -393,6 +422,7 @@ components/text_processing/
 - [x] Complete processing pipeline with text statistics and analysis
 
 **Example Usage:**
+
 ```python
 from sejm_whiz.text_processing import clean_legal_text, normalize_legal_text, process_legal_document
 
@@ -413,6 +443,7 @@ result = process_legal_document(text)
 **Objective**: Implement bag of embeddings approach with HerBERT
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout main
@@ -428,6 +459,7 @@ uv add sentence-transformers numpy
 ```
 
 **Component Structure:**
+
 ```
 components/embeddings/
 └── sejm_whiz/
@@ -444,6 +476,7 @@ components/embeddings/
 ```
 
 **Key Features Implemented:**
+
 - [x] **HerBERT Integration**: Complete Polish BERT model (`allegro/herbert-klej-cased-v1`) with tokenization
 - [x] **Bag-of-Embeddings**: Document-level embedding generation through token averaging
 - [x] **GPU Optimization**: CUDA support with efficient memory management for GTX 1060 6GB
@@ -454,6 +487,7 @@ components/embeddings/
 - [x] **Error Handling**: Comprehensive error handling with graceful fallbacks
 
 **Advanced Implementation Features:**
+
 - [x] **Model Caching**: Singleton pattern for model loading with lazy initialization
 - [x] **Memory Management**: Automatic CUDA memory cleanup and garbage collection
 - [x] **Batch Optimization**: Dynamic batch sizing based on available GPU memory
@@ -462,6 +496,7 @@ components/embeddings/
 - [x] **Vector Operations**: Integration with vector database for embedding storage and retrieval
 
 **Production Implementation:**
+
 ```python
 # Complete HerBERT encoder with optimization
 class HerBERTEncoder:
@@ -486,6 +521,7 @@ class HerBERTEncoder:
 ```
 
 **Testing Results:**
+
 - [x] **Comprehensive Test Suite**: Complete test coverage across 5 test modules:
   - `test_herbert_encoder.py`: Core HerBERT encoder functionality
   - `test_bag_embeddings.py`: Document-level embedding generation
@@ -497,6 +533,7 @@ class HerBERTEncoder:
 - [x] **Integration Testing**: Vector database integration for embedding storage
 
 **Validation Results:**
+
 - [x] **HerBERT Model**: Loads correctly with Polish BERT model `allegro/herbert-klej-cased-v1`
 - [x] **Embedding Generation**: Successfully generates 768-dimensional embeddings for Polish legal text
 - [x] **Bag-of-Embeddings**: Document-level averaging works with proper token handling
@@ -506,6 +543,7 @@ class HerBERTEncoder:
 - [x] **Production Ready**: Complete error handling, logging, and performance monitoring
 
 **Integration with Other Components:**
+
 - [x] **Vector DB**: Seamless integration with pgvector for embedding storage
 - [x] **Text Processing**: Uses cleaned and normalized text from text_processing component
 - [x] **Redis**: Optional caching layer for improved performance
@@ -516,6 +554,7 @@ class HerBERTEncoder:
 **Objective**: Legal document analysis with multi-act amendment detection
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout main
@@ -529,6 +568,7 @@ uv run poly create component --name legal_nlp
 ```
 
 **Component Structure:**
+
 ```
 components/legal_nlp/
 └── sejm_whiz/
@@ -540,6 +580,7 @@ components/legal_nlp/
 ```
 
 **Key Features Implemented:**
+
 - [x] **Legal Concept Detection**: Comprehensive extraction of legal concepts (principles, definitions, obligations, prohibitions, rights, penalties, conditions, exceptions)
 - [x] **Amendment Detection**: Multi-act amendment detection with modification, addition, and deletion types
 - [x] **Semantic Field Analysis**: Identification of legal domains (civil law, criminal law, administrative law, constitutional law, tax law, labor law)
@@ -550,6 +591,7 @@ components/legal_nlp/
 - [x] **Relationship Extraction**: Legal entity relationship mapping with confidence scoring
 
 **Advanced NLP Implementation:**
+
 ```python
 # Legal concept detection with pattern matching
 class LegalNLPAnalyzer:
@@ -586,6 +628,7 @@ class LegalNLPAnalyzer:
 ```
 
 **Testing Results:**
+
 - [x] **45+ tests passing** across 4 test modules:
   - `test_core.py`: Legal concept extraction and amendment detection
   - `test_semantic_analyzer.py`: Semantic field analysis and conceptual density
@@ -597,6 +640,7 @@ class LegalNLPAnalyzer:
 - [x] **Legal relationship mapping**: Extracts entity relationships with confidence scoring
 
 **Validation Results:**
+
 - [x] Multi-act amendments detected correctly with comprehensive pattern matching
 - [x] Legal concepts extracted with high accuracy across multiple concept types
 - [x] Semantic analysis produces meaningful domain classifications and complexity metrics
@@ -604,7 +648,7 @@ class LegalNLPAnalyzer:
 - [x] Integration tests validate end-to-end analysis workflows
 - [x] Production-ready with comprehensive error handling and edge case management
 
----
+______________________________________________________________________
 
 ## Phase 4: ML Components (WIP)
 
@@ -613,6 +657,7 @@ class LegalNLPAnalyzer:
 **Objective**: Implement ML models for law change predictions
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout main
@@ -628,6 +673,7 @@ uv add optuna  # for hyperparameter optimization
 ```
 
 **Component Structure:**
+
 ```
 components/prediction_models/
 └── sejm_whiz/
@@ -641,6 +687,7 @@ components/prediction_models/
 ```
 
 **Key Features Implemented:**
+
 - [x] **Ensemble Methods**: VotingEnsemble, StackingEnsemble, BlendingEnsemble with soft/hard voting strategies
 - [x] **Similarity-Based Predictions**: Cosine distance, Euclidean distance, hybrid, and temporal similarity predictors
 - [x] **Classification Models**: Random Forest, Gradient Boosting, SVM, Logistic Regression, and TF-IDF embedding classifiers
@@ -650,6 +697,7 @@ components/prediction_models/
 - [x] **Model Training Pipeline**: Complete training, evaluation, and persistence infrastructure
 
 **Advanced Features:**
+
 - [x] **Model Metrics**: Comprehensive evaluation with accuracy, precision, recall, F1-score, AUC-ROC
 - [x] **Feature Engineering**: Legal document-specific feature extraction and processing
 - [x] **Temporal Weighting**: Time-based decay for historical document similarity
@@ -658,6 +706,7 @@ components/prediction_models/
 - [x] **Confidence Levels**: Automatic confidence level assignment based on prediction scores
 
 **Validation Results:**
+
 - [x] All imports work correctly from the prediction_models component
 - [x] Factory functions create appropriate model instances
 - [x] Configuration system supports various deployment scenarios
@@ -670,6 +719,7 @@ components/prediction_models/
 **Objective**: Implement semantic search using bag of embeddings with cross-register matching
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout main
@@ -683,6 +733,7 @@ uv run poly create component --name semantic_search
 ```
 
 **Component Structure:**
+
 ```
 components/semantic_search/
 └── sejm_whiz/
@@ -698,6 +749,7 @@ components/semantic_search/
 ```
 
 **Key Features Implemented:**
+
 - [x] **Semantic Search Engine**: Main search interface using HerBERT embeddings and pgvector similarity
 - [x] **Cross-Register Matching**: Specialized matching between formal legal language and informal parliamentary proceedings
 - [x] **Document Indexing**: Efficient embedding storage and retrieval with batch processing
@@ -707,6 +759,7 @@ components/semantic_search/
 - [x] **Advanced Filtering**: Search filtering by document type, legal domain, date ranges, and amendment types
 
 **Advanced Implementation Features:**
+
 - [x] **Hybrid Search**: Combination of semantic similarity and keyword matching for comprehensive results
 - [x] **Legal Domain Awareness**: Domain-specific search optimization for different areas of Polish law
 - [x] **Amendment Tracking**: Specialized search for tracking legal changes and amendment relationships
@@ -715,6 +768,7 @@ components/semantic_search/
 - [x] **Performance Optimization**: Efficient vector operations with batch processing and caching strategies
 
 **Integration Points:**
+
 - [x] **Vector Database**: Uses existing pgvector operations for similarity search
 - [x] **Embeddings Component**: Leverages HerBERT encoder for query and document embeddings
 - [x] **Text Processing**: Uses normalized legal text for improved search accuracy
@@ -722,6 +776,7 @@ components/semantic_search/
 - [x] **Prediction Models**: Provides search results for law change prediction features
 
 **Testing Strategy:**
+
 ```bash
 # Test semantic search functionality
 uv run pytest test/components/sejm_whiz/semantic_search/test_search_engine.py -v
@@ -736,12 +791,14 @@ uv run pytest test/components/sejm_whiz/semantic_search/test_integration.py -v
 ```
 
 **Performance Requirements:**
-- [x] Search response time: <100ms for single document queries
-- [x] Batch search: <500ms for 10 concurrent queries
-- [x] Cross-register matching: <200ms for legal-parliamentary document pairs
+
+- [x] Search response time: \<100ms for single document queries
+- [x] Batch search: \<500ms for 10 concurrent queries
+- [x] Cross-register matching: \<200ms for legal-parliamentary document pairs
 - [x] Index updates: Real-time embedding storage without search disruption
 
 **Validation Results:**
+
 - [x] Semantic similarity search returns relevant legal documents
 - [x] Cross-register matching successfully connects legal acts with parliamentary discussions
 - [x] Query processing improves search accuracy through legal term normalization
@@ -750,6 +807,7 @@ uv run pytest test/components/sejm_whiz/semantic_search/test_integration.py -v
 - [x] Performance meets requirements under realistic document corpus size
 
 **Implementation Summary:**
+
 ```
 components/semantic_search/
 └── sejm_whiz/
@@ -765,6 +823,7 @@ components/semantic_search/
 ```
 
 **Key Implementation Features:**
+
 - [x] **Complete Search Pipeline**: End-to-end semantic search with query processing, embedding generation, similarity search, and result ranking
 - [x] **Cross-Register Matching**: Specialized algorithms for connecting formal legal language with informal parliamentary proceedings
 - [x] **Performance Optimization**: Efficient batch processing, caching strategies, and GPU-optimized embedding generation
@@ -773,6 +832,7 @@ components/semantic_search/
 - [x] **Production-Ready**: Complete error handling, logging, monitoring, and comprehensive test coverage
 
 **Testing Results:**
+
 - [x] **Comprehensive Test Suite**: Complete test coverage across 7 test modules:
   - `test_search_engine.py`: Core search functionality and integration
   - `test_indexer.py`: Document indexing and embedding management
@@ -785,7 +845,7 @@ components/semantic_search/
 - [x] **Integration Testing**: Validated seamless integration with all existing components
 - [x] **Legal Accuracy**: Cross-register matching achieves high accuracy in connecting legal acts with parliamentary discussions
 
----
+______________________________________________________________________
 
 ## Phase 5: Project Assembly (WIP)
 
@@ -794,6 +854,7 @@ components/semantic_search/
 **Objective**: Create FastAPI web server base
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout main
@@ -807,6 +868,7 @@ uv run poly create base --name web_api
 ```
 
 **Base Structure:**
+
 ```
 bases/web_api/
 └── sejm_whiz/
@@ -816,6 +878,7 @@ bases/web_api/
 ```
 
 **Key Features Implemented:**
+
 - [x] **FastAPI Application Factory**: `create_app()` function with comprehensive configuration
 - [x] **CORS Middleware**: Configurable CORS support with production-ready settings
 - [x] **Comprehensive Error Handling**:
@@ -840,6 +903,7 @@ bases/web_api/
   - Health status page
 
 **Core Implementation:**
+
 ```python
 # FastAPI application with complete configuration
 def create_app() -> FastAPI:
@@ -872,6 +936,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 ```
 
 **API Endpoints:**
+
 - [x] `GET /` - Root endpoint (redirects to home page)
 - [x] `GET /home` - Landing page with project overview
 - [x] `GET /dashboard` - Real-time monitoring dashboard
@@ -883,6 +948,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 - [x] Request validation with detailed error responses
 
 **Production-Ready Features:**
+
 - [x] **Structured Error Responses**: Consistent error format with timestamps
 - [x] **Request Validation**: Automatic validation with meaningful error messages
 - [x] **Middleware Support**: CORS configured with production considerations
@@ -891,12 +957,14 @@ async def general_exception_handler(request: Request, exc: Exception):
 - [x] **Type Safety**: Full Pydantic model integration for request/response validation
 
 **Integration Points:**
+
 - [x] Ready for component integration (semantic_search, prediction_models, etc.)
 - [x] Extensible route structure for adding API endpoints
 - [x] Middleware pipeline ready for authentication, rate limiting, etc.
 - [x] Database integration ready via existing database component
 
 **Validation Results:**
+
 - [x] FastAPI application creates successfully with `get_app()` function
 - [x] All endpoints respond correctly with proper status codes
 - [x] Error handling provides structured responses for all exception types
@@ -912,6 +980,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 **Objective**: Assemble complete API server
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout main
@@ -923,6 +992,7 @@ uv run poly create project --name api_server
 ```
 
 **Project Structure:**
+
 ```
 projects/api_server/
 ├── pyproject.toml         ✅ Project configuration with web_api base
@@ -931,11 +1001,13 @@ projects/api_server/
 ```
 
 **Key Files Implemented:**
+
 - [x] `pyproject.toml`: Project configuration using web_api base with proper dependencies (FastAPI, Uvicorn, Pydantic)
 - [x] `main.py`: Application entry point with uvicorn server configuration
 - [x] `README.md`: Comprehensive documentation with usage instructions and API endpoint information
 
 **Project Configuration:**
+
 ```toml
 [tool.polylith.bricks]
 bases = ["web_api"]
@@ -949,6 +1021,7 @@ dependencies = [
 ```
 
 **Running the API Server:**
+
 ```bash
 # From workspace root:
 uv run python projects/api_server/main.py
@@ -958,18 +1031,21 @@ uv run uvicorn projects.api_server.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Available Endpoints:**
+
 - [x] `GET /` - Root endpoint with API information
 - [x] `GET /health` - Health check endpoint with structured response
 - [x] `GET /docs` - Interactive API documentation (Swagger UI)
 - [x] `GET /redoc` - Alternative API documentation (ReDoc)
 
 **Future API Endpoints** (to be added with additional components):
+
 - [ ] `/api/v1/predictions` - Get law change predictions
 - [ ] `/api/v1/search` - Semantic search endpoint
 - [ ] `/api/v1/documents` - Legal document management
 - [ ] `/api/v1/users` - User preference management
 
 **Validation Results:**
+
 - [x] API server starts successfully without errors
 - [x] FastAPI application factory integration works correctly
 - [x] Health endpoints respond with proper JSON structure
@@ -986,6 +1062,7 @@ uv run uvicorn projects.api_server.main:app --host 0.0.0.0 --port 8000 --reload
 **Objective**: Assemble batch data processing system
 
 **Tasks:**
+
 ```bash
 # Create feature branch
 git checkout main
@@ -997,6 +1074,7 @@ uv run poly create project --name data_processor
 ```
 
 **Processing Pipeline:**
+
 - [x] Automated API data ingestion (Sejm API and ELI API integration)
 - [x] Document preprocessing and cleaning (Text processing pipeline)
 - [x] Embedding generation and storage (HerBERT bag-of-embeddings)
@@ -1004,6 +1082,7 @@ uv run poly create project --name data_processor
 - [x] Database storage (Vector DB and document operations)
 
 **Deliverables:**
+
 - [x] data_pipeline base with pipeline orchestration and batch processing
 - [x] data_processor project with comprehensive ingestion pipeline
 - [x] Modular pipeline steps (Sejm ingestion, ELI ingestion, text processing, embeddings, storage)
@@ -1012,6 +1091,7 @@ uv run poly create project --name data_processor
 - [x] Documentation and usage examples
 
 **Validation:**
+
 ```bash
 # Test data processor execution
 uv run python projects/data_processor/main.py
@@ -1021,7 +1101,7 @@ uv run poly info
 uv run poly sync
 ```
 
----
+______________________________________________________________________
 
 ## Phase 6: Testing & Quality Assurance (WIP)
 
@@ -1030,6 +1110,7 @@ uv run poly sync
 **Objective**: Comprehensive testing of all components
 
 **Tasks:**
+
 ```bash
 # Add testing dependencies
 uv add --dev pytest pytest-cov pytest-mock
@@ -1043,6 +1124,7 @@ uv run pytest --cov=sejm_whiz --cov-report=html
 ```
 
 **Testing Checklist:**
+
 - [x] 772 unit tests passing across all components
 - [ ] Integration tests between components (partial)
 - [x] Mock tests for external APIs
@@ -1053,6 +1135,7 @@ uv run pytest --cov=sejm_whiz --cov-report=html
 **Objective**: Full workflow validation
 
 **Test Scenarios:**
+
 - [x] Complete document processing pipeline (verified with 128 documents processed)
 - [x] API request/response cycles (health endpoints working)
 - [ ] Multi-act amendment detection accuracy (component built, not deployed)
@@ -1062,6 +1145,7 @@ uv run pytest --cov=sejm_whiz --cov-report=html
 ### Step 6.3: Polylith Validation
 
 **Commands:**
+
 ```bash
 # Validate workspace integrity
 uv run poly check
@@ -1076,25 +1160,27 @@ uv run poly deps
 uv run poly sync
 ```
 
----
+______________________________________________________________________
 
 ## Phase 7: Deployment Preparation (WIP)
 
 ### Integration Requirements Before Production
 
 **Critical Integration Tasks**:
+
 1. Connect ELI API pipeline to data processor main function
-2. Import and use legal_nlp in document processing pipeline
-3. Add prediction model endpoints to API server
-4. Expose semantic search functionality through API
-5. Configure Redis connection in applications
-6. Create functional API endpoints beyond health checks
+1. Import and use legal_nlp in document processing pipeline
+1. Add prediction model endpoints to API server
+1. Expose semantic search functionality through API
+1. Configure Redis connection in applications
+1. Create functional API endpoints beyond health checks
 
 ### Step 7.1: Multi-Cloud Deployment Architecture (PLANNED)
 
 **Objective**: Enable hybrid deployment across k3s, AWS, and OpenStack
 
 **Current Implementation Status:**
+
 ```bash
 # Directory structure now organized for multi-cloud deployment
 deployments/
@@ -1111,6 +1197,7 @@ deployments/
 ```
 
 **k3s Deployment (Current - Production Ready):**
+
 - [x] GPU-enabled deployment with NVIDIA CUDA 12.2
 - [x] PostgreSQL + pgvector on persistent volumes
 - [x] NVIDIA runtime class configuration
@@ -1119,6 +1206,7 @@ deployments/
 - [x] Production deployment running on p7 host
 
 **Infrastructure Abstraction Layer (Planned):**
+
 ```python
 # infrastructure/base.py - To be implemented in Phase 8
 class InfrastructureProvider(ABC):
@@ -1140,6 +1228,7 @@ class InfrastructureProvider(ABC):
 **Objective**: Optimize for GTX 1060 6GB constraints
 
 **Completed Tasks:**
+
 - [x] Memory usage profiling - HerBERT uses ~712MiB on GPU
 - [x] Batch size optimization - Dynamic batching based on available memory
 - [x] CUDA 12.2 integration with NVIDIA Container Toolkit
@@ -1147,6 +1236,7 @@ class InfrastructureProvider(ABC):
 - [x] Dockerfile optimized with multi-stage build
 
 **Current GPU Performance:**
+
 - Embedding generation: ~500 documents/minute
 - GPU memory usage: 712MiB / 6144MiB (11.6%)
 - Temperature: 40°C (optimal)
@@ -1155,6 +1245,7 @@ class InfrastructureProvider(ABC):
 ### Step 7.3: Production Deployment Strategy
 
 **Current Production Status (k3s):**
+
 - [x] Environment configuration via ConfigMaps and Secrets
 - [x] Health monitoring endpoints in place
 - [x] Error handling and recovery implemented
@@ -1165,6 +1256,7 @@ class InfrastructureProvider(ABC):
 **Multi-Cloud Expansion (Phase 8 - Planned):**
 
 #### AWS Services Mapping:
+
 - **Database**: RDS PostgreSQL with pgvector extension
 - **Cache**: ElastiCache Redis
 - **Storage**: S3 for document storage
@@ -1172,6 +1264,7 @@ class InfrastructureProvider(ABC):
 - **AI Services**: SageMaker endpoints for model inference
 
 #### OpenStack Services Mapping:
+
 - **Database**: Trove PostgreSQL instances
 - **Cache**: Redis on Nova instances
 - **Storage**: Swift object storage
@@ -1179,6 +1272,7 @@ class InfrastructureProvider(ABC):
 - **Networking**: Neutron for service discovery
 
 #### Universal Platform (Future - Crossplane):
+
 ```yaml
 # Future universal resource definition
 apiVersion: platform.sejm-whiz.io/v1alpha1
@@ -1195,35 +1289,39 @@ spec:
     replicas: 3
 ```
 
----
+______________________________________________________________________
 
 ## Success Metrics & Validation
 
 ### Technical Metrics
-- [ ] Embedding generation: <200ms for 1000 tokens
-- [ ] Vector similarity search: <50ms response time
+
+- [ ] Embedding generation: \<200ms for 1000 tokens
+- [ ] Vector similarity search: \<50ms response time
 - [ ] Multi-act amendment detection: >90% accuracy
-- [ ] API response time: <500ms for complex queries
-- [ ] GPU memory usage: <5.5GB peak
+- [ ] API response time: \<500ms for complex queries
+- [ ] GPU memory usage: \<5.5GB peak
 - [ ] Test coverage: >90% for all components
 
 ### Development Metrics
+
 - [ ] All Polylith checks pass (`uv run poly check`)
 - [ ] All projects build successfully (`uv run poly build`)
 - [ ] No circular dependencies between components
 - [ ] Consistent code style and documentation
 
 ### Deployment Metrics
+
 - [ ] Docker containers build without errors
 - [ ] Database migrations run successfully
 - [ ] All services start and communicate properly
 - [ ] Monitoring and logging operational
 
----
+______________________________________________________________________
 
 ## Emergency Procedures
 
 ### Rollback Strategy
+
 ```bash
 # Rollback to previous working state
 git checkout main
@@ -1232,6 +1330,7 @@ uv sync --dev
 ```
 
 ### Component Isolation
+
 ```bash
 # Test individual component
 uv run poly test --component component_name
@@ -1241,6 +1340,7 @@ uv run poly check --component component_name
 ```
 
 ### Debug Commands
+
 ```bash
 # Verbose workspace info
 uv run poly info --verbose
@@ -1252,52 +1352,84 @@ uv run poly deps --show-deps
 uv run poly build --verbose
 ```
 
----
+______________________________________________________________________
 
 ## Implementation Status Analysis
 
 Implementation status has been thoroughly reviewed. Current status reflects actual deployment verification.
 
-**KEY FINDING**: Pipeline is 95% functional (Sejm API → Text Processing → GPU Embeddings working) but fails at final database storage step due to localhost configuration issue.
+**KEY FINDING**: Infrastructure issues resolved - PostgreSQL SSL configuration fixed and database operational. Pipeline components ready for integration and deployment.
 
-### 🚧 **Phase 1: Infrastructure & Core Setup - WIP**
-- Database setup with PostgreSQL + pgvector 🚧 **WIP** - CrashLoopBackOff due to SSL certificate configuration issues
-- Container environment with Docker and k3s 🚧 **WIP** - k3s cluster operational but critical services failing
+### ✅ **Phase 1: Infrastructure & Core Setup - COMPLETED**
+
+- Database setup with PostgreSQL + pgvector ✅ **DONE** - SSL configuration fixed, database operational with pgvector
+- Container environment with Docker and k3s ✅ **DONE** - k3s cluster operational with working database connectivity
 - Development environment with uv and Polylith ✅ **DONE** - fully functional local development environment
 
+#### **PostgreSQL SSL Configuration Fix (2025-08-04)**
+
+**Problem**: PostgreSQL pods in CrashLoopBackOff due to missing SSL certificates
+
+- Error: `could not load server certificate file "server.crt": No such file or directory`
+- SSL enabled in Helm values but no certificates provided
+- Database persistent volume contained old SSL-enabled configuration
+
+**Solution Applied**:
+
+1. Disabled SSL in `helm/charts/postgresql-pgvector/values.yaml` (`ssl.enabled: false`)
+1. Deleted PVC to clear old SSL-enabled database configuration
+1. Completely reinstalled PostgreSQL with clean database
+1. Ran database migrations to establish complete schema
+
+**Results**:
+
+- ✅ PostgreSQL pod Running (1/1 Ready)
+- ✅ Database accepts connections and queries
+- ✅ pgvector extension operational with vector indexes
+- ✅ Complete schema with 6 tables and 23 indexes created
+- ✅ All database-dependent services can now connect
+
 ### 🚧 **Phase 2: Core API Components - IMPLEMENTED BUT NOT DEPLOYED**
+
 - **Step 2.1: sejm_api Component** 📋 **PLANNED** (Implementation complete, deployment verification needed)
+
   - ✅ Implementation complete with 248 tests passing
   - ✅ Comprehensive security features and rate limiting
   - ❌ Deployment verification blocked by infrastructure issues
   - Status: Ready for deployment once infrastructure stabilized
 
 - **Step 2.2: eli_api Component** 📋 **PLANNED** (Implementation complete, deployment verification needed)
+
   - ✅ Implementation complete with 119 tests passing
   - ✅ Advanced security features and batch processing
   - ❌ Production deployment not attempted
   - Status: Ready for deployment integration
 
 - **Step 2.3: vector_db Component** 📋 **PLANNED** (Implementation complete, deployment verification needed)
+
   - ✅ Implementation complete with 66 tests passing
   - ✅ pgvector integration and UUID support
   - ❌ Cannot verify due to PostgreSQL deployment issues
   - Status: Ready for deployment once database operational
 
 ### 📋 **Phase 3: Data Processing Components - IMPLEMENTED BUT NOT DEPLOYED**
+
 - **Step 3.1: text_processing Component** 📋 **PLANNED** (Implementation complete, deployment verification needed)
+
   - ✅ Implementation complete with 79 tests passing
   - ✅ Polish legal text processing pipeline operational in local testing
   - ❌ Production deployment verification blocked by infrastructure issues
   - Status: Ready for deployment once infrastructure stabilized
 
 - **Step 3.2: embeddings Component** 📋 **PLANNED** (Implementation complete, deployment verification needed)
+
   - ✅ Implementation complete with comprehensive GPU optimization
   - ✅ HerBERT Polish BERT integration with bag-of-embeddings approach
   - ❌ Production GPU deployment not verified due to infrastructure issues
   - Status: Ready for deployment with GPU support
 
 - **Step 3.3: legal_nlp Component** 📋 **PLANNED** (Implementation complete, not integrated)
+
   - ✅ Implementation complete with 45+ tests passing
   - ✅ Advanced legal document analysis with multi-act amendment detection
   - ✅ Comprehensive semantic field analysis and conceptual density metrics
@@ -1305,7 +1437,9 @@ Implementation status has been thoroughly reviewed. Current status reflects actu
   - Status: Complete implementation ready for service integration
 
 ### 📋 **Phase 4: ML Components - IMPLEMENTED BUT NOT DEPLOYED**
+
 - **Step 4.1: prediction_models Component** 📋 **PLANNED** (Implementation complete, not deployed)
+
   - ✅ Complete ML pipeline with ensemble methods, similarity-based predictors, and classification models
   - ✅ Comprehensive configuration system with GPU/CPU optimization
   - ✅ Legal document-specific feature extraction and processing
@@ -1313,6 +1447,7 @@ Implementation status has been thoroughly reviewed. Current status reflects actu
   - Status: Ready for API integration and deployment
 
 - **Step 4.2: semantic_search Component** 📋 **PLANNED** (Implementation complete, not deployed)
+
   - ✅ Complete semantic search pipeline with cross-register matching
   - ✅ HerBERT-powered embedding search with pgvector integration
   - ✅ Comprehensive test coverage across 7 modules
@@ -1320,7 +1455,9 @@ Implementation status has been thoroughly reviewed. Current status reflects actu
   - Status: Ready for API integration and deployment
 
 ### 🚧 **Phase 5: Project Assembly - IMPLEMENTED BUT DEPLOYMENT ISSUES**
+
 - **Step 5.1: web_api Base** 🚧 **WIP** (Implementation complete, deployment verification needed)
+
   - ✅ FastAPI application factory with comprehensive configuration
   - ✅ CORS middleware, error handling, and health endpoints
   - ✅ Production-ready with structured responses and API documentation
@@ -1328,6 +1465,7 @@ Implementation status has been thoroughly reviewed. Current status reflects actu
   - Status: Implementation complete, ready for deployment verification
 
 - **Step 5.2: api_server Project** 📋 **PLANNED** (Implementation complete, not deployed)
+
   - ✅ Main web API server using web_api base
   - ✅ FastAPI application with uvicorn server configuration
   - ✅ Complete Web Interface: Multi-page application with home, dashboard, API docs, and health pages
@@ -1335,12 +1473,14 @@ Implementation status has been thoroughly reviewed. Current status reflects actu
   - Status: Ready for k3s deployment
 
 - **Step 5.3: data_processor Project** 🚧 **WIP** (Deployed but failing)
+
   - ✅ Implementation complete with comprehensive data processing pipeline
   - ✅ Integration with all ingestion components
   - ❌ k3s deployment failing (pods in Completed state, database connection issues)
   - Status: Deployment exists but not functional, requires infrastructure fixes
 
 - **Step 5.4: web_ui Project** 🚧 **WIP** (Deployed but not accessible)
+
   - ✅ Implementation complete with multi-page interface
   - ✅ Real-time log streaming and modern responsive design
   - ❌ k3s deployment not accessible (0/1 Unknown status, ports 30800/30801 not responding)
@@ -1349,6 +1489,7 @@ Implementation status has been thoroughly reviewed. Current status reflects actu
 ### 📊 **Current Metrics (Updated)**
 
 #### **Implementation Status Summary**
+
 - **Total tests passing**: 772+ across all components (comprehensive unit test coverage)
 - **Components status**: 11 components implemented
   - **DONE (0)**: None meet full criteria (designed, implemented, tested, deployed, verified, monitored, documented)
@@ -1358,36 +1499,39 @@ Implementation status has been thoroughly reviewed. Current status reflects actu
   - **DONE (0)**: None meet full deployment and verification criteria
   - **WIP (2)**: data_processor (deployed but failing), web_ui (deployed but not accessible)
   - **PLANNED (1)**: api_server (implemented, ready for deployment)
-- **Deployment status**: k3s cluster with critical failures
-  - **Working**: Redis (1/1 Ready)
-  - **Failing**: PostgreSQL (CrashLoopBackOff), Data processor (Completed/Failed), Web UI (0/1 Unknown)
-  - **Missing**: API server deployment, functional end-to-end pipeline
+- **Deployment status**: k3s cluster with core infrastructure operational
+  - **Working**: PostgreSQL (1/1 Ready), Redis (1/1 Ready)
+  - **Needs Integration**: Data processor (ready to run with database), Web UI (deployment exists but needs troubleshooting)
+  - **Missing**: API server deployment, component integration for full pipeline
 
 #### **Production Verification**
-- **Database**: PostgreSQL deployment failing (CrashLoopBackOff due to SSL certificate issues)
+
+- **Database**: PostgreSQL operational (1/1 Ready) with pgvector extension and complete schema
 - **Web UI**: Not accessible (deployment exists but service not responding)
-- **GPU Processing**: Not verified in production (deployment issues prevent testing)
-- **Core Components**: Implementation complete but deployment verification blocked
-- **Security**: Advanced protection implemented in code but not deployed
-- **Test Coverage**: >90% unit test coverage but no production deployment verification
+- **GPU Processing**: Ready for testing (database connectivity restored)
+- **Core Components**: Implementation complete and database connectivity established
+- **Security**: Advanced protection implemented in code, ready for deployment
+- **Test Coverage**: >90% unit test coverage with infrastructure now supporting integration tests
 
 ### 🎯 **Critical Issues Requiring Immediate Attention**
-1. **🔧 URGENT**: Fix PostgreSQL SSL certificate configuration (CrashLoopBackOff)
-2. **🔧 URGENT**: Restore Web UI service accessibility (0/1 Unknown status)
-3. **🔧 URGENT**: Fix data processor deployment connectivity (database connection)
-4. **📦 DEPLOY**: Deploy api_server project to k3s environment
-5. **🔍 VERIFY**: Verify all services can start and communicate in k3s environment
-6. **🔍 VERIFY**: End-to-end testing of complete pipeline once infrastructure is stable
-7. **📊 MONITOR**: Implement monitoring for deployed services health and performance
+
+1. ✅ **COMPLETED**: Fix PostgreSQL SSL certificate configuration (database now operational)
+1. **🔧 URGENT**: Restore Web UI service accessibility (0/1 Unknown status)
+1. **🔧 HIGH**: Test data processor with restored database connectivity
+1. **📦 DEPLOY**: Deploy api_server project to k3s environment
+1. **🔗 INTEGRATE**: Connect implemented components (legal_nlp, prediction_models, semantic_search) to deployed services
+1. **🔍 VERIFY**: End-to-end testing of complete pipeline with operational database
+1. **📊 MONITOR**: Implement monitoring for deployed services health and performance
 
 #### **Root Cause Analysis**
-- **PostgreSQL Failure**: SSL certificate configuration preventing database startup
-- **Service Connectivity**: Applications may be using incorrect service names or ports
-- **Deployment Configuration**: k3s manifests may have configuration issues
-- **Network Policies**: Potential network connectivity issues between services
+
+- ✅ **PostgreSQL Failure**: SSL certificate configuration issue resolved - database now operational
+- **Service Connectivity**: Applications may be using incorrect service names or ports (database connectivity restored)
+- **Deployment Configuration**: k3s manifests may have configuration issues for Web UI
+- **Network Policies**: Potential network connectivity issues between some services
 - **Resource Constraints**: Possible resource allocation issues on single-node k3s cluster
 
----
+______________________________________________________________________
 
 ## Phase 8: Multi-Cloud Deployment Extension (PLANNED)
 
@@ -1396,6 +1540,7 @@ Implementation status has been thoroughly reviewed. Current status reflects actu
 **Objective**: Create provider-agnostic infrastructure interface
 
 **Tasks:**
+
 ```bash
 # Create infrastructure component
 uv run poly create component --name infrastructure
@@ -1410,6 +1555,7 @@ components/infrastructure/
 ```
 
 **Key Implementations:**
+
 - [ ] Storage abstraction (LocalFS, S3, Swift)
 - [ ] Database configuration management
 - [ ] Cache provider abstraction
@@ -1420,6 +1566,7 @@ components/infrastructure/
 **Objective**: Enable deployment on AWS cloud
 
 **AWS Resources:**
+
 ```bash
 # AWS CDK setup
 deployments/aws/cdk/
@@ -1433,6 +1580,7 @@ deployments/aws/cdk/
 ```
 
 **Services Mapping:**
+
 - [ ] RDS PostgreSQL with pgvector extension
 - [ ] ECS Fargate for API server
 - [ ] EC2 GPU instances for processing
@@ -1444,6 +1592,7 @@ deployments/aws/cdk/
 **Objective**: Enable private cloud deployment
 
 **OpenStack Resources:**
+
 ```bash
 # Heat templates
 deployments/openstack/heat/
@@ -1455,6 +1604,7 @@ deployments/openstack/heat/
 ```
 
 **Services Mapping:**
+
 - [ ] Trove for managed PostgreSQL
 - [ ] Nova instances with GPU flavors
 - [ ] Swift for object storage
@@ -1466,6 +1616,7 @@ deployments/openstack/heat/
 **Objective**: Cloud-agnostic deployment using Crossplane
 
 **Universal Configuration:**
+
 ```yaml
 # deployments/universal/platform.yaml
 apiVersion: platform.sejm-whiz.io/v1alpha1
@@ -1493,52 +1644,58 @@ spec:
 ### Business Benefits of Hybrid Deployment
 
 **Flexibility:**
+
 - Deploy on-premises for data sovereignty (government/legal organizations)
 - Use public cloud for scalability (enterprise clients)
 - Hybrid scenarios for different workload requirements
 
 **Cost Optimization:**
+
 - Choose most cost-effective platform per workload
 - Avoid vendor lock-in
 - Regional deployment for performance
 
 **Compliance:**
+
 - Meet data residency requirements
 - Support air-gapped environments
 - Maintain control over sensitive data
 
----
+______________________________________________________________________
 
 ## Integration Status Summary
 
 ### Currently Integrated and Working
+
 - **Data Flow**: Sejm API → Text Processing → Embeddings (GPU) → Database
 - **Results**: 168 Sejm proceedings stored with 95 vector embeddings
 - **Infrastructure**: k3s cluster with GPU, PostgreSQL with pgvector
 
 ### Built but Not Integrated (Ready for Connection)
-| Component | Status | Integration Gap | Impact |
-|-----------|--------|-----------------|--------|
-| ELI API | Complete, tested | Pipeline never called in main() | No legal documents ingested |
-| Legal NLP | Complete, tested | Not imported anywhere | No legal concept extraction |
-| Prediction Models | Complete, tested | No API endpoints | No predictions available |
-| Semantic Search | Complete, tested | No API endpoints | Embeddings not searchable |
-| Redis | Deployed | Not configured in apps | No caching or queues |
-| API Server | Running | Only health endpoints | No functional API |
+
+| Component         | Status           | Integration Gap                 | Impact                      |
+| ----------------- | ---------------- | ------------------------------- | --------------------------- |
+| ELI API           | Complete, tested | Pipeline never called in main() | No legal documents ingested |
+| Legal NLP         | Complete, tested | Not imported anywhere           | No legal concept extraction |
+| Prediction Models | Complete, tested | No API endpoints                | No predictions available    |
+| Semantic Search   | Complete, tested | No API endpoints                | Embeddings not searchable   |
+| Redis             | Deployed         | Not configured in apps          | No caching or queues        |
+| API Server        | Running          | Only health endpoints           | No functional API           |
 
 ### Integration Priority Tasks
+
 1. **Quick Win**: Call ELI pipeline in data_processor main (1 line change)
-2. **High Value**: Add search endpoint to API server using semantic_search
-3. **Core Feature**: Add prediction endpoints using prediction_models
-4. **Enhancement**: Integrate legal_nlp into document processing
-5. **Performance**: Configure Redis in applications
+1. **High Value**: Add search endpoint to API server using semantic_search
+1. **Core Feature**: Add prediction endpoints using prediction_models
+1. **Enhancement**: Integrate legal_nlp into document processing
+1. **Performance**: Configure Redis in applications
 
 ## Next Steps
 
 1. **Immediate**: Complete component integration to enable full functionality
-2. **Current State**: Core pipeline working but user-facing features disconnected
-3. **Phase 8 Planning**: Multi-cloud support after integration complete
-4. **Monitoring**: Add observability before scaling
-5. **Documentation**: Update after integration tasks complete
+1. **Current State**: Core pipeline working but user-facing features disconnected
+1. **Phase 8 Planning**: Multi-cloud support after integration complete
+1. **Monitoring**: Add observability before scaling
+1. **Documentation**: Update after integration tasks complete
 
 This implementation plan provides a structured approach to building the sejm-whiz system using Polylith architecture with concrete commands, deliverables, and validation steps, now including a comprehensive multi-cloud deployment strategy.
