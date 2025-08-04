@@ -1,24 +1,23 @@
-# GPU-enabled deployment based on working k3s-docker-gpu example
-# WIP: This deployment is under active development
-apiVersion: apps/v1
-kind: Deployment
+# WIP: Job-based processor deployment - under development
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: sejm-whiz-processor-gpu
+  name: sejm-whiz-processor-job
   namespace: sejm-whiz
   labels:
-    app: sejm-whiz-processor-gpu
+    app: sejm-whiz-processor
     version: gpu
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: sejm-whiz-processor-gpu
+  completions: 1
+  parallelism: 1
+  backoffLimit: 3
   template:
     metadata:
       labels:
-        app: sejm-whiz-processor-gpu
+        app: sejm-whiz-processor
         version: gpu
     spec:
+      restartPolicy: Never
       runtimeClassName: nvidia  # Direct NVIDIA runtime access
       nodeSelector:
         gpu: gtx1060  # Target GPU node
@@ -26,7 +25,7 @@ spec:
       - name: processor
         image: sejm-whiz-processor:optimized
         env:
-        # NVIDIA GPU environment variables (from working example)
+        # NVIDIA GPU environment variables
         - name: NVIDIA_VISIBLE_DEVICES
           value: "all"
         - name: NVIDIA_DRIVER_CAPABILITIES
@@ -63,16 +62,13 @@ spec:
           value: "/app/.cache"
         - name: TRANSFORMERS_CACHE
           value: "/app/.cache"
-        # No ports or health probes needed for batch processing application
         resources:
           requests:
-            memory: "2Gi"
-            cpu: "1"
-            # nvidia.com/gpu: 1  # Temporarily disabled until NVIDIA Container Toolkit is properly configured
+            memory: "4Gi"  # Increased for ML dependencies
+            cpu: "2"
           limits:
-            memory: "6Gi"
-            cpu: "3"
-            # nvidia.com/gpu: 1  # Temporarily disabled until NVIDIA Container Toolkit is properly configured
+            memory: "8Gi"  # Increased for ML dependencies
+            cpu: "4"
         volumeMounts:
         - name: model-cache
           mountPath: /app/.cache
@@ -92,4 +88,3 @@ spec:
         hostPath:
           path: /tmp/sejm-whiz/components
           type: Directory
-# Service removed - not needed for batch processing application
