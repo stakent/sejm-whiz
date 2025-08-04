@@ -78,7 +78,7 @@ class ELIDataIngestionStep(PipelineStep):
         else:
             # Search for recent documents in category
             documents = await self.client.search_documents(
-                filters={"type": category} if category else None, limit=10
+                document_type=category, limit=10
             )
 
         return {**data, "eli_documents": documents, "step_completed": "eli_ingestion"}
@@ -319,13 +319,14 @@ async def main():
     logger.info("Starting data processor")
 
     try:
-        # Example: Process Sejm proceedings for a specific session
-        pipeline = await create_sejm_only_pipeline()
+        # Run complete ingestion pipeline (both Sejm and ELI)
+        pipeline = await create_full_ingestion_pipeline()
 
         # Sample input data
         input_data = {
             "session_id": "10",
             "date_range": {"start": "2024-01-01", "end": "2024-01-31"},
+            "category": "ustawa",  # For ELI documents
         }
 
         # Run pipeline
@@ -347,14 +348,17 @@ async def main():
             {
                 "session_id": "10",
                 "date_range": {"start": "2024-01-01", "end": "2024-01-31"},
+                "category": "ustawa",
             },
             {
                 "session_id": "11",
                 "date_range": {"start": "2024-02-01", "end": "2024-02-28"},
+                "category": "rozporządzenie",
             },
             {
                 "session_id": "12",
                 "date_range": {"start": "2024-03-01", "end": "2024-03-31"},
+                "category": "ustawa",
             },
         ]
 

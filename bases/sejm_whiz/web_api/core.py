@@ -3,9 +3,9 @@ import logging
 import asyncio
 import subprocess
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, List, Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse
 from fastapi.exceptions import RequestValidationError
@@ -13,6 +13,20 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
+
+# Import components for API functionality
+try:
+    from sejm_whiz.semantic_search import SemanticSearchEngine
+    from sejm_whiz.prediction_models import (
+        PredictionInput,
+        create_default_similarity_predictor,
+        create_default_ensemble,
+    )
+
+    COMPONENTS_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"Some components not available: {e}")
+    COMPONENTS_AVAILABLE = False
 
 
 logger = logging.getLogger(__name__)
@@ -28,6 +42,42 @@ class ErrorResponse(BaseModel):
     error: str
     detail: str
     timestamp: str
+
+
+class SearchRequest(BaseModel):
+    query: str
+    limit: int = 10
+    threshold: float = 0.5
+    document_type: Optional[str] = None
+
+
+class SearchResult(BaseModel):
+    document_id: str
+    title: str
+    content: str
+    document_type: str
+    similarity_score: float
+    metadata: dict
+
+
+class SearchResponse(BaseModel):
+    results: List[SearchResult]
+    total_results: int
+    query: str
+    processing_time_ms: float
+
+
+class PredictionRequest(BaseModel):
+    document_text: str
+    context_documents: Optional[List[str]] = None
+    model_type: str = "similarity"
+
+
+class PredictionResponse(BaseModel):
+    prediction: str
+    confidence: float
+    prediction_type: str
+    processing_time_ms: float
 
 
 def create_app() -> FastAPI:
@@ -328,6 +378,131 @@ def configure_routes(app: FastAPI) -> None:
             "message": "Unable to determine processor status",
             "timestamp": datetime.utcnow().isoformat(),
         }
+
+    # Semantic Search API endpoints
+    if COMPONENTS_AVAILABLE:
+
+        @app.post("/api/v1/search", response_model=SearchResponse)
+        async def semantic_search(request: SearchRequest):
+            """Perform semantic search on legal documents."""
+            import time
+
+            start_time = time.time()
+
+            try:
+                # Initialize search engine
+                search_engine = SemanticSearchEngine()
+
+                # Perform search
+                results = search_engine.search(
+                    query=request.query,
+                    limit=request.limit,
+                    document_type=request.document_type,
+                    similarity_threshold=request.threshold,
+                )
+
+                # Convert results to API format
+                search_results = []
+                for result in results:
+                    content = result.document.content
+                    truncated_content = (
+                        content[:500] + "..." if len(content) > 500 else content
+                    )
+
+                    search_results.append(
+                        SearchResult(
+                            document_id=str(result.document.id),
+                            title=result.document.title,
+                            content=truncated_content,
+                            document_type=result.document.document_type,
+                            similarity_score=result.similarity_score,
+                            metadata=result.search_metadata,
+                        )
+                    )
+
+                processing_time = (time.time() - start_time) * 1000
+
+                return SearchResponse(
+                    results=search_results,
+                    total_results=len(search_results),
+                    query=request.query,
+                    processing_time_ms=processing_time,
+                )
+
+            except Exception as e:
+                logger.error(f"Error in semantic search: {e}")
+                raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+        @app.get("/api/v1/search")
+        async def semantic_search_get(
+            q: str = Query(..., description="Search query"),
+            limit: int = Query(10, description="Maximum number of results"),
+            threshold: float = Query(0.5, description="Similarity threshold"),
+            document_type: Optional[str] = Query(
+                None, description="Filter by document type"
+            ),
+        ):
+            """Perform semantic search via GET request."""
+            request = SearchRequest(
+                query=q, limit=limit, threshold=threshold, document_type=document_type
+            )
+            return await semantic_search(request)
+
+        @app.post("/api/v1/predict", response_model=PredictionResponse)
+        async def predict_law_changes(request: PredictionRequest):
+            """Predict potential law changes based on document analysis."""
+            import time
+
+            start_time = time.time()
+
+            try:
+                # Initialize predictor based on model type
+                if request.model_type == "similarity":
+                    predictor = create_default_similarity_predictor()
+                elif request.model_type == "ensemble":
+                    predictor = create_default_ensemble()
+                else:
+                    raise ValueError(f"Unknown model type: {request.model_type}")
+
+                # Create prediction input
+                prediction_input = PredictionInput(
+                    document_text=request.document_text,
+                    context_documents=request.context_documents or [],
+                )
+
+                # Generate prediction
+                result = await predictor.predict(prediction_input)
+
+                processing_time = (time.time() - start_time) * 1000
+
+                return PredictionResponse(
+                    prediction=result.prediction,
+                    confidence=result.confidence,
+                    prediction_type=request.model_type,
+                    processing_time_ms=processing_time,
+                )
+
+            except Exception as e:
+                logger.error(f"Error in prediction: {e}")
+                raise HTTPException(
+                    status_code=500, detail=f"Prediction failed: {str(e)}"
+                )
+
+    else:
+
+        @app.get("/api/v1/search")
+        async def search_unavailable():
+            raise HTTPException(
+                status_code=503,
+                detail="Search functionality unavailable - components not loaded",
+            )
+
+        @app.post("/api/v1/predict")
+        async def predict_unavailable():
+            raise HTTPException(
+                status_code=503,
+                detail="Prediction functionality unavailable - components not loaded",
+            )
 
 
 def get_app() -> FastAPI:

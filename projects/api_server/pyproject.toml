@@ -20,4 +20,11 @@ dependencies = [
 
 [tool.polylith.bricks]
 bases = ["web_api"]
-components = []
+components = [
+    "semantic_search",
+    "prediction_models",
+    "embeddings",
+    "vector_db",
+    "database",
+    "text_processing"
+]

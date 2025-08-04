@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: sejm_whiz_password
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     ports:
-      - "5432:5432"
+      - "5433:5432"  # Different port to avoid conflict with k3s PostgreSQL
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/01-create-extensions.sql
@@ -61,6 +61,38 @@ services:
       # Mount source code for hot reload in development
       - ../../components:/app/components
       - ../../projects/web_ui:/app/projects/web_ui
+      - ../../bases:/app/bases
+    networks:
+      - sejm-whiz-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # API Server for REST API endpoints
+  api-server:
+    build:
+      context: ../../
+      dockerfile: projects/api_server/Dockerfile
+    container_name: sejm-whiz-api-server-dev
+    ports:
+      - "8001:8000"  # Different port to avoid conflict with web-ui
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=sejm_whiz
+      - DATABASE_USER=sejm_whiz_user
+      - DATABASE_PASSWORD=sejm_whiz_password
+      - DATABASE_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      # Mount source code for hot reload in development
+      - ../../components:/app/components
+      - ../../projects/api_server:/app/projects/api_server
       - ../../bases:/app/bases
     networks:
       - sejm-whiz-dev
