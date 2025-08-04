@@ -110,7 +110,44 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             min-height: 500px;
             max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .log-content-wrapper {
+            flex: 1;
             overflow-y: auto;
+            scroll-behavior: smooth;
+            position: relative;
+        }
+
+        .scroll-to-bottom {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 18px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .scroll-to-bottom:hover {
+            background: #5a67d8;
+            transform: scale(1.1);
+        }
+
+        .scroll-to-bottom.show {
+            display: flex;
         }
 
         .log-header {
@@ -168,6 +205,7 @@
             color: #e2e8f0;
             white-space: pre-wrap;
             word-wrap: break-word;
+            padding: 10px;
         }
 
         .log-line {
@@ -238,21 +276,21 @@
         }
 
         /* Scrollbar styling */
-        .log-container::-webkit-scrollbar {
+        .log-content-wrapper::-webkit-scrollbar {
             width: 8px;
         }
 
-        .log-container::-webkit-scrollbar-track {
+        .log-content-wrapper::-webkit-scrollbar-track {
             background: #2d3748;
             border-radius: 4px;
         }
 
-        .log-container::-webkit-scrollbar-thumb {
+        .log-content-wrapper::-webkit-scrollbar-thumb {
             background: #4a5568;
             border-radius: 4px;
         }
 
-        .log-container::-webkit-scrollbar-thumb:hover {
+        .log-content-wrapper::-webkit-scrollbar-thumb:hover {
             background: #718096;
         }
 
@@ -440,7 +478,10 @@
                     </button>
                 </div>
             </div>
-            <div id="logContent">Connecting to log stream...</div>
+            <div class="log-content-wrapper">
+                <div id="logContent">Connecting to log stream...</div>
+                <button class="scroll-to-bottom" id="scrollToBottomBtn" onclick="scrollToBottom()" title="Scroll to bottom">↓</button>
+            </div>
         </div>
     </div>
 
@@ -527,7 +568,11 @@
 
             // Auto-scroll if enabled
             if (autoScroll) {
-                logContent.scrollTop = logContent.scrollHeight;
+                const logWrapper = document.querySelector('.log-content-wrapper');
+                // Use requestAnimationFrame to ensure the DOM has updated
+                requestAnimationFrame(() => {
+                    logWrapper.scrollTop = logWrapper.scrollHeight;
+                });
             }
         }
 
@@ -597,6 +642,34 @@
             autoScroll = !autoScroll;
             document.getElementById('autoScrollText').textContent =
                 `Auto-scroll: ${autoScroll ? 'ON' : 'OFF'}`;
+
+            // If auto-scroll is turned on, scroll to bottom immediately
+            if (autoScroll) {
+                scrollToBottom();
+            }
+
+            // Update scroll button visibility
+            updateScrollButtonVisibility();
+        }
+
+        function scrollToBottom() {
+            const logWrapper = document.querySelector('.log-content-wrapper');
+            logWrapper.scrollTop = logWrapper.scrollHeight;
+            document.getElementById('scrollToBottomBtn').classList.remove('show');
+        }
+
+        function updateScrollButtonVisibility() {
+            const logWrapper = document.querySelector('.log-content-wrapper');
+            const scrollBtn = document.getElementById('scrollToBottomBtn');
+
+            // Show button if not at bottom and auto-scroll is off
+            const isAtBottom = logWrapper.scrollTop + logWrapper.clientHeight >= logWrapper.scrollHeight - 10;
+
+            if (!autoScroll && !isAtBottom) {
+                scrollBtn.classList.add('show');
+            } else {
+                scrollBtn.classList.remove('show');
+            }
         }
 
         function toggleConnection() {
@@ -694,6 +767,19 @@
             connectToLogStream();
             fetchProcessorStatus();
             fetchServicesStatus();
+
+            // Add scroll event listener to detect manual scrolling
+            const logWrapper = document.querySelector('.log-content-wrapper');
+            logWrapper.addEventListener('scroll', () => {
+                updateScrollButtonVisibility();
+
+                // If user scrolls to bottom manually, turn on auto-scroll
+                const isAtBottom = logWrapper.scrollTop + logWrapper.clientHeight >= logWrapper.scrollHeight - 10;
+                if (isAtBottom && !autoScroll) {
+                    autoScroll = true;
+                    document.getElementById('autoScrollText').textContent = 'Auto-scroll: ON';
+                }
+            });
 
             // Update processor status every 30 seconds
             setInterval(fetchProcessorStatus, 30000);
