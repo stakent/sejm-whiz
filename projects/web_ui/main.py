@@ -40,6 +40,7 @@ async def health():
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "version": "0.1.0",
+        "hot_reload_test": "✅ Hot reload working!",
     }
 
 
@@ -121,6 +122,9 @@ async def home():
             <h1>🚀 Sejm Whiz</h1>
             <p style="font-size: 1.2em; color: #718096; margin-top: 15px;">
                 AI-driven legal prediction system using Polish Parliament data
+            </p>
+            <p style="color: #48bb78; margin-top: 10px; font-weight: bold;">
+                🔥 Hot reload is working perfectly! No more Docker builds!
             </p>
             <p style="color: #4a5568; margin-top: 20px;">
                 Monitor parliamentary proceedings and legal documents to predict future law changes
@@ -425,6 +429,7 @@ async def stream_logs():
         # Check which processor pods are available
         for label in processor_labels:
             try:
+                # Try with kubectl first
                 check_process = await asyncio.create_subprocess_exec(
                     "kubectl",
                     "get",
@@ -447,7 +452,31 @@ async def stream_logs():
                     yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found processor pods with label: {label}\n\n"
                     break
             except (FileNotFoundError, OSError):
-                continue
+                # If kubectl not found, try with full path
+                try:
+                    check_process = await asyncio.create_subprocess_exec(
+                        "/usr/local/bin/kubectl",
+                        "get",
+                        "pods",
+                        "-n",
+                        "sejm-whiz",
+                        "-l",
+                        label,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                    )
+                    stdout, stderr = await check_process.communicate()
+                    if (
+                        check_process.returncode == 0
+                        and b"No resources found" not in stdout
+                        and stdout.strip()
+                    ):
+                        kubectl_available = True
+                        pod_selector = label
+                        yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found processor pods with label: {label}\n\n"
+                        break
+                except (FileNotFoundError, OSError):
+                    continue
 
         if kubectl_available and pod_selector:
             try:
