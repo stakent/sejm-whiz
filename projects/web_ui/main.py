@@ -4,12 +4,18 @@
 import asyncio
 import subprocess
 from datetime import datetime
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
+import requests
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse
+from fastapi.responses import (
+    HTMLResponse,
+    StreamingResponse,
+    RedirectResponse,
+    JSONResponse,
+)
 
 app = FastAPI(
     title="Sejm Whiz Web UI",
@@ -111,6 +117,7 @@ async def home():
     <nav class="top-nav">
         <a href="/" class="nav-brand">🚀 Sejm Whiz</a>
         <div class="nav-links">
+            <a href="/search" class="nav-link">🔍 Search</a>
             <a href="/dashboard" class="nav-link">📊 Dashboard</a>
             <a href="/docs" class="nav-link">📚 API Docs</a>
             <a href="/health" class="nav-link">❤️ Health</a>
@@ -259,6 +266,7 @@ async def dashboard():
     <nav class="top-nav">
         <a href="/" class="nav-brand">🚀 Sejm Whiz</a>
         <div class="nav-links">
+            <a href="/search" class="nav-link">🔍 Search</a>
             <a href="/dashboard" class="nav-link active">📊 Dashboard</a>
             <a href="/docs" class="nav-link">📚 API Docs</a>
             <a href="/health" class="nav-link">❤️ Health</a>
@@ -527,6 +535,448 @@ async def stream_logs():
     )
 
 
+@app.get("/search", response_class=HTMLResponse)
+async def search_page():
+    """Serve the semantic search interface."""
+    html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sejm Whiz - Semantic Search</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        .top-nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 0 20px; height: 60px; display: flex; align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .nav-brand {
+            font-weight: 600; font-size: 1.2em; color: #2d3748;
+            margin-right: 30px; text-decoration: none;
+        }
+        .nav-links {
+            display: flex; gap: 20px; align-items: center;
+        }
+        .nav-link {
+            text-decoration: none; color: #4a5568; font-weight: 500;
+            padding: 8px 16px; border-radius: 6px; transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            background: rgba(102, 126, 234, 0.1); color: #667eea;
+        }
+        .nav-link.active {
+            background: #667eea; color: white;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; padding: 70px 20px 20px 20px; margin: 0;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .search-header {
+            background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); text-align: center;
+        }
+        .search-form {
+            background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        .search-input {
+            width: 100%; padding: 15px; font-size: 1.1em; border: 2px solid #e2e8f0;
+            border-radius: 8px; margin-bottom: 20px; transition: border-color 0.3s ease;
+        }
+        .search-input:focus {
+            outline: none; border-color: #667eea;
+        }
+        .search-options {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px; margin-bottom: 20px;
+        }
+        .option-group {
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .option-group label {
+            font-weight: 500; color: #2d3748; font-size: 0.9em;
+        }
+        .option-group select, .option-group input {
+            padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px;
+        }
+        .search-button {
+            background: #667eea; color: white; padding: 12px 30px;
+            border: none; border-radius: 8px; font-size: 1.1em; font-weight: 500;
+            cursor: pointer; transition: background 0.3s ease;
+        }
+        .search-button:hover { background: #5a67d8; }
+        .search-button:disabled { background: #a0aec0; cursor: not-allowed; }
+        .results-container {
+            background: white; border-radius: 12px; padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); display: none;
+        }
+        .results-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;
+        }
+        .result-item {
+            border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;
+            margin-bottom: 15px; transition: box-shadow 0.3s ease;
+        }
+        .result-item:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .result-title {
+            font-weight: 600; color: #2d3748; margin-bottom: 8px; font-size: 1.1em;
+        }
+        .result-content {
+            color: #4a5568; line-height: 1.6; margin-bottom: 10px;
+        }
+        .result-metadata {
+            display: flex; gap: 15px; font-size: 0.9em; color: #718096;
+        }
+        .result-score {
+            background: #667eea; color: white; padding: 2px 8px; border-radius: 12px;
+            font-size: 0.8em; font-weight: 500;
+        }
+        .loading {
+            text-align: center; padding: 40px; color: #718096;
+        }
+        .query-analysis {
+            background: #f7fafc; border-radius: 8px; padding: 15px; margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .analysis-title {
+            font-weight: 600; color: #2d3748; margin-bottom: 8px;
+        }
+        .analysis-content {
+            font-size: 0.9em; color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="/" class="nav-brand">🚀 Sejm Whiz</a>
+        <div class="nav-links">
+            <a href="/search" class="nav-link active">🔍 Search</a>
+            <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+            <a href="/docs" class="nav-link">📚 API Docs</a>
+            <a href="/health" class="nav-link">❤️ Health</a>
+            <a href="/home" class="nav-link">🏠 Home</a>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="search-header">
+            <h1>🔍 Semantic Search</h1>
+            <p style="font-size: 1.1em; color: #718096; margin-top: 10px;">
+                Search through Polish parliamentary proceedings and legal documents using AI-powered semantic search
+            </p>
+        </div>
+
+        <div class="search-form">
+            <form id="searchForm">
+                <input
+                    type="text"
+                    id="searchQuery"
+                    class="search-input"
+                    placeholder="Enter your search query in Polish (e.g., 'prawo pracy', 'ustawa o ochronie danych')..."
+                    required
+                >
+
+                <div class="search-options">
+                    <div class="option-group">
+                        <label for="searchMode">Search Mode</label>
+                        <select id="searchMode">
+                            <option value="hybrid">Hybrid (Recommended)</option>
+                            <option value="semantic_only">Semantic Only</option>
+                            <option value="cross_register">Cross-Register</option>
+                            <option value="legal_focused">Legal Focused</option>
+                        </select>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="documentType">Document Type</label>
+                        <select id="documentType">
+                            <option value="">All Documents</option>
+                            <option value="sejm_proceeding">Sejm Proceedings</option>
+                            <option value="legal_act">Legal Acts</option>
+                            <option value="amendment">Amendments</option>
+                        </select>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="maxResults">Max Results</label>
+                        <select id="maxResults">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="threshold">Similarity Threshold</label>
+                        <input type="range" id="threshold" min="0.3" max="0.9" step="0.1" value="0.5">
+                        <span id="thresholdValue">0.5</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <label><input type="checkbox" id="queryExpansion" checked> Query Expansion</label>
+                    <label><input type="checkbox" id="crossRegister" checked> Cross-Register Matching</label>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="submit" class="search-button" id="searchButton">
+                        🔍 Search Documents
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="results-container" id="resultsContainer">
+            <div class="results-header">
+                <h2 id="resultsTitle">Search Results</h2>
+                <div id="resultsInfo"></div>
+            </div>
+
+            <div id="queryAnalysis" class="query-analysis" style="display: none;">
+                <div class="analysis-title">Query Analysis</div>
+                <div class="analysis-content" id="analysisContent"></div>
+            </div>
+
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let isSearching = false;
+
+        // Update threshold display
+        document.getElementById('threshold').addEventListener('input', function() {
+            document.getElementById('thresholdValue').textContent = this.value;
+        });
+
+        // Handle search form submission
+        document.getElementById('searchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await performSearch();
+        });
+
+        async function performSearch() {
+            if (isSearching) return;
+
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) return;
+
+            isSearching = true;
+            const searchButton = document.getElementById('searchButton');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsContent = document.getElementById('resultsContent');
+
+            // Update UI state
+            searchButton.disabled = true;
+            searchButton.textContent = '🔄 Searching...';
+            resultsContainer.style.display = 'block';
+            resultsContent.innerHTML = '<div class="loading">🔍 Searching through legal documents...</div>';
+
+            try {
+                // Prepare search parameters
+                const searchParams = {
+                    query: query,
+                    limit: parseInt(document.getElementById('maxResults').value),
+                    threshold: parseFloat(document.getElementById('threshold').value),
+                    document_type: document.getElementById('documentType').value || null,
+                    enable_query_expansion: document.getElementById('queryExpansion').checked,
+                    enable_cross_register: document.getElementById('crossRegister').checked,
+                    search_mode: document.getElementById('searchMode').value
+                };
+
+                // Perform search
+                const response = await fetch('/api/v1/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(searchParams)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Search failed');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsContent.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #e53e3e;">
+                        ❌ Search failed: ${error.message}
+                        <br><br>
+                        <small>Make sure the API server is running and accessible.</small>
+                    </div>
+                `;
+            } finally {
+                isSearching = false;
+                searchButton.disabled = false;
+                searchButton.textContent = '🔍 Search Documents';
+            }
+        }
+
+        function displayResults(data) {
+            const resultsInfo = document.getElementById('resultsInfo');
+            const resultsContent = document.getElementById('resultsContent');
+            const queryAnalysis = document.getElementById('queryAnalysis');
+            const analysisContent = document.getElementById('analysisContent');
+
+            // Update results info
+            resultsInfo.innerHTML = `
+                <div style="font-size: 0.9em; color: #718096;">
+                    ${data.total_results} results in ${data.processing_time_ms.toFixed(1)}ms
+                </div>
+            `;
+
+            // Display query analysis if available
+            if (data.processed_query) {
+                const analysis = data.processed_query;
+                analysisContent.innerHTML = `
+                    <strong>Normalized Query:</strong> ${analysis.normalized_query}<br>
+                    <strong>Query Type:</strong> ${analysis.query_type}<br>
+                    ${analysis.legal_terms && analysis.legal_terms.length > 0 ?
+                        `<strong>Legal Terms:</strong> ${analysis.legal_terms.join(', ')}<br>` : ''}
+                    ${analysis.expanded_terms && analysis.expanded_terms.length > 0 ?
+                        `<strong>Expanded Terms:</strong> ${analysis.expanded_terms.join(', ')}<br>` : ''}
+                    ${analysis.legal_references && analysis.legal_references.length > 0 ?
+                        `<strong>Legal References:</strong> ${analysis.legal_references.join(', ')}<br>` : ''}
+                `;
+                queryAnalysis.style.display = 'block';
+            } else {
+                queryAnalysis.style.display = 'none';
+            }
+
+            // Display results
+            if (data.results && data.results.length > 0) {
+                resultsContent.innerHTML = data.results.map(result => `
+                    <div class="result-item">
+                        <div class="result-title">${escapeHtml(result.title)}</div>
+                        <div class="result-content">${escapeHtml(result.content)}</div>
+                        <div class="result-metadata">
+                            <span class="result-score">${(result.similarity_score * 100).toFixed(1)}%</span>
+                            <span>Type: ${result.document_type}</span>
+                            <span>ID: ${result.document_id}</span>
+                            ${result.metadata && result.metadata.cross_register_score ?
+                                `<span>Cross-Register: ${(result.metadata.cross_register_score * 100).toFixed(1)}%</span>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                resultsContent.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #718096;">
+                        🔍 No results found for your query.
+                        <br><br>
+                        Try adjusting your search terms or lowering the similarity threshold.
+                    </div>
+                `;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Focus search input on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('searchQuery').focus();
+        });
+    </script>
+</body>
+</html>"""
+    return HTMLResponse(content=html_content)
+
+
+# API proxy endpoints for semantic search
+@app.post("/api/v1/search")
+async def proxy_search(request_data: dict):
+    """Proxy search requests to the main API server."""
+    try:
+        # Forward to main API server running on port 8000
+        response = requests.post(
+            "http://localhost:8000/api/v1/search",
+            json=request_data,
+            headers={"Content-Type": "application/json"},
+            timeout=30,
+        )
+
+        if response.status_code == 200:
+            return JSONResponse(content=response.json())
+        else:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"API server error: {response.text}",
+            )
+
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(
+            status_code=503,
+            detail="Cannot connect to API server. Make sure it's running on port 8000.",
+        )
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504, detail="API server timeout. The search is taking too long."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Proxy error: {str(e)}")
+
+
+@app.get("/api/v1/search")
+async def proxy_search_get(
+    q: str,
+    limit: int = 10,
+    threshold: float = 0.5,
+    document_type: Optional[str] = None,
+    expand_query: bool = True,
+    cross_register: bool = True,
+    search_mode: str = "hybrid",
+):
+    """Proxy GET search requests to the main API server."""
+    params = {
+        "q": q,
+        "limit": limit,
+        "threshold": threshold,
+        "expand_query": expand_query,
+        "cross_register": cross_register,
+        "search_mode": search_mode,
+    }
+    if document_type:
+        params["document_type"] = document_type
+
+    try:
+        response = requests.get(
+            "http://localhost:8000/api/v1/search", 
+            params={k: v for k, v in params.items() if v is not None}, 
+            timeout=30
+        )
+
+        if response.status_code == 200:
+            return JSONResponse(content=response.json())
+        else:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"API server error: {response.text}",
+            )
+
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(
+            status_code=503,
+            detail="Cannot connect to API server. Make sure it's running on port 8000.",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Proxy error: {str(e)}")
+
+
 @app.get("/api/processor/status")
 async def processor_status():
     """Get the current status of the data processor."""
@@ -591,4 +1041,4 @@ async def processor_status():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8080)

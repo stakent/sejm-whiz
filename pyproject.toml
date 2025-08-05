@@ -24,6 +24,7 @@ dependencies = [
     "python-multipart>=0.0.20",
     "redis>=6.2.0",
     "regex>=2024.11.6",
+    "requests>=2.32.4",
     "sacremoses>=0.1.1",
     "scikit-learn>=1.7.1",
     "sentence-transformers>=5.0.0",
