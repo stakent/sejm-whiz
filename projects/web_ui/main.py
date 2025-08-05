@@ -516,12 +516,12 @@ async def stream_logs():
         batch_num = 1
         while True:
             logs = [
-                f"{datetime.utcnow().isoformat()} - data_processor - INFO - Starting batch {batch_num}",
-                f"{datetime.utcnow().isoformat()} - sejm_ingestion - INFO - Fetching new proceedings",
-                f"{datetime.utcnow().isoformat()} - text_processing - INFO - Processing batch {batch_num}",
-                f"{datetime.utcnow().isoformat()} - embedding_generation - INFO - Generating embeddings",
-                f"{datetime.utcnow().isoformat()} - database_storage - INFO - Storing results",
-                f"{datetime.utcnow().isoformat()} - data_processor - INFO - Batch {batch_num} completed",
+                f"{datetime.utcnow().isoformat()} - data_processor - INFO - [SAMPLE] Starting batch {batch_num}",
+                f"{datetime.utcnow().isoformat()} - sejm_ingestion - INFO - [SAMPLE] Fetching new proceedings",
+                f"{datetime.utcnow().isoformat()} - text_processing - INFO - [SAMPLE] Processing batch {batch_num}",
+                f"{datetime.utcnow().isoformat()} - embedding_generation - INFO - [SAMPLE] Generating embeddings",
+                f"{datetime.utcnow().isoformat()} - database_storage - INFO - [SAMPLE] Storing results",
+                f"{datetime.utcnow().isoformat()} - data_processor - INFO - [SAMPLE] Batch {batch_num} completed",
             ]
             for log in logs:
                 yield f"data: {log}\n\n"
@@ -956,9 +956,9 @@ async def proxy_search_get(
 
     try:
         response = requests.get(
-            "http://localhost:8000/api/v1/search", 
-            params={k: v for k, v in params.items() if v is not None}, 
-            timeout=30
+            "http://localhost:8000/api/v1/search",
+            params={k: v for k, v in params.items() if v is not None},
+            timeout=30,
         )
 
         if response.status_code == 200:

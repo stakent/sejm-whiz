@@ -276,20 +276,20 @@ def configure_routes(app: FastAPI) -> None:
             yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - No live logs available, showing demo logs\n\n"
 
             sample_logs = [
-                f"{datetime.utcnow().isoformat()} - data_processor - INFO - Starting data processor",
-                f"{datetime.utcnow().isoformat()} - data_processor - INFO - Initializing pipeline components",
-                f"{datetime.utcnow().isoformat()} - sejm_ingestion - INFO - Fetching Sejm proceedings data",
-                f"{datetime.utcnow().isoformat()} - sejm_ingestion - INFO - Retrieved 15 proceedings for session 10",
-                f"{datetime.utcnow().isoformat()} - eli_ingestion - INFO - Fetching ELI legal documents",
-                f"{datetime.utcnow().isoformat()} - eli_ingestion - INFO - Retrieved 8 legal documents",
-                f"{datetime.utcnow().isoformat()} - text_processing - INFO - Processing text data",
-                f"{datetime.utcnow().isoformat()} - text_processing - INFO - Cleaned 23 documents",
-                f"{datetime.utcnow().isoformat()} - embedding_generation - INFO - Generating embeddings",
-                f"{datetime.utcnow().isoformat()} - embedding_generation - INFO - Generated embeddings for 23 documents",
-                f"{datetime.utcnow().isoformat()} - database_storage - INFO - Storing data in database",
-                f"{datetime.utcnow().isoformat()} - database_storage - INFO - Stored 15 Sejm proceedings",
-                f"{datetime.utcnow().isoformat()} - database_storage - INFO - Stored 8 ELI documents",
-                f"{datetime.utcnow().isoformat()} - data_processor - INFO - Pipeline completed successfully",
+                f"{datetime.utcnow().isoformat()} - data_processor - INFO - [SAMPLE] Starting data processor",
+                f"{datetime.utcnow().isoformat()} - data_processor - INFO - [SAMPLE] Initializing pipeline components",
+                f"{datetime.utcnow().isoformat()} - sejm_ingestion - INFO - [SAMPLE] Fetching Sejm proceedings data",
+                f"{datetime.utcnow().isoformat()} - sejm_ingestion - INFO - [SAMPLE] Retrieved 15 proceedings for session 10",
+                f"{datetime.utcnow().isoformat()} - eli_ingestion - INFO - [SAMPLE] Fetching ELI legal documents",
+                f"{datetime.utcnow().isoformat()} - eli_ingestion - INFO - [SAMPLE] Retrieved 8 legal documents",
+                f"{datetime.utcnow().isoformat()} - text_processing - INFO - [SAMPLE] Processing text data",
+                f"{datetime.utcnow().isoformat()} - text_processing - INFO - [SAMPLE] Cleaned 23 documents",
+                f"{datetime.utcnow().isoformat()} - embedding_generation - INFO - [SAMPLE] Generating embeddings",
+                f"{datetime.utcnow().isoformat()} - embedding_generation - INFO - [SAMPLE] Generated embeddings for 23 documents",
+                f"{datetime.utcnow().isoformat()} - database_storage - INFO - [SAMPLE] Storing data in database",
+                f"{datetime.utcnow().isoformat()} - database_storage - INFO - [SAMPLE] Stored 15 Sejm proceedings",
+                f"{datetime.utcnow().isoformat()} - database_storage - INFO - [SAMPLE] Stored 8 ELI documents",
+                f"{datetime.utcnow().isoformat()} - data_processor - INFO - [SAMPLE] Pipeline completed successfully",
             ]
 
             for log in sample_logs:
