@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
+from sejm_whiz import __version__
 
 # Import components for API functionality
 try:
@@ -39,7 +40,7 @@ logger = logging.getLogger(__name__)
 class HealthResponse(BaseModel):
     status: str
     timestamp: str
-    version: str = "0.1.0"
+    version: str = __version__
 
 
 class ErrorResponse(BaseModel):
@@ -93,7 +94,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Sejm Whiz API",
         description="AI-driven legal prediction system using Polish Parliament data",
-        version="0.1.0",
+        version=__version__,
         docs_url="/docs",
         redoc_url="/redoc",
     )
@@ -180,7 +181,7 @@ def configure_routes(app: FastAPI) -> None:
 
     @app.get("/")
     async def root():
-        return {"message": "Sejm Whiz API", "version": "0.1.0", "docs": "/docs"}
+        return {"message": "Sejm Whiz API", "version": __version__, "docs": "/docs"}
 
     @app.get("/dashboard", response_class=HTMLResponse)
     async def dashboard(request: Request):

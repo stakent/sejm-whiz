@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "api_server"
-version = "0.1.0"
+dynamic = ["version"]
 
 
 
@@ -33,3 +33,6 @@ components = [
     "database",
     "text_processing"
 ]
+
+[tool.hatch.version]
+path = "../../components/sejm_whiz/__init__.py"

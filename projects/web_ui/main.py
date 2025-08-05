@@ -9,6 +9,7 @@ import requests
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from sejm_whiz import __version__
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import (
     HTMLResponse,
@@ -20,7 +21,7 @@ from fastapi.responses import (
 app = FastAPI(
     title="Sejm Whiz Web UI",
     description="Web interface for monitoring Sejm Whiz data processing pipeline",
-    version="0.1.0",
+    version=__version__,
 )
 
 # Configure CORS
@@ -45,7 +46,7 @@ async def health():
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "0.1.0",
+        "version": __version__,
         "hot_reload_test": "✅ Hot reload working!",
     }
 

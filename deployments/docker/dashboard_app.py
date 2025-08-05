@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from sejm_whiz import __version__
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 class HealthResponse(BaseModel):
     status: str
     timestamp: str
-    version: str = "0.1.0"
+    version: str = __version__
 
 
 class ErrorResponse(BaseModel):
@@ -38,7 +39,7 @@ class ErrorResponse(BaseModel):
 app = FastAPI(
     title="Sejm Whiz Dashboard",
     description="Real-time monitoring dashboard for Sejm Whiz data processing pipeline",
-    version="0.1.0",
+    version=__version__,
 )
 
 app.add_middleware(
@@ -66,7 +67,7 @@ async def health_check():
 
 @app.get("/")
 async def root():
-    return {"message": "Sejm Whiz Dashboard", "version": "0.1.0", "status": "running"}
+    return {"message": "Sejm Whiz Dashboard", "version": __version__, "status": "running"}
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
