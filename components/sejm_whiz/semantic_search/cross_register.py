@@ -321,8 +321,10 @@ class CrossRegisterMatcher:
         }
 
         for pattern_name, pattern_config in patterns.items():
-            formal_pattern = re.compile(pattern_config["formal"], re.IGNORECASE)
-            informal_pattern = re.compile(pattern_config["informal"], re.IGNORECASE)
+            formal_pattern = re.compile(str(pattern_config["formal"]), re.IGNORECASE)
+            informal_pattern = re.compile(
+                str(pattern_config["informal"]), re.IGNORECASE
+            )
 
             formal_matches = formal_pattern.findall(legal_text)
             informal_matches = informal_pattern.findall(parl_text)
@@ -338,7 +340,7 @@ class CrossRegisterMatcher:
                     informal_text=f"Pattern: {pattern_name} (informal)",
                     similarity_score=similarity_score,
                     match_type="structural_pattern",
-                    confidence=pattern_config["confidence"],
+                    confidence=pattern_config["confidence"],  # type: ignore[arg-type]
                     normalized_forms={
                         "formal": str(formal_matches),
                         "informal": str(informal_matches),

@@ -13,6 +13,24 @@ from .core import (
     search_similar_documents,
     get_semantic_search_service,
 )
+from .config import (
+    SearchConfig,
+    SearchMode,
+    RelevanceMode,
+    RankingParameters,
+    get_default_search_config,
+    get_production_search_config,
+    get_development_search_config,
+    get_default_ranking_parameters,
+    get_legal_focused_ranking_parameters,
+)
+from .query_processor import (
+    QueryProcessor,
+    ProcessedQuery,
+    QueryType,
+    get_query_processor,
+    process_search_query as process_query,
+)
 
 __all__ = [
     # Main search engine
@@ -35,4 +53,20 @@ __all__ = [
     "process_search_query",
     "search_similar_documents",
     "get_semantic_search_service",
+    # Configuration
+    "SearchConfig",
+    "SearchMode",
+    "RelevanceMode",
+    "RankingParameters",
+    "get_default_search_config",
+    "get_production_search_config",
+    "get_development_search_config",
+    "get_default_ranking_parameters",
+    "get_legal_focused_ranking_parameters",
+    # Query processing
+    "QueryProcessor",
+    "ProcessedQuery",
+    "QueryType",
+    "get_query_processor",
+    "process_query",
 ]
