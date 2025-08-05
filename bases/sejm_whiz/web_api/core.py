@@ -300,12 +300,12 @@ def configure_routes(app: FastAPI) -> None:
             batch_num = 1
             while True:
                 logs = [
-                    f"{datetime.now(UTC).isoformat()} - data_processor - INFO - Starting batch {batch_num}",
-                    f"{datetime.now(UTC).isoformat()} - sejm_ingestion - INFO - Fetching new proceedings",
-                    f"{datetime.now(UTC).isoformat()} - text_processing - INFO - Processing batch {batch_num}",
-                    f"{datetime.now(UTC).isoformat()} - embedding_generation - INFO - Generating embeddings for batch {batch_num}",
-                    f"{datetime.now(UTC).isoformat()} - database_storage - INFO - Storing batch {batch_num} results",
-                    f"{datetime.now(UTC).isoformat()} - data_processor - INFO - Batch {batch_num} completed",
+                    f"{datetime.now(UTC).isoformat()} - data_processor - INFO - [SAMPLE] Starting batch {batch_num}",
+                    f"{datetime.now(UTC).isoformat()} - sejm_ingestion - INFO - [SAMPLE] Fetching new proceedings",
+                    f"{datetime.now(UTC).isoformat()} - text_processing - INFO - [SAMPLE] Processing batch {batch_num}",
+                    f"{datetime.now(UTC).isoformat()} - embedding_generation - INFO - [SAMPLE] Generating embeddings for batch {batch_num}",
+                    f"{datetime.now(UTC).isoformat()} - database_storage - INFO - [SAMPLE] Storing batch {batch_num} results",
+                    f"{datetime.now(UTC).isoformat()} - data_processor - INFO - [SAMPLE] Batch {batch_num} completed",
                 ]
                 for log in logs:
                     yield f"data: {log}\n\n"
