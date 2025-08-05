@@ -121,3 +121,7 @@ ssh root@p7 "cd /root/tmp/sejm-whiz && docker compose -f docker-compose.dev-p7.y
 # Copy updated files first, then:
 ssh root@p7 "cd /root/tmp/sejm-whiz && docker compose -f docker-compose.dev-p7.yml up -d"
 ```
+
+## Deployment Memories
+
+- Use `root@p7:/root/tmp/sejm-whiz-baremetal/` directory for deployments to p7
