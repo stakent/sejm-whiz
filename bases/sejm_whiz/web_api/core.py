@@ -4,6 +4,7 @@ import asyncio
 import subprocess
 from pathlib import Path
 from typing import AsyncGenerator, List, Optional
+from enum import StrEnum
 
 from fastapi import FastAPI, Request, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,6 +36,17 @@ except ImportError as e:
 
 
 logger = logging.getLogger(__name__)
+
+
+class ProcessorStatus(StrEnum):
+    """Docker container status values."""
+
+    RUNNING = "running"
+    PAUSED = "paused"
+    RESTARTING = "restarting"
+    DEAD = "dead"
+    STOPPED = "stopped"
+    UNKNOWN = "unknown"
 
 
 class HealthResponse(BaseModel):
@@ -199,34 +211,25 @@ def configure_routes(app: FastAPI) -> None:
             docker_available = False
             container_name = None
 
-            # Try to find the processor container
-            processor_containers = [
-                "sejm-whiz-processor-dev",
-                "sejm-whiz-processor",
-                "processor",
-            ]
-
-            # Check which processor containers are available
-            for container in processor_containers:
-                try:
-                    check_process = await asyncio.create_subprocess_exec(
-                        "docker",
-                        "ps",
-                        "--filter",
-                        f"name={container}",
-                        "--format",
-                        "{{.Names}}",
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                    )
-                    stdout, stderr = await check_process.communicate()
-                    if check_process.returncode == 0 and stdout.strip():
-                        docker_available = True
-                        container_name = container
-                        yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - Found processor container: {container}\n\n"
-                        break
-                except (FileNotFoundError, OSError):
-                    continue
+            # Check for the processor container
+            container_name = "sejm-whiz-processor"
+            try:
+                check_process = await asyncio.create_subprocess_exec(
+                    "docker",
+                    "ps",
+                    "--filter",
+                    f"name={container_name}",
+                    "--format",
+                    "{{.Names}}",
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await check_process.communicate()
+                if check_process.returncode == 0 and stdout.strip():
+                    docker_available = True
+                    yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - Found processor container: {container_name}\n\n"
+            except (FileNotFoundError, OSError):
+                pass
 
             if docker_available and container_name:
                 try:
@@ -327,73 +330,67 @@ def configure_routes(app: FastAPI) -> None:
     async def processor_status():
         """Get the current status of the data processor."""
         try:
-            # Try to find processor containers
-            processor_containers = [
-                "sejm-whiz-processor-dev",
-                "sejm-whiz-processor",
-                "processor",
-            ]
+            # Check for the processor container
+            container_name = "sejm-whiz-processor"
+            result = subprocess.run(
+                [
+                    "docker",
+                    "inspect",
+                    container_name,
+                    "--format",
+                    "{{json .}}",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
 
-            for container_name in processor_containers:
-                result = subprocess.run(
-                    [
-                        "docker",
-                        "inspect",
-                        container_name,
-                        "--format",
-                        "{{json .}}",
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                )
+            if result.returncode == 0:
+                import json
 
-                if result.returncode == 0:
-                    import json
+                container_data = json.loads(result.stdout)
+                state = container_data.get("State", {})
+                config = container_data.get("Config", {})
 
-                    container_data = json.loads(result.stdout)
-                    state = container_data.get("State", {})
-                    config = container_data.get("Config", {})
+                # Determine processor type from environment variables
+                env_vars = config.get("Env", [])
+                processor_type = "CPU"  # Default
+                for env_var in env_vars:
+                    if env_var.startswith("EMBEDDING_DEVICE="):
+                        device = env_var.split("=", 1)[1]
+                        if device.lower() in ["cuda", "gpu"]:
+                            processor_type = "GPU"
+                        break
 
-                    # Determine processor type from environment variables
-                    env_vars = config.get("Env", [])
-                    processor_type = "CPU"  # Default
-                    for env_var in env_vars:
-                        if env_var.startswith("EMBEDDING_DEVICE="):
-                            device = env_var.split("=", 1)[1]
-                            if device.lower() in ["cuda", "gpu"]:
-                                processor_type = "GPU"
-                            break
+                # Map Docker state to readable status
+                if state.get("Running"):
+                    status = ProcessorStatus.RUNNING
+                elif state.get("Paused"):
+                    status = ProcessorStatus.PAUSED
+                elif state.get("Restarting"):
+                    status = ProcessorStatus.RESTARTING
+                elif state.get("Dead"):
+                    status = ProcessorStatus.DEAD
+                else:
+                    status = ProcessorStatus.STOPPED
 
-                    # Map Docker state to readable status
-                    if state.get("Running"):
-                        status = "Running"
-                    elif state.get("Paused"):
-                        status = "Paused"
-                    elif state.get("Restarting"):
-                        status = "Restarting"
-                    elif state.get("Dead"):
-                        status = "Dead"
-                    else:
-                        status = "Stopped"
-
-                    return {
-                        "status": status,
-                        "processor_type": processor_type,
-                        "container_name": container_name,
-                        "started_at": state.get("StartedAt"),
-                        "finished_at": state.get("FinishedAt"),
-                        "exit_code": state.get("ExitCode"),
-                        "pid": state.get("Pid"),
-                        "health": state.get("Health", {}).get("Status", "unknown"),
-                        "environment": "docker-compose",
-                    }
+                return {
+                    "status": status,
+                    "processor_type": processor_type,
+                    "container_name": container_name,
+                    "started_at": state.get("StartedAt"),
+                    "finished_at": state.get("FinishedAt"),
+                    "exit_code": state.get("ExitCode"),
+                    "pid": state.get("Pid"),
+                    "health": state.get("Health", {}).get("Status", "unknown"),
+                    "environment": "docker-compose",
+                }
         except Exception as e:
             logger.error(f"Error getting processor status: {e}")
 
         # Fallback status
         return {
-            "status": "unknown",
+            "status": ProcessorStatus.UNKNOWN,
             "message": "Unable to determine processor status",
             "timestamp": datetime.now(UTC).isoformat(),
         }
@@ -449,7 +446,9 @@ def configure_routes(app: FastAPI) -> None:
                         services.append(
                             {
                                 "name": name,
-                                "status": "running" if running else "stopped",
+                                "status": ProcessorStatus.RUNNING
+                                if running
+                                else ProcessorStatus.STOPPED,
                                 "service_type": service_type,
                                 "image": image,
                                 "ports": ports,
@@ -487,7 +486,7 @@ def configure_routes(app: FastAPI) -> None:
                 "compose_status": compose_status,
                 "total_services": len(services),
                 "running_services": len(
-                    [s for s in services if s["status"] == "running"]
+                    [s for s in services if s["status"] == ProcessorStatus.RUNNING]
                 ),
                 "timestamp": datetime.now(UTC).isoformat(),
             }

@@ -4,7 +4,7 @@ services:
   # PostgreSQL with pgvector extension
   postgres:
     image: pgvector/pgvector:pg17
-    container_name: sejm-whiz-postgres-dev
+    container_name: sejm-whiz-postgres
     environment:
       POSTGRES_DB: sejm_whiz
       POSTGRES_USER: sejm_whiz_user
@@ -26,7 +26,7 @@ services:
   # Redis for caching and queues
   redis:
     image: redis:7.2-alpine
-    container_name: sejm-whiz-redis-dev
+    container_name: sejm-whiz-redis
     ports:
       - "6379:6379"
     volumes:
@@ -44,7 +44,7 @@ services:
     build:
       context: ../../
       dockerfile: projects/web_ui/Dockerfile
-    container_name: sejm-whiz-web-ui-dev
+    container_name: sejm-whiz-web-ui
     ports:
       - "8000:8000"
     environment:
@@ -76,7 +76,7 @@ services:
     build:
       context: ../../
       dockerfile: projects/api_server/Dockerfile
-    container_name: sejm-whiz-api-server-dev
+    container_name: sejm-whiz-api-server
     ports:
       - "8001:8000"  # Different port to avoid conflict with web-ui
     environment:
@@ -113,7 +113,7 @@ services:
       context: ../../
       dockerfile: ${PROCESSOR_DOCKERFILE:-projects/data_processor/Dockerfile}
       target: ${PROCESSOR_BUILD_TARGET:-}  # Use full build for GPU, base for CPU-only
-    container_name: sejm-whiz-processor-dev
+    container_name: sejm-whiz-processor
     environment:
       - DEPLOYMENT_ENV=docker-compose
       - DATABASE_HOST=postgres

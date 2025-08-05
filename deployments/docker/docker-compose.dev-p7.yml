@@ -4,7 +4,7 @@ services:
   # PostgreSQL with pgvector extension
   postgres:
     image: pgvector/pgvector:pg17
-    container_name: sejm-whiz-postgres-dev
+    container_name: sejm-whiz-postgres
     environment:
       POSTGRES_DB: sejm_whiz
       POSTGRES_USER: sejm_whiz_user
@@ -26,7 +26,7 @@ services:
   # Redis for caching and queues
   redis:
     image: redis:7.2-alpine
-    container_name: sejm-whiz-redis-dev
+    container_name: sejm-whiz-redis
     ports:
       - "6379:6379"
     volumes:
@@ -42,7 +42,7 @@ services:
   # API Server for REST API endpoints (CPU-only for faster builds)
   api-server:
     image: python:3.12-slim-bookworm
-    container_name: sejm-whiz-api-server-dev
+    container_name: sejm-whiz-api-server
     ports:
       - "8001:8000"  # Different port to avoid conflict with web-ui
     environment:
