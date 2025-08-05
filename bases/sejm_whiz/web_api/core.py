@@ -16,7 +16,11 @@ from pydantic import BaseModel
 
 # Import components for API functionality
 try:
-    from sejm_whiz.semantic_search import SemanticSearchEngine
+    from sejm_whiz.semantic_search import (
+        get_semantic_search_service,
+        process_search_query,
+        get_production_search_config,
+    )
     from sejm_whiz.prediction_models import (
         PredictionInput,
         create_default_similarity_predictor,
@@ -49,6 +53,9 @@ class SearchRequest(BaseModel):
     limit: int = 10
     threshold: float = 0.5
     document_type: Optional[str] = None
+    enable_query_expansion: bool = True
+    enable_cross_register: bool = True
+    search_mode: str = "hybrid"  # semantic_only, cross_register, hybrid, legal_focused
 
 
 class SearchResult(BaseModel):
@@ -65,6 +72,8 @@ class SearchResponse(BaseModel):
     total_results: int
     query: str
     processing_time_ms: float
+    processed_query: Optional[dict] = None  # ProcessedQuery information
+    search_metadata: Optional[dict] = None
 
 
 class PredictionRequest(BaseModel):
@@ -496,21 +505,57 @@ def configure_routes(app: FastAPI) -> None:
 
         @app.post("/api/v1/search", response_model=SearchResponse)
         async def semantic_search(request: SearchRequest):
-            """Perform semantic search on legal documents."""
+            """Perform enhanced semantic search on legal documents with query processing."""
             import time
 
             start_time = time.time()
 
             try:
-                # Initialize search engine
-                search_engine = SemanticSearchEngine()
+                # Process the query with legal term normalization
+                processed_query = process_search_query(
+                    request.query, expand_terms=request.enable_query_expansion
+                )
 
-                # Perform search
-                results = search_engine.search(
-                    query=request.query,
-                    limit=request.limit,
+                # Get production search configuration
+                search_config = get_production_search_config()
+
+                # Override config based on request parameters
+                search_config.max_results = request.limit
+                search_config.similarity_threshold = request.threshold
+                search_config.enable_cross_register = request.enable_cross_register
+                search_config.enable_query_expansion = request.enable_query_expansion
+
+                # Set search mode from request
+                from sejm_whiz.semantic_search.config import SearchMode
+
+                if request.search_mode == "semantic_only":
+                    search_config.search_mode = SearchMode.SEMANTIC_ONLY
+                elif request.search_mode == "cross_register":
+                    search_config.search_mode = SearchMode.CROSS_REGISTER
+                elif request.search_mode == "legal_focused":
+                    search_config.search_mode = SearchMode.LEGAL_FOCUSED
+                else:
+                    search_config.search_mode = SearchMode.HYBRID
+
+                # Initialize enhanced search service
+                search_service = get_semantic_search_service()
+
+                # Use the processed query's normalized text for search
+                search_query = processed_query.normalized_query
+
+                # Include expanded terms if available
+                if processed_query.expanded_terms:
+                    search_query += " " + " ".join(
+                        processed_query.expanded_terms[:3]
+                    )  # Limit to 3 expanded terms
+
+                # Perform enhanced search using the processed query
+                results = search_service.search_documents(
+                    query=search_query,
+                    limit=search_config.max_results,
                     document_type=request.document_type,
-                    similarity_threshold=request.threshold,
+                    similarity_threshold=search_config.similarity_threshold,
+                    include_cross_register=search_config.enable_cross_register,
                 )
 
                 # Convert results to API format
@@ -539,6 +584,13 @@ def configure_routes(app: FastAPI) -> None:
                     total_results=len(search_results),
                     query=request.query,
                     processing_time_ms=processing_time,
+                    processed_query=processed_query.to_dict(),
+                    search_metadata={
+                        "search_mode": request.search_mode,
+                        "query_expansion_enabled": request.enable_query_expansion,
+                        "cross_register_enabled": request.enable_cross_register,
+                        "similarity_threshold": request.threshold,
+                    },
                 )
 
             except Exception as e:
@@ -553,12 +605,60 @@ def configure_routes(app: FastAPI) -> None:
             document_type: Optional[str] = Query(
                 None, description="Filter by document type"
             ),
+            expand_query: bool = Query(
+                True, description="Enable query expansion with synonyms"
+            ),
+            cross_register: bool = Query(
+                True, description="Enable cross-register matching"
+            ),
+            search_mode: str = Query(
+                "hybrid",
+                description="Search mode: semantic_only, cross_register, hybrid, legal_focused",
+            ),
         ):
-            """Perform semantic search via GET request."""
+            """Perform enhanced semantic search via GET request."""
             request = SearchRequest(
-                query=q, limit=limit, threshold=threshold, document_type=document_type
+                query=q,
+                limit=limit,
+                threshold=threshold,
+                document_type=document_type,
+                enable_query_expansion=expand_query,
+                enable_cross_register=cross_register,
+                search_mode=search_mode,
             )
             return await semantic_search(request)
+
+        @app.post("/api/v1/query/analyze")
+        async def analyze_query(request: dict):
+            """Analyze and process a search query to show legal term extraction and normalization."""
+            try:
+                query = request.get("query", "")
+                if not query:
+                    raise HTTPException(status_code=400, detail="Query is required")
+
+                expand_terms = request.get("expand_terms", True)
+
+                # Process the query
+                processed_query = process_search_query(query, expand_terms=expand_terms)
+
+                return {
+                    "query_analysis": processed_query.to_dict(),
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+
+            except Exception as e:
+                logger.error(f"Error analyzing query: {e}")
+                raise HTTPException(
+                    status_code=500, detail=f"Query analysis failed: {str(e)}"
+                )
+
+        @app.get("/api/v1/query/analyze")
+        async def analyze_query_get(
+            q: str = Query(..., description="Query to analyze"),
+            expand_terms: bool = Query(True, description="Enable term expansion"),
+        ):
+            """Analyze a query via GET request."""
+            return await analyze_query({"query": q, "expand_terms": expand_terms})
 
         @app.post("/api/v1/predict", response_model=PredictionResponse)
         async def predict_law_changes(request: PredictionRequest):
