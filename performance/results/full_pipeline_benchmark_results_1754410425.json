@@ -1,0 +1,19 @@
+{
+  "benchmark_info": {
+    "timestamp": "2025-08-05T18:13:45.912428",
+    "benchmark_type": "full_pipeline",
+    "description": "Complete Sejm-Whiz processing pipeline performance comparison"
+  },
+  "results": {
+    "gpu": {
+      "device": "cuda",
+      "error": "Error 111 connecting to localhost:6379. Connection refused.",
+      "benchmark_completed": false
+    },
+    "cpu": {
+      "device": "cpu",
+      "error": "DocumentOperations() takes no arguments",
+      "benchmark_completed": false
+    }
+  }
+}
