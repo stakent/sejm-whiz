@@ -3,7 +3,7 @@
 import logging
 from typing import List, Optional, Dict, Tuple, Any
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from contextlib import contextmanager
 
 from sqlalchemy import text, and_, or_, bindparam, Integer, String, Float
@@ -253,7 +253,7 @@ class SecureDocumentOperations:
                     .update(
                         {
                             "embedding": validated_embedding,
-                            "updated_at": datetime.utcnow(),
+                            "updated_at": datetime.now(UTC),
                         },
                         synchronize_session=False,
                     )
@@ -583,7 +583,7 @@ class SecureEmbeddingOperations:
             ):  # Max 1 year
                 raise ValidationError(f"Invalid hours_back: {hours_back}")
 
-            cutoff_time = datetime.utcnow() - timedelta(hours=hours_back)
+            cutoff_time = datetime.now(UTC) - timedelta(hours=hours_back)
 
             with safe_db_session() as session:
                 # Use parameterized query

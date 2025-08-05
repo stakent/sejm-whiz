@@ -2,7 +2,7 @@
 
 import pytest
 from uuid import uuid4
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 from sejm_whiz.semantic_search.ranker import (
     ResultRanker,
@@ -20,7 +20,7 @@ class TestResultRanker:
     @pytest.fixture
     def sample_documents(self):
         """Create sample legal documents with different characteristics."""
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
 
         documents = []
 
@@ -200,7 +200,7 @@ class TestResultRanker:
 
     def test_calculate_temporal_score(self, ranker):
         """Test temporal score calculation."""
-        current_time = datetime.utcnow()
+        current_time = datetime.now(UTC)
 
         # Recent document (within recency boost period)
         recent_date = current_time - timedelta(days=10)

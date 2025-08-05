@@ -3,7 +3,7 @@
 import logging
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, UTC
 from uuid import UUID
 
 
@@ -140,7 +140,7 @@ class SemanticSearchEngine:
                     "raw_distance": distance,
                     "query_length": len(query),
                     "document_length": len(doc.content),
-                    "search_timestamp": datetime.utcnow().isoformat(),
+                    "search_timestamp": datetime.now(UTC).isoformat(),
                 }
 
                 result = SearchResult(
@@ -240,7 +240,7 @@ class SemanticSearchEngine:
                     "distance_metric": distance_metric.value,
                     "raw_distance": distance,
                     "reference_document_id": str(document_id),
-                    "search_timestamp": datetime.utcnow().isoformat(),
+                    "search_timestamp": datetime.now(UTC).isoformat(),
                 }
 
                 result = SearchResult(

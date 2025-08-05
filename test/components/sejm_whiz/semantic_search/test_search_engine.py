@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, UTC
 
 import numpy as np
 
@@ -42,7 +42,7 @@ class TestSemanticSearchEngine:
             content="Test legal document content with articles and paragraphs.",
             document_type="ustawa",
             legal_domain="prawo cywilne",
-            published_at=datetime.utcnow(),
+            published_at=datetime.now(UTC),
             is_amendment=False,
             affects_multiple_acts=False,
         )
@@ -230,7 +230,7 @@ class TestSemanticSearchEngine:
             content="Test content",
             document_type="ustawa",
             legal_domain="prawo cywilne",
-            published_at=datetime.utcnow(),
+            published_at=datetime.now(UTC),
         )
 
         result = SearchResult(

@@ -3,7 +3,7 @@
 
 import asyncio
 import subprocess
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import AsyncGenerator, Optional
 import requests
 
@@ -45,7 +45,7 @@ async def health():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "version": __version__,
         "hot_reload_test": "✅ Hot reload working!",
     }
@@ -458,7 +458,7 @@ async def stream_logs():
                 ):
                     kubectl_available = True
                     pod_selector = label
-                    yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found processor pods with label: {label}\n\n"
+                    yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - Found processor pods with label: {label}\n\n"
                     break
             except (FileNotFoundError, OSError):
                 # If kubectl not found, try with full path
@@ -482,7 +482,7 @@ async def stream_logs():
                     ):
                         kubectl_available = True
                         pod_selector = label
-                        yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found processor pods with label: {label}\n\n"
+                        yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - Found processor pods with label: {label}\n\n"
                         break
                 except (FileNotFoundError, OSError):
                     continue
@@ -508,20 +508,20 @@ async def stream_logs():
                         yield f"data: {line.decode('utf-8')}\n\n"
                     return
             except Exception as e:
-                yield f"data: {datetime.utcnow().isoformat()} - dashboard - ERROR - Failed to stream logs: {e}\n\n"
+                yield f"data: {datetime.now(UTC).isoformat()} - dashboard - ERROR - Failed to stream logs: {e}\n\n"
 
         # Fallback: Generate demo logs
-        yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - No live processor found, showing demo logs\n\n"
+        yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - No live processor found, showing demo logs\n\n"
 
         batch_num = 1
         while True:
             logs = [
-                f"{datetime.utcnow().isoformat()} - data_processor - INFO - [SAMPLE] Starting batch {batch_num}",
-                f"{datetime.utcnow().isoformat()} - sejm_ingestion - INFO - [SAMPLE] Fetching new proceedings",
-                f"{datetime.utcnow().isoformat()} - text_processing - INFO - [SAMPLE] Processing batch {batch_num}",
-                f"{datetime.utcnow().isoformat()} - embedding_generation - INFO - [SAMPLE] Generating embeddings",
-                f"{datetime.utcnow().isoformat()} - database_storage - INFO - [SAMPLE] Storing results",
-                f"{datetime.utcnow().isoformat()} - data_processor - INFO - [SAMPLE] Batch {batch_num} completed",
+                f"{datetime.now(UTC).isoformat()} - data_processor - INFO - [SAMPLE] Starting batch {batch_num}",
+                f"{datetime.now(UTC).isoformat()} - sejm_ingestion - INFO - [SAMPLE] Fetching new proceedings",
+                f"{datetime.now(UTC).isoformat()} - text_processing - INFO - [SAMPLE] Processing batch {batch_num}",
+                f"{datetime.now(UTC).isoformat()} - embedding_generation - INFO - [SAMPLE] Generating embeddings",
+                f"{datetime.now(UTC).isoformat()} - database_storage - INFO - [SAMPLE] Storing results",
+                f"{datetime.now(UTC).isoformat()} - data_processor - INFO - [SAMPLE] Batch {batch_num} completed",
             ]
             for log in logs:
                 yield f"data: {log}\n\n"
@@ -1037,7 +1037,7 @@ async def processor_status():
     return {
         "status": "unknown",
         "message": "Unable to determine processor status",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 

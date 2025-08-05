@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from dataclasses import asdict
 
 from sejm_whiz.database import DocumentOperations, get_database_config
@@ -49,7 +49,7 @@ class DocumentIngestionPipeline:
         """Ingest recently published documents."""
 
         logger.info(f"Starting ingestion of documents from last {days} days")
-        self.stats["start_time"] = datetime.utcnow()
+        self.stats["start_time"] = datetime.now(UTC)
 
         try:
             # Get ELI client
@@ -69,7 +69,7 @@ class DocumentIngestionPipeline:
             raise IngestionPipelineError(f"Ingestion failed: {e}")
 
         finally:
-            self.stats["end_time"] = datetime.utcnow()
+            self.stats["end_time"] = datetime.now(UTC)
 
         return self._compile_results(results)
 
@@ -249,7 +249,7 @@ class DocumentIngestionPipeline:
             processed_doc.metadata.update(
                 {
                     "eli_metadata": doc,
-                    "ingestion_timestamp": datetime.utcnow().isoformat(),
+                    "ingestion_timestamp": datetime.now(UTC).isoformat(),
                 }
             )
 
@@ -355,11 +355,8 @@ class DocumentIngestionPipeline:
     async def cleanup_failed_ingestions(self, older_than_hours: int = 24) -> int:
         """Clean up failed ingestion attempts."""
 
-        cutoff_time = datetime.utcnow() - timedelta(hours=older_than_hours)
-
         # This would clean up any temporary data or failed attempts
-        # For now, we'll use Redis cache cleanup
-
+        # TODO: Implement time-based filtering for items older than specified hours
         cleared_count = self.cache.clear_pattern("ingestion:failed:*")
 
         logger.info(f"Cleaned up {cleared_count} failed ingestion records")

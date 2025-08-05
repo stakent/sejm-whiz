@@ -4,7 +4,7 @@ import re
 import logging
 from typing import List, Dict, Set, Optional, Any
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import Enum
 
 from sejm_whiz.text_processing import (
@@ -99,7 +99,7 @@ class QueryProcessor:
 
         # Build search metadata
         search_metadata = {
-            "processing_timestamp": datetime.utcnow().isoformat(),
+            "processing_timestamp": datetime.now(UTC).isoformat(),
             "has_legal_terms": len(legal_terms) > 0,
             "has_references": len(legal_references) > 0,
             "has_temporal_filters": len(temporal_filters) > 0,

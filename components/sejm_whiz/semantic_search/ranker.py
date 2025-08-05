@@ -3,7 +3,7 @@
 import logging
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import Enum
 
 from .search_engine import SearchResult
@@ -134,7 +134,7 @@ class ResultRanker:
         self, results: List[SearchResult]
     ) -> List[SearchResult]:
         """Rank results with temporal boosting for recent documents."""
-        current_time = datetime.utcnow()
+        current_time = datetime.now(UTC)
 
         for result in results:
             temporal_score = self._calculate_temporal_score(
@@ -195,7 +195,7 @@ class ResultRanker:
         custom_weights: Optional[Dict[str, float]] = None,
     ) -> List[SearchResult]:
         """Rank results using composite scoring strategy."""
-        current_time = datetime.utcnow()
+        current_time = datetime.now(UTC)
 
         for result in results:
             # Base similarity score

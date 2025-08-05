@@ -4,7 +4,7 @@ import httpx
 import asyncio
 import logging
 from typing import Dict, List, Optional, Any, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from urllib.parse import urljoin, quote
 import time
 
@@ -219,7 +219,7 @@ class ELIClient:
     ) -> List[Dict[str, Any]]:
         """Get recently published documents."""
 
-        date_from = datetime.utcnow() - timedelta(days=days)
+        date_from = datetime.now(UTC) - timedelta(days=days)
         document_types = document_types or self.config.legal_document_types
 
         all_documents = []

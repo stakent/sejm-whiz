@@ -5,7 +5,7 @@ import uuid
 import logging
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from dataclasses import dataclass, asdict
 
 from .connection import get_redis_client
@@ -117,7 +117,7 @@ class RedisJobQueue:
             kwargs=kwargs or {},
             priority=priority,
             status=JobStatus.PENDING,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
             max_retries=max_retries,
         )
 
@@ -167,7 +167,7 @@ class RedisJobQueue:
 
             # Update job status
             job_data.status = JobStatus.RUNNING
-            job_data.started_at = datetime.utcnow()
+            job_data.started_at = datetime.now(UTC)
             self._update_job(job_data)
 
             logger.info(f"Dequeued job {job_id} from queue {queue_name}")
@@ -213,7 +213,7 @@ class RedisJobQueue:
                 return False
 
             job.status = JobStatus.COMPLETED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             job.result = result
 
             # Update job data
@@ -258,7 +258,7 @@ class RedisJobQueue:
                 )
             else:
                 job.status = JobStatus.FAILED
-                job.completed_at = datetime.utcnow()
+                job.completed_at = datetime.now(UTC)
                 logger.error(f"Job {job_id} failed permanently: {error}")
 
             self._update_job(job)
@@ -287,7 +287,7 @@ class RedisJobQueue:
                 self._client.lrem(queue_name, 0, job_id)
 
             job.status = JobStatus.CANCELLED
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(UTC)
             self._update_job(job)
 
             logger.info(f"Job {job_id} cancelled")
@@ -346,7 +346,7 @@ class RedisJobQueue:
     def clear_completed_jobs(self, older_than_hours: int = 24) -> int:
         """Clear completed jobs older than specified hours."""
         try:
-            cutoff_time = datetime.utcnow() - timedelta(hours=older_than_hours)
+            cutoff_time = datetime.now(UTC) - timedelta(hours=older_than_hours)
             cleared_count = 0
 
             job_keys = self._client.keys(f"{self.job_key_prefix}*")

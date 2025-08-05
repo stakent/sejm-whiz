@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, UTC
 import logging
 import asyncio
 import subprocess
@@ -139,7 +139,7 @@ def configure_error_handlers(app: FastAPI) -> None:
             content=ErrorResponse(
                 error=exc.__class__.__name__,
                 detail=str(exc.detail),
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
             ).model_dump(),
         )
 
@@ -152,7 +152,7 @@ def configure_error_handlers(app: FastAPI) -> None:
             content=ErrorResponse(
                 error="ValidationError",
                 detail=str(exc),
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
             ).model_dump(),
         )
 
@@ -164,7 +164,7 @@ def configure_error_handlers(app: FastAPI) -> None:
             content=ErrorResponse(
                 error="InternalServerError",
                 detail="An internal server error occurred",
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
             ).model_dump(),
         )
 
@@ -177,7 +177,7 @@ def configure_routes(app: FastAPI) -> None:
 
     @app.get("/health", response_model=HealthResponse)
     async def health_check():
-        return HealthResponse(status="healthy", timestamp=datetime.utcnow().isoformat())
+        return HealthResponse(status="healthy", timestamp=datetime.now(UTC).isoformat())
 
     @app.get("/")
     async def root():
@@ -223,7 +223,7 @@ def configure_routes(app: FastAPI) -> None:
                     if check_process.returncode == 0 and stdout.strip():
                         docker_available = True
                         container_name = container
-                        yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found processor container: {container}\n\n"
+                        yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - Found processor container: {container}\n\n"
                         break
                 except (FileNotFoundError, OSError):
                     continue
@@ -251,7 +251,7 @@ def configure_routes(app: FastAPI) -> None:
                         return
                 except Exception as e:
                     logger.warning(f"Failed to stream from docker: {e}")
-                    yield f"data: {datetime.utcnow().isoformat()} - dashboard - ERROR - Failed to stream logs: {e}\n\n"
+                    yield f"data: {datetime.now(UTC).isoformat()} - dashboard - ERROR - Failed to stream logs: {e}\n\n"
 
             # Check for local log file
             log_file = Path("/var/log/sejm-whiz/data-processor.log")
@@ -273,23 +273,23 @@ def configure_routes(app: FastAPI) -> None:
                     logger.warning(f"Failed to tail log file: {e}")
 
             # Fallback: Generate sample/demo logs for development
-            yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - No live logs available, showing demo logs\n\n"
+            yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - No live logs available, showing demo logs\n\n"
 
             sample_logs = [
-                f"{datetime.utcnow().isoformat()} - data_processor - INFO - [SAMPLE] Starting data processor",
-                f"{datetime.utcnow().isoformat()} - data_processor - INFO - [SAMPLE] Initializing pipeline components",
-                f"{datetime.utcnow().isoformat()} - sejm_ingestion - INFO - [SAMPLE] Fetching Sejm proceedings data",
-                f"{datetime.utcnow().isoformat()} - sejm_ingestion - INFO - [SAMPLE] Retrieved 15 proceedings for session 10",
-                f"{datetime.utcnow().isoformat()} - eli_ingestion - INFO - [SAMPLE] Fetching ELI legal documents",
-                f"{datetime.utcnow().isoformat()} - eli_ingestion - INFO - [SAMPLE] Retrieved 8 legal documents",
-                f"{datetime.utcnow().isoformat()} - text_processing - INFO - [SAMPLE] Processing text data",
-                f"{datetime.utcnow().isoformat()} - text_processing - INFO - [SAMPLE] Cleaned 23 documents",
-                f"{datetime.utcnow().isoformat()} - embedding_generation - INFO - [SAMPLE] Generating embeddings",
-                f"{datetime.utcnow().isoformat()} - embedding_generation - INFO - [SAMPLE] Generated embeddings for 23 documents",
-                f"{datetime.utcnow().isoformat()} - database_storage - INFO - [SAMPLE] Storing data in database",
-                f"{datetime.utcnow().isoformat()} - database_storage - INFO - [SAMPLE] Stored 15 Sejm proceedings",
-                f"{datetime.utcnow().isoformat()} - database_storage - INFO - [SAMPLE] Stored 8 ELI documents",
-                f"{datetime.utcnow().isoformat()} - data_processor - INFO - [SAMPLE] Pipeline completed successfully",
+                f"{datetime.now(UTC).isoformat()} - data_processor - INFO - [SAMPLE] Starting data processor",
+                f"{datetime.now(UTC).isoformat()} - data_processor - INFO - [SAMPLE] Initializing pipeline components",
+                f"{datetime.now(UTC).isoformat()} - sejm_ingestion - INFO - [SAMPLE] Fetching Sejm proceedings data",
+                f"{datetime.now(UTC).isoformat()} - sejm_ingestion - INFO - [SAMPLE] Retrieved 15 proceedings for session 10",
+                f"{datetime.now(UTC).isoformat()} - eli_ingestion - INFO - [SAMPLE] Fetching ELI legal documents",
+                f"{datetime.now(UTC).isoformat()} - eli_ingestion - INFO - [SAMPLE] Retrieved 8 legal documents",
+                f"{datetime.now(UTC).isoformat()} - text_processing - INFO - [SAMPLE] Processing text data",
+                f"{datetime.now(UTC).isoformat()} - text_processing - INFO - [SAMPLE] Cleaned 23 documents",
+                f"{datetime.now(UTC).isoformat()} - embedding_generation - INFO - [SAMPLE] Generating embeddings",
+                f"{datetime.now(UTC).isoformat()} - embedding_generation - INFO - [SAMPLE] Generated embeddings for 23 documents",
+                f"{datetime.now(UTC).isoformat()} - database_storage - INFO - [SAMPLE] Storing data in database",
+                f"{datetime.now(UTC).isoformat()} - database_storage - INFO - [SAMPLE] Stored 15 Sejm proceedings",
+                f"{datetime.now(UTC).isoformat()} - database_storage - INFO - [SAMPLE] Stored 8 ELI documents",
+                f"{datetime.now(UTC).isoformat()} - data_processor - INFO - [SAMPLE] Pipeline completed successfully",
             ]
 
             for log in sample_logs:
@@ -300,12 +300,12 @@ def configure_routes(app: FastAPI) -> None:
             batch_num = 1
             while True:
                 logs = [
-                    f"{datetime.utcnow().isoformat()} - data_processor - INFO - Starting batch {batch_num}",
-                    f"{datetime.utcnow().isoformat()} - sejm_ingestion - INFO - Fetching new proceedings",
-                    f"{datetime.utcnow().isoformat()} - text_processing - INFO - Processing batch {batch_num}",
-                    f"{datetime.utcnow().isoformat()} - embedding_generation - INFO - Generating embeddings for batch {batch_num}",
-                    f"{datetime.utcnow().isoformat()} - database_storage - INFO - Storing batch {batch_num} results",
-                    f"{datetime.utcnow().isoformat()} - data_processor - INFO - Batch {batch_num} completed",
+                    f"{datetime.now(UTC).isoformat()} - data_processor - INFO - Starting batch {batch_num}",
+                    f"{datetime.now(UTC).isoformat()} - sejm_ingestion - INFO - Fetching new proceedings",
+                    f"{datetime.now(UTC).isoformat()} - text_processing - INFO - Processing batch {batch_num}",
+                    f"{datetime.now(UTC).isoformat()} - embedding_generation - INFO - Generating embeddings for batch {batch_num}",
+                    f"{datetime.now(UTC).isoformat()} - database_storage - INFO - Storing batch {batch_num} results",
+                    f"{datetime.now(UTC).isoformat()} - data_processor - INFO - Batch {batch_num} completed",
                 ]
                 for log in logs:
                     yield f"data: {log}\n\n"
@@ -395,7 +395,7 @@ def configure_routes(app: FastAPI) -> None:
         return {
             "status": "unknown",
             "message": "Unable to determine processor status",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
     @app.get("/api/services/status")
@@ -489,7 +489,7 @@ def configure_routes(app: FastAPI) -> None:
                 "running_services": len(
                     [s for s in services if s["status"] == "running"]
                 ),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
@@ -498,7 +498,7 @@ def configure_routes(app: FastAPI) -> None:
                 "services": [],
                 "compose_status": {},
                 "error": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
     # Semantic Search API endpoints
@@ -644,7 +644,7 @@ def configure_routes(app: FastAPI) -> None:
 
                 return {
                     "query_analysis": processed_query.to_dict(),
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
 
             except Exception as e:

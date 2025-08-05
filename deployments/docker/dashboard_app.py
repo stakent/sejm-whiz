@@ -7,7 +7,7 @@ This runs the web dashboard without requiring the full component system
 import subprocess
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -62,12 +62,16 @@ else:
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
-    return HealthResponse(status="healthy", timestamp=datetime.utcnow().isoformat())
+    return HealthResponse(status="healthy", timestamp=datetime.now(UTC).isoformat())
 
 
 @app.get("/")
 async def root():
-    return {"message": "Sejm Whiz Dashboard", "version": __version__, "status": "running"}
+    return {
+        "message": "Sejm Whiz Dashboard",
+        "version": __version__,
+        "status": "running",
+    }
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -188,14 +192,14 @@ async def services_status():
             "services": services,
             "total_services": len(services),
             "running_services": len([s for s in services if s["status"] == "running"]),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
     except Exception as e:
         logger.error(f"Error getting services status: {e}")
         return {
             "services": [],
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
 
@@ -206,7 +210,7 @@ async def processor_status():
         "status": "not_deployed",
         "message": "Data processor not yet deployed in this minimal setup",
         "environment": "docker-compose-minimal",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -215,7 +219,7 @@ async def stream_logs():
     """Stream real Docker container logs."""
 
     async def log_generator() -> AsyncGenerator[str, None]:
-        yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Starting real-time log streaming\n\n"
+        yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - Starting real-time log streaming\n\n"
 
         # Get list of containers to monitor
         containers_to_monitor = [
@@ -244,7 +248,7 @@ async def stream_logs():
                 )
 
                 if check_result.returncode == 0 and check_result.stdout.strip():
-                    yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Found container: {container}\n\n"
+                    yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - Found container: {container}\n\n"
 
                     # Stream recent logs from this container
                     try:
@@ -262,16 +266,16 @@ async def stream_logs():
                                     if log_line.strip():
                                         yield f"data: {log_line.strip()}\n\n"
                             else:
-                                yield f"data: {datetime.utcnow().isoformat()} - {container} - INFO - No recent logs available\n\n"
+                                yield f"data: {datetime.now(UTC).isoformat()} - {container} - INFO - No recent logs available\n\n"
                         else:
-                            yield f"data: {datetime.utcnow().isoformat()} - dashboard - WARN - Could not read logs from {container}\n\n"
+                            yield f"data: {datetime.now(UTC).isoformat()} - dashboard - WARN - Could not read logs from {container}\n\n"
                     except Exception as e:
-                        yield f"data: {datetime.utcnow().isoformat()} - dashboard - ERROR - Log streaming error for {container}: {str(e)}\n\n"
+                        yield f"data: {datetime.now(UTC).isoformat()} - dashboard - ERROR - Log streaming error for {container}: {str(e)}\n\n"
 
             except Exception as e:
-                yield f"data: {datetime.utcnow().isoformat()} - dashboard - ERROR - Container check failed for {container}: {str(e)}\n\n"
+                yield f"data: {datetime.now(UTC).isoformat()} - dashboard - ERROR - Container check failed for {container}: {str(e)}\n\n"
 
-        yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Initial log scan complete\n\n"
+        yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - Initial log scan complete\n\n"
 
         # Now start live streaming from containers
         active_containers = []
@@ -296,11 +300,11 @@ async def stream_logs():
                 continue
 
         if active_containers:
-            yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Starting live streaming from {len(active_containers)} containers\n\n"
+            yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - Starting live streaming from {len(active_containers)} containers\n\n"
 
             # For now, we'll poll for new logs every 10 seconds
             # In a full implementation, we'd use docker logs -f with async subprocess
-            last_log_time = datetime.utcnow()
+            last_log_time = datetime.now(UTC)
 
             while True:
                 await asyncio.sleep(10)
@@ -322,15 +326,15 @@ async def stream_logs():
                                 if log_line.strip():
                                     yield f"data: {log_line.strip()}\n\n"
                     except Exception as e:
-                        yield f"data: {datetime.utcnow().isoformat()} - dashboard - ERROR - Live streaming error for {container}: {str(e)}\n\n"
+                        yield f"data: {datetime.now(UTC).isoformat()} - dashboard - ERROR - Live streaming error for {container}: {str(e)}\n\n"
 
-                last_log_time = datetime.utcnow()
-                yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - Log scan cycle complete\n\n"
+                last_log_time = datetime.now(UTC)
+                yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - Log scan cycle complete\n\n"
         else:
             # Fallback to demo logs if no containers found
             while True:
                 await asyncio.sleep(15)
-                yield f"data: {datetime.utcnow().isoformat()} - dashboard - INFO - No active containers found, showing status updates\n\n"
+                yield f"data: {datetime.now(UTC).isoformat()} - dashboard - INFO - No active containers found, showing status updates\n\n"
 
     return StreamingResponse(
         log_generator(),

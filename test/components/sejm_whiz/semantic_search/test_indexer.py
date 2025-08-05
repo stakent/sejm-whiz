@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, UTC
 
 import numpy as np
 
@@ -71,7 +71,7 @@ class TestDocumentIndexer:
             content="This is a test legal document with various articles and paragraphs.",
             document_type="ustawa",
             legal_domain="prawo cywilne",
-            published_at=datetime.utcnow(),
+            published_at=datetime.now(UTC),
             is_amendment=False,
             affects_multiple_acts=False,
             embedding=None,  # Not yet indexed

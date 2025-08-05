@@ -3,7 +3,7 @@
 import logging
 from typing import List, Optional, Dict, Tuple
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, UTC
 
 from sqlalchemy import func, or_
 
@@ -66,7 +66,7 @@ class DocumentOperations:
             result = (
                 session.query(LegalDocument)
                 .filter(LegalDocument.id == document_id)
-                .update({"embedding": embedding, "updated_at": datetime.utcnow()})
+                .update({"embedding": embedding, "updated_at": datetime.now(UTC)})
             )
             return result > 0
 
