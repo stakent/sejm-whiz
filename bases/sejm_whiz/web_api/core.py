@@ -102,6 +102,39 @@ class PredictionResponse(BaseModel):
     processing_time_ms: float
 
 
+class ProcessorStatusResponse(BaseModel):
+    status: ProcessorStatus
+    processor_type: str
+    container_name: str
+    started_at: Optional[str] = None
+    finished_at: Optional[str] = None
+    exit_code: Optional[int] = None
+    pid: Optional[int] = None
+    health: str = "unknown"
+    environment: str = "docker-compose"
+    message: Optional[str] = None
+    timestamp: Optional[str] = None
+
+
+class ServiceInfo(BaseModel):
+    name: str
+    status: ProcessorStatus
+    service_type: str
+    image: str
+    ports: str
+    created_at: str
+    status_detail: str
+
+
+class ServicesStatusResponse(BaseModel):
+    services: List[ServiceInfo]
+    compose_status: dict
+    total_services: int
+    running_services: int
+    timestamp: str
+    error: Optional[str] = None
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Sejm Whiz API",
@@ -326,7 +359,7 @@ def configure_routes(app: FastAPI) -> None:
             },
         )
 
-    @app.get("/api/processor/status")
+    @app.get("/api/processor/status", response_model=ProcessorStatusResponse)
     async def processor_status():
         """Get the current status of the data processor."""
         try:
@@ -374,28 +407,30 @@ def configure_routes(app: FastAPI) -> None:
                 else:
                     status = ProcessorStatus.STOPPED
 
-                return {
-                    "status": status,
-                    "processor_type": processor_type,
-                    "container_name": container_name,
-                    "started_at": state.get("StartedAt"),
-                    "finished_at": state.get("FinishedAt"),
-                    "exit_code": state.get("ExitCode"),
-                    "pid": state.get("Pid"),
-                    "health": state.get("Health", {}).get("Status", "unknown"),
-                    "environment": "docker-compose",
-                }
+                return ProcessorStatusResponse(
+                    status=status,
+                    processor_type=processor_type,
+                    container_name=container_name,
+                    started_at=state.get("StartedAt"),
+                    finished_at=state.get("FinishedAt"),
+                    exit_code=state.get("ExitCode"),
+                    pid=state.get("Pid"),
+                    health=state.get("Health", {}).get("Status", "unknown"),
+                    environment="docker-compose",
+                )
         except Exception as e:
             logger.error(f"Error getting processor status: {e}")
 
         # Fallback status
-        return {
-            "status": ProcessorStatus.UNKNOWN,
-            "message": "Unable to determine processor status",
-            "timestamp": datetime.now(UTC).isoformat(),
-        }
+        return ProcessorStatusResponse(
+            status=ProcessorStatus.UNKNOWN,
+            processor_type="unknown",
+            container_name="sejm-whiz-processor",
+            message="Unable to determine processor status",
+            timestamp=datetime.now(UTC).isoformat(),
+        )
 
-    @app.get("/api/services/status")
+    @app.get("/api/services/status", response_model=ServicesStatusResponse)
     async def services_status():
         """Get the status of all Docker Compose services."""
         try:
@@ -444,17 +479,17 @@ def configure_routes(app: FastAPI) -> None:
                         running = "Up" in status
 
                         services.append(
-                            {
-                                "name": name,
-                                "status": ProcessorStatus.RUNNING
+                            ServiceInfo(
+                                name=name,
+                                status=ProcessorStatus.RUNNING
                                 if running
                                 else ProcessorStatus.STOPPED,
-                                "service_type": service_type,
-                                "image": image,
-                                "ports": ports,
-                                "created_at": created,
-                                "status_detail": status,
-                            }
+                                service_type=service_type,
+                                image=image,
+                                ports=ports,
+                                created_at=created,
+                                status_detail=status,
+                            )
                         )
 
             # Also check Docker Compose status if available
@@ -481,24 +516,26 @@ def configure_routes(app: FastAPI) -> None:
             except Exception as e:
                 logger.debug(f"Could not get docker compose status: {e}")
 
-            return {
-                "services": services,
-                "compose_status": compose_status,
-                "total_services": len(services),
-                "running_services": len(
-                    [s for s in services if s["status"] == ProcessorStatus.RUNNING]
+            return ServicesStatusResponse(
+                services=services,
+                compose_status=compose_status,
+                total_services=len(services),
+                running_services=len(
+                    [s for s in services if s.status == ProcessorStatus.RUNNING]
                 ),
-                "timestamp": datetime.now(UTC).isoformat(),
-            }
+                timestamp=datetime.now(UTC).isoformat(),
+            )
 
         except Exception as e:
             logger.error(f"Error getting services status: {e}")
-            return {
-                "services": [],
-                "compose_status": {},
-                "error": str(e),
-                "timestamp": datetime.now(UTC).isoformat(),
-            }
+            return ServicesStatusResponse(
+                services=[],
+                compose_status={},
+                total_services=0,
+                running_services=0,
+                timestamp=datetime.now(UTC).isoformat(),
+                error=str(e),
+            )
 
     # Semantic Search API endpoints
     if COMPONENTS_AVAILABLE:
