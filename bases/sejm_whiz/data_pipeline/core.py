@@ -1,9 +1,13 @@
 """Data pipeline base for batch processing workflows."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TypeVar, Generic
 import logging
 from datetime import datetime
+
+# Type variables for pipeline data flow
+InputData = TypeVar("InputData")
+OutputData = TypeVar("OutputData")
 
 
 class DataPipelineError(Exception):
@@ -12,23 +16,23 @@ class DataPipelineError(Exception):
     pass
 
 
-class PipelineStep(ABC):
-    """Abstract base class for pipeline steps."""
+class PipelineStep(ABC, Generic[InputData, OutputData]):
+    """Abstract base class for pipeline steps with generic types."""
 
     def __init__(self, name: str):
         self.name = name
         self.logger = logging.getLogger(f"pipeline.{name}")
 
     @abstractmethod
-    async def process(self, data: Any) -> Any:
+    async def process(self, data: InputData) -> OutputData:
         """Process data in this pipeline step."""
         pass
 
-    async def validate_input(self, data: Any) -> bool:
+    async def validate_input(self, data: InputData) -> bool:
         """Validate input data before processing."""
         return True
 
-    async def validate_output(self, data: Any) -> bool:
+    async def validate_output(self, data: OutputData) -> bool:
         """Validate output data after processing."""
         return True
 
@@ -40,19 +44,17 @@ class DataPipeline:
         self.name = name
         self.steps = steps
         self.logger = logging.getLogger(f"pipeline.{name}")
-        self.metrics = {
-            "runs": 0,
-            "successes": 0,
-            "failures": 0,
-            "last_run": None,
-            "last_success": None,
-        }
+        self.runs = 0
+        self.successes = 0
+        self.failures = 0
+        self.last_run: datetime | None = None
+        self.last_success: datetime | None = None
 
     async def run(self, initial_data: Any) -> Any:
         """Run the complete pipeline."""
-        self.metrics["runs"] += 1
+        self.runs += 1
         start_time = datetime.now()
-        self.metrics["last_run"] = start_time
+        self.last_run = start_time
 
         try:
             self.logger.info(
@@ -83,8 +85,8 @@ class DataPipeline:
 
                 self.logger.info(f"Step '{step.name}' completed successfully")
 
-            self.metrics["successes"] += 1
-            self.metrics["last_success"] = datetime.now()
+            self.successes += 1
+            self.last_success = datetime.now()
             duration = (datetime.now() - start_time).total_seconds()
 
             self.logger.info(
@@ -93,7 +95,7 @@ class DataPipeline:
             return current_data
 
         except Exception as e:
-            self.metrics["failures"] += 1
+            self.failures += 1
             duration = (datetime.now() - start_time).total_seconds()
             self.logger.error(
                 f"Pipeline '{self.name}' failed after {duration:.2f}s: {str(e)}"
@@ -102,7 +104,13 @@ class DataPipeline:
 
     def get_metrics(self) -> Dict[str, Any]:
         """Get pipeline execution metrics."""
-        return self.metrics.copy()
+        return {
+            "runs": self.runs,
+            "successes": self.successes,
+            "failures": self.failures,
+            "last_run": self.last_run,
+            "last_success": self.last_success,
+        }
 
 
 class BatchProcessor:
