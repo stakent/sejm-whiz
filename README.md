@@ -4,6 +4,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Semantic Versioning](https://img.shields.io/badge/semver-2.0.0-blue)](https://semver.org/)
+[![Conventional Commits](https://img.shields.io/badge/conventional%20commits-1.0.0-%23FE5196)](https://conventionalcommits.org/)
 
 ## About This Project
 
@@ -89,6 +91,58 @@ uv run poly test
 # Explore individual components
 uv run python development/main.py
 ```
+
+## Version Management
+
+This project follows [Semantic Versioning 2.0.0](https://semver.org/) and uses [Conventional Commits](https://conventionalcommits.org/) for automated version management:
+
+### Version Format
+
+- **MAJOR.MINOR.PATCH** (e.g., 1.2.3)
+- **MAJOR**: Breaking changes that require code updates
+- **MINOR**: New features that are backward compatible
+- **PATCH**: Bug fixes that are backward compatible
+
+### Making Releases
+
+```bash
+# Automatic version bump based on commit messages
+uv run cz bump
+
+# Manual version increments
+uv run cz bump --increment PATCH  # 0.1.0 → 0.1.1
+uv run cz bump --increment MINOR  # 0.1.0 → 0.2.0
+uv run cz bump --increment MAJOR  # 0.1.0 → 1.0.0
+
+# Alternative with bumpversion
+uv run bumpversion patch  # Bug fixes
+uv run bumpversion minor  # New features
+uv run bumpversion major  # Breaking changes
+```
+
+### Commit Message Format
+
+Use conventional commit format for automatic version detection:
+
+```
+feat: add new document parsing feature     # Minor version bump
+fix: resolve embedding generation issue    # Patch version bump
+BREAKING CHANGE: change API response       # Major version bump
+docs: update installation instructions    # No version bump
+refactor: improve code readability        # Patch version bump
+```
+
+### Release Process
+
+1. Follow conventional commit format in your commits
+1. Run `uv run cz bump` to automatically determine version increment
+1. Review the generated changelog in `CHANGELOG.md`
+1. Push tags: `git push --tags`
+
+The version is automatically updated in:
+
+- `components/sejm_whiz/__init__.py`
+- `CHANGELOG.md` (with automatic generation)
 
 ### Prerequisites for Local Experimentation
 

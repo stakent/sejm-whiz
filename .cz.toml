@@ -1,0 +1,18 @@
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$version"
+version_files = [
+    "components/sejm_whiz/__init__.py:__version__",
+]
+update_changelog_on_bump = true
+changelog_file = "CHANGELOG.md"
+changelog_format = "%(version)s (%(date)s)"
+major_version_zero = true
+
+[settings]
+# Follow conventional commits specification
+# https://www.conventionalcommits.org/
+commit_parser = "^(break|new|fix|hotfix|feat|docs|style|refactor|perf|test|build|ci):(\\s.*)"
+version_parser = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(\\-(?P<prerelease>\\w+)\\d*)?"
+change_type_order = ["BREAKING CHANGE", "feat", "fix", "refactor", "perf"]

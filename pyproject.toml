@@ -53,6 +53,8 @@ dev = [
     "pre-commit>=4.2.0",
     "pytest-asyncio>=1.1.0",
     "pytest-postgresql>=7.0.2",
+    "commitizen>=4.8.3",
+    "bumpversion>=0.6.0",
 ]
 
 [tool.hatch.build]
@@ -78,3 +80,37 @@ pl-core-news-sm = { url = "https://github.com/explosion/spacy-models/releases/do
 
 [tool.hatch.version]
 path = "components/sejm_whiz/__init__.py"
+
+# Semantic Versioning Configuration
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$version"
+version_files = [
+    "components/sejm_whiz/__init__.py:__version__",
+    "pyproject.toml:version"
+]
+
+[tool.commitizen.settings]
+major_version_zero = true
+
+[tool.bumpversion]
+current_version = "0.1.0"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
+serialize = ["{major}.{minor}.{patch}"]
+search = "{current_version}"
+replace = "{new_version}"
+commit = true
+tag = true
+tag_name = "v{new_version}"
+message = "bump: version {current_version} → {new_version}"
+
+[[tool.bumpversion.files]]
+filename = "components/sejm_whiz/__init__.py"
+search = "__version__ = \"{current_version}\""
+replace = "__version__ = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = "version = \"{current_version}\""
+replace = "version = \"{new_version}\""
