@@ -129,3 +129,47 @@ ssh root@p7 "cd /root/tmp/sejm-whiz && docker compose -f docker-compose.dev-p7.y
 ## Git Workflow Memories
 
 - Remember to commit your changes from feature branch with meaningful name, push to GitHub, create PR, then merge to main, then checkout and pull origin main
+- Add release process to commit -> github chain
+
+## Semantic Versioning
+
+The project follows [Semantic Versioning](https://semver.org/) with MAJOR.MINOR.PATCH format:
+
+### Version Bumping Commands
+
+```bash
+# Patch version (bug fixes) - 0.1.0 → 0.1.1
+uv run cz bump --increment PATCH
+# or
+uv run bumpversion patch
+
+# Minor version (new features) - 0.1.0 → 0.2.0
+uv run cz bump --increment MINOR
+# or
+uv run bumpversion minor
+
+# Major version (breaking changes) - 0.1.0 → 1.0.0
+uv run cz bump --increment MAJOR
+# or
+uv run bumpversion major
+
+# Auto-detect version increment based on commit messages
+uv run cz bump
+```
+
+### Conventional Commits
+
+Use conventional commit format for automatic version detection:
+
+- `feat:` - New feature (minor version bump)
+- `fix:` - Bug fix (patch version bump)
+- `BREAKING CHANGE:` - Breaking change (major version bump)
+- `refactor:` - Code refactoring (patch version bump)
+- `docs:` - Documentation changes (no version bump)
+
+### Version Files
+
+Versions are automatically updated in:
+
+- `components/sejm_whiz/__init__.py` (__version__)
+- `CHANGELOG.md` (with commitizen)
