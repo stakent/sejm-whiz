@@ -125,3 +125,7 @@ ssh root@p7 "cd /root/tmp/sejm-whiz && docker compose -f docker-compose.dev-p7.y
 ## Deployment Memories
 
 - Use `root@p7:/root/tmp/sejm-whiz-baremetal/` directory for deployments to p7
+
+## Git Workflow Memories
+
+- Remember to commit your changes from feature branch with meaningful name, push to GitHub, create PR, then merge to main, then checkout and pull origin main
