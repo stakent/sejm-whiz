@@ -1,7 +1,7 @@
 """Database operations for legal documents and embeddings."""
 
 import logging
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Any
 from uuid import UUID
 from datetime import datetime, UTC
 
@@ -9,12 +9,17 @@ from sqlalchemy import func, or_
 
 from .models import LegalDocument, LegalAmendment, CrossReference, DocumentEmbedding
 from .connection import get_db_session
+from .config import DatabaseConfig
 
 logger = logging.getLogger(__name__)
 
 
 class DocumentOperations:
     """Operations for legal documents."""
+
+    def __init__(self, db_config: Optional[DatabaseConfig] = None):
+        """Initialize document operations with optional database configuration."""
+        self.db_config = db_config
 
     @staticmethod
     def create_document(
@@ -99,6 +104,63 @@ class DocumentOperations:
                 query_obj = query_obj.filter(LegalDocument.legal_domain == legal_domain)
 
             return query_obj.offset(offset).limit(limit).all()
+
+    @staticmethod
+    def get_document_by_eli_id(eli_id: str) -> Optional[LegalDocument]:
+        """Get document by ELI identifier."""
+        with get_db_session() as session:
+            return (
+                session.query(LegalDocument)
+                .filter(LegalDocument.eli_identifier == eli_id)
+                .first()
+            )
+
+    @staticmethod
+    def store_legal_document(
+        eli_identifier: str,
+        title: str,
+        content_type: str,
+        source_url: str,
+        raw_content: str,
+        processed_text: str,
+        metadata: Dict[str, Any],
+        **kwargs
+    ) -> Optional[Dict[str, Any]]:
+        """Store a legal document with all required fields."""
+        with get_db_session() as session:
+            try:
+                document = LegalDocument(
+                    eli_identifier=eli_identifier,
+                    title=title,
+                    content=processed_text,  # Store processed text as main content
+                    document_type=metadata.get("document_type", "legal_act"),
+                    legal_domain=metadata.get("legal_domain"),
+                    publication_date=metadata.get("publication_date"),
+                    effective_date=metadata.get("effective_date"),
+                    issuing_authority=metadata.get("issuing_authority"),
+                    language=metadata.get("language", "pl"),
+                    source_url=source_url,
+                    raw_content=raw_content,
+                    metadata=metadata,
+                    **kwargs
+                )
+                session.add(document)
+                session.flush()
+                session.refresh(document)
+                
+                result = {
+                    "id": str(document.id),
+                    "eli_identifier": document.eli_identifier,
+                    "title": document.title,
+                    "document_type": document.document_type
+                }
+                
+                return result
+                
+            except Exception as e:
+                logger.error(f"Failed to store document {eli_identifier}: {e}")
+                session.rollback()
+                return None
 
 
 class VectorOperations:
