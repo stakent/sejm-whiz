@@ -31,7 +31,6 @@ app.add_typer(env.app, name="env", help="🌍 Environment management")
 app.add_typer(dev.app, name="dev", help="🛠️ Development tools")
 
 
-
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
@@ -94,7 +93,6 @@ def main(
     if ctx.invoked_subcommand is None:
         console.print(ctx.get_help())
         raise typer.Exit()
-
 
 def _detect_environment() -> str:
     """Detect current environment from various sources."""
