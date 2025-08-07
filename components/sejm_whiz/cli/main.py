@@ -59,13 +59,16 @@ def main(
     **Quick Start:**
     ```
     # Check system status
-    sejm-whiz-cli system status
+    uv run python sejm-whiz-cli.py system status
 
     # Ingest documents
-    sejm-whiz-cli ingest documents --source eli
+    uv run python sejm-whiz-cli.py ingest documents --source eli
 
     # Search for documents
-    sejm-whiz-cli search query "ustawa o ochronie danych"
+    uv run python sejm-whiz-cli.py search query "ustawa o ochronie danych"
+    
+    # Or create alias for shorter commands:
+    alias sejm-whiz-cli="uv run python ./sejm-whiz-cli.py"
     ```
     """
     if version:
@@ -125,13 +128,13 @@ def help():
     console.print("🚀 [bold green]Quick Start[/bold green]")
     console.print("```")
     console.print("# Check system status")
-    console.print("sejm-whiz-cli system status")
+    console.print("uv run python sejm-whiz-cli.py system status")
     console.print()
     console.print("# Ingest recent documents")
-    console.print("sejm-whiz-cli ingest documents --since 7d --source eli")
+    console.print("uv run python sejm-whiz-cli.py ingest documents --since 7d --source eli")
     console.print()
     console.print("# Search for documents")
-    console.print('sejm-whiz-cli search query "ustawa o ochronie danych"')
+    console.print('uv run python sejm-whiz-cli.py search query "ustawa o ochronie danych"')
     console.print("```")
     console.print()
 
@@ -143,15 +146,15 @@ def help():
     common_table.add_column("Example", style="yellow")
 
     common_commands = [
-        ("system status", "Check system health", "sejm-whiz-cli system status"),
+        ("system status", "Check system health", "uv run python sejm-whiz-cli.py system status"),
         (
             "ingest documents",
             "Import legal documents",
-            "sejm-whiz-cli ingest documents --since 30d",
+            "uv run python sejm-whiz-cli.py ingest documents --since 30d",
         ),
-        ("search query", "Search documents", 'sejm-whiz-cli search query "RODO"'),
-        ("db migrate", "Update database", "sejm-whiz-cli db migrate"),
-        ("config show", "View settings", "sejm-whiz-cli config show"),
+        ("search query", "Search documents", 'uv run python sejm-whiz-cli.py search query "RODO"'),
+        ("db migrate", "Update database", "uv run python sejm-whiz-cli.py db migrate"),
+        ("config show", "View settings", "uv run python sejm-whiz-cli.py config show"),
     ]
 
     for cmd, desc, example in common_commands:
@@ -186,21 +189,22 @@ def help():
 
     # Help resources
     console.print("📖 [bold green]Getting More Help[/bold green]")
-    console.print("• Detailed command help: [cyan]sejm-whiz-cli COMMAND --help[/cyan]")
+    console.print("• Detailed command help: [cyan]uv run python sejm-whiz-cli.py COMMAND --help[/cyan]")
     console.print(
-        "• Subcommand help: [cyan]sejm-whiz-cli COMMAND SUBCOMMAND --help[/cyan]"
+        "• Subcommand help: [cyan]uv run python sejm-whiz-cli.py COMMAND SUBCOMMAND --help[/cyan]"
     )
     console.print("• Complete guide: [cyan]CLI_README.md[/cyan] in project root")
     console.print("• Shell completion: [cyan]./scripts/install-completion.sh[/cyan]")
     console.print()
 
     console.print("💡 [bold yellow]Pro Tips[/bold yellow]")
-    console.print("• Use tab completion for faster command entry")
+    console.print("• Use tab completion for faster command entry (after setting up alias)")
     console.print("• Add [cyan]--verbose[/cyan] to any command for debug output")
     console.print("• Check [cyan]system status[/cyan] before running operations")
     console.print(
         "• Use [cyan]--dry-run[/cyan] flags when available to preview actions"
     )
+    console.print("• Create alias: [cyan]alias sejm-whiz-cli='uv run python ./sejm-whiz-cli.py'[/cyan]")
 
 
 @app.command()
