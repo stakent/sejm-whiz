@@ -11,12 +11,15 @@ app = typer.Typer()
 
 
 @app.command()
-def status():
+def status(ctx: typer.Context):
     """📊 Show comprehensive system health status."""
     console.print("🔍 [bold blue]Checking system components...[/bold blue]")
 
-    # Create status table
-    table = Table(title="🏛️ Sejm-Whiz System Status")
+    # Get current environment from context
+    current_env = ctx.obj.get("env", "local") if ctx.obj else "local"
+
+    # Create status table with environment in title
+    table = Table(title=f"🏛️ Sejm-Whiz System Status ({current_env})")
     table.add_column("Service", style="cyan", no_wrap=True)
     table.add_column("Status", style="magenta")
     table.add_column("Details", style="green")

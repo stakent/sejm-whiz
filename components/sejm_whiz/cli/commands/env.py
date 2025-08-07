@@ -68,9 +68,10 @@ def list():
 
 
 @app.command()
-def current():
+def current(ctx: typer.Context):
     """🌍 Show current active environment."""
-    current_env = _get_current_environment()
+    # Get environment from context (includes --env flag)
+    current_env = ctx.obj.get("env", "local") if ctx.obj else _get_current_environment()
     console.print(
         f"🌍 [bold blue]Current Environment: [cyan]{current_env}[/cyan][/bold blue]"
     )
