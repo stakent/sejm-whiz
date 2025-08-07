@@ -2,12 +2,19 @@
 
 import typer
 from rich.console import Console
-from rich.progress import Progress
 from typing import Optional
 import time
 
 console = Console()
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=False)
+
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """💾 Database management operations."""
+    if ctx.invoked_subcommand is None:
+        # Run status command by default
+        status()
 
 
 @app.command()
@@ -19,14 +26,38 @@ def migrate(
     """🔄 Run database migrations."""
     console.print("🔄 [bold blue]Running database migrations...[/bold blue]")
 
-    with Progress() as progress:
-        task = progress.add_task("[cyan]Migrating...", total=100)
+    try:
+        from alembic import command
+        from alembic.config import Config
+        from sejm_whiz.database import get_database_config
+        import os
 
-        for i in range(100):
-            time.sleep(0.02)
-            progress.update(task, advance=1)
+        # Get database configuration
+        db_config = get_database_config()
 
-    console.print("✅ [bold green]Database migrations completed![/bold green]")
+        # Set up Alembic config
+        alembic_cfg = Config(
+            os.path.join(os.path.dirname(__file__), "../../database/alembic.ini")
+        )
+        alembic_cfg.set_main_option("sqlalchemy.url", db_config.get_connection_string())
+
+        # Run migration
+        if revision:
+            command.upgrade(alembic_cfg, revision)
+        else:
+            command.upgrade(alembic_cfg, "head")
+
+        console.print("✅ [bold green]Database migrations completed![/bold green]")
+
+    except ImportError:
+        console.print("❌ [bold red]Database migration is not available.[/bold red]")
+        console.print("Missing requirements:")
+        console.print("  • Alembic migration framework")
+        console.print("  • Database connection configuration")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"❌ [bold red]Migration failed: {str(e)}[/bold red]")
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -34,26 +65,16 @@ def seed(
     dataset: str = typer.Option("sample", "--dataset", "-d", help="Dataset to seed"),
 ):
     """🌱 Seed database with test data."""
-    console.print(f"🌱 [bold blue]Seeding database with {dataset} data...[/bold blue]")
-
-    # Simulate seeding progress
-    datasets = {
-        "sample": ["Legal documents", "Embeddings", "Test users"],
-        "full": ["All ELI documents", "Parliamentary proceedings", "Full embeddings"],
-        "minimal": ["Basic schema", "Admin user"],
-    }
-
-    items = datasets.get(dataset, datasets["sample"])
-
-    with Progress() as progress:
-        task = progress.add_task("[green]Seeding...", total=len(items))
-
-        for item in items:
-            console.print(f"  📦 Loading {item}...")
-            time.sleep(1)
-            progress.update(task, advance=1)
-
-    console.print("✅ [bold green]Database seeded successfully![/bold green]")
+    console.print("❌ [bold red]Database seeding is not implemented yet.[/bold red]")
+    console.print(
+        "This command would populate the database with test data but requires:"
+    )
+    console.print("  • Test data generation scripts")
+    console.print("  • Sample legal documents and metadata")
+    console.print("  • User management system")
+    console.print("  • Data validation and integrity checks")
+    console.print(f"  • Requested dataset: {dataset}")
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -63,18 +84,15 @@ def backup(
     ),
 ):
     """💾 Create database backup."""
+    console.print("❌ [bold red]Database backup is not implemented yet.[/bold red]")
+    console.print("This command would create a database backup but requires:")
+    console.print("  • PostgreSQL dump utilities (pg_dump)")
+    console.print("  • Database connection and authentication")
+    console.print("  • Backup compression and encryption")
+    console.print("  • Backup validation and verification")
     backup_file = output or f"sejm-whiz-backup-{time.strftime('%Y%m%d-%H%M%S')}.sql"
-
-    console.print(f"💾 [bold blue]Creating backup: {backup_file}[/bold blue]")
-
-    with Progress() as progress:
-        task = progress.add_task("[cyan]Backing up...", total=100)
-
-        for i in range(100):
-            time.sleep(0.03)
-            progress.update(task, advance=1)
-
-    console.print(f"✅ [bold green]Backup created: {backup_file}[/bold green]")
+    console.print(f"  • Target file: {backup_file}")
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -83,44 +101,31 @@ def restore(
     confirm: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
 ):
     """🔄 Restore database from backup."""
-    if not confirm:
-        if not typer.confirm("⚠️ This will overwrite the current database. Continue?"):
-            console.print("❌ Restore cancelled.")
-            raise typer.Abort()
-
-    console.print(f"🔄 [bold blue]Restoring from: {backup_file}[/bold blue]")
-
-    with Progress() as progress:
-        task = progress.add_task("[cyan]Restoring...", total=100)
-
-        for i in range(100):
-            time.sleep(0.04)
-            progress.update(task, advance=1)
-
-    console.print("✅ [bold green]Database restored successfully![/bold green]")
+    console.print("❌ [bold red]Database restore is not implemented yet.[/bold red]")
+    console.print("This command would restore a database backup but requires:")
+    console.print("  • PostgreSQL restore utilities (psql)")
+    console.print("  • Database connection and authentication")
+    console.print("  • Backup validation and integrity checks")
+    console.print("  • Safe restore procedures with rollback")
+    console.print(f"  • Source file: {backup_file}")
+    console.print(f"  • Confirmation required: {not confirm}")
+    raise typer.Exit(1)
 
 
 @app.command()
 def reset(confirm: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation")):
     """🗑️ Reset database (WARNING: Deletes all data)."""
-    if not confirm:
-        if not typer.confirm("⚠️ This will DELETE ALL DATA. Are you sure?"):
-            console.print("❌ Reset cancelled.")
-            raise typer.Abort()
-
-    console.print("🗑️ [bold red]Resetting database...[/bold red]")
-
-    steps = ["Dropping tables", "Recreating schema", "Running migrations"]
-
-    with Progress() as progress:
-        task = progress.add_task("[red]Resetting...", total=len(steps))
-
-        for step in steps:
-            console.print(f"  🔄 {step}...")
-            time.sleep(1)
-            progress.update(task, advance=1)
-
-    console.print("✅ [bold green]Database reset completed![/bold green]")
+    console.print("❌ [bold red]Database reset is not implemented yet.[/bold red]")
+    console.print("This command would completely reset the database but requires:")
+    console.print("  • Dangerous operation safeguards")
+    console.print("  • Database schema recreation scripts")
+    console.print("  • Migration system integration")
+    console.print("  • Backup creation before reset")
+    console.print(f"  • Confirmation required: {not confirm}")
+    console.print(
+        "⚠️ [bold yellow]This would DELETE ALL DATA - use with extreme caution[/bold yellow]"
+    )
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -128,29 +133,72 @@ def status():
     """📊 Show database status and statistics."""
     console.print("📊 [bold blue]Database Status[/bold blue]")
 
-    from rich.table import Table
+    try:
+        from rich.table import Table
+        from sejm_whiz.database import get_database_config, DatabaseManager
 
-    # Connection info table
-    conn_table = Table(title="Connection Information")
-    conn_table.add_column("Property", style="cyan")
-    conn_table.add_column("Value", style="green")
+        config = get_database_config()
+        db_manager = DatabaseManager(config)
 
-    conn_table.add_row("Host", "localhost")
-    conn_table.add_row("Port", "5432")
-    conn_table.add_row("Database", "sejm_whiz")
-    conn_table.add_row("Status", "✅ Connected")
+        # Connection info table
+        conn_table = Table(title="Connection Information")
+        conn_table.add_column("Property", style="cyan")
+        conn_table.add_column("Value", style="green")
 
-    console.print(conn_table)
+        conn_table.add_row("Host", config.host)
+        conn_table.add_row("Port", str(config.port))
+        conn_table.add_row("Database", config.database)
 
-    # Statistics table
-    stats_table = Table(title="Database Statistics")
-    stats_table.add_column("Table", style="cyan")
-    stats_table.add_column("Rows", style="magenta")
-    stats_table.add_column("Size", style="green")
+        # Test connection
+        if db_manager.test_connection():
+            conn_table.add_row("Status", "✅ Connected")
+        else:
+            conn_table.add_row("Status", "❌ Connection failed")
 
-    stats_table.add_row("legal_documents", "12,456", "45.2 MB")
-    stats_table.add_row("document_embeddings", "12,456", "234.7 MB")
-    stats_table.add_row("search_results", "8,901", "15.3 MB")
-    stats_table.add_row("user_queries", "2,345", "1.8 MB")
+        console.print(conn_table)
 
-    console.print(stats_table)
+        # Try to get real statistics
+        try:
+            from sqlalchemy import text
+
+            with db_manager.engine.connect() as conn:
+                # Get table statistics from information_schema
+                stats_query = text("""
+                SELECT
+                    table_name,
+                    COALESCE(n_tup_ins, 0) as row_count,
+                    pg_size_pretty(pg_total_relation_size(table_name::regclass)) as size
+                FROM information_schema.tables
+                LEFT JOIN pg_stat_user_tables ON pg_stat_user_tables.relname = tables.table_name
+                WHERE table_schema = 'public'
+                ORDER BY table_name;
+                """)
+
+                result = conn.execute(stats_query)
+                stats_data = result.fetchall()
+
+                if stats_data:
+                    stats_table = Table(title="Database Statistics")
+                    stats_table.add_column("Table", style="cyan")
+                    stats_table.add_column("Rows", style="magenta")
+                    stats_table.add_column("Size", style="green")
+
+                    for row in stats_data:
+                        stats_table.add_row(row[0], str(row[1]), row[2])
+
+                    console.print(stats_table)
+                else:
+                    console.print("⚠️ [yellow]No database statistics available[/yellow]")
+
+        except Exception as e:
+            console.print(f"⚠️ [yellow]Could not retrieve statistics: {str(e)}[/yellow]")
+
+    except ImportError:
+        console.print("❌ [bold red]Database status check not available.[/bold red]")
+        console.print("Missing requirements:")
+        console.print("  • Database connection components")
+        console.print("  • Configuration management")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"❌ [bold red]Status check failed: {str(e)}[/bold red]")
+        raise typer.Exit(1)

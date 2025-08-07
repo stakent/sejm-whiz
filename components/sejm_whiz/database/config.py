@@ -104,6 +104,18 @@ class DatabaseConfig(BaseSettings):
             ssl_mode="disable",
         )
 
+    @classmethod
+    def for_p7(cls) -> "DatabaseConfig":
+        """Create configuration for p7 server deployment."""
+        return cls(
+            host="p7",
+            port=5432,
+            database="sejm_whiz",
+            username="sejm_whiz_user",
+            password="sejm_whiz_password",
+            ssl_mode="disable",
+        )
+
 
 # Global configuration instance
 db_config = DatabaseConfig()
@@ -111,13 +123,20 @@ db_config = DatabaseConfig()
 
 def get_database_config() -> DatabaseConfig:
     """Get database configuration based on environment."""
+    # Check CLI environment first (from --env flag)
+    cli_env = os.getenv("SEJM_WHIZ_CLI_ENV", "")
     deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
 
-    if deployment_env == "k3s":
+    # Prioritize CLI environment setting
+    env = cli_env or deployment_env
+
+    if env == "k3s":
         return DatabaseConfig.for_k3s()
-    elif deployment_env == "baremetal":
+    elif env == "baremetal":
         return DatabaseConfig.for_baremetal()
-    elif deployment_env in ["docker-compose", "development"]:
+    elif env == "p7":
+        return DatabaseConfig.for_p7()
+    elif env in ["docker-compose", "development"]:
         # Use environment variables for Docker Compose and development
         return DatabaseConfig(
             host=os.getenv("DATABASE_HOST", "localhost"),

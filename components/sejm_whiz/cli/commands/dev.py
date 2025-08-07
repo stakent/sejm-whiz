@@ -8,7 +8,22 @@ from typing import Optional
 import time
 
 console = Console()
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=False)
+
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """🛠️ Development tools operations."""
+    if ctx.invoked_subcommand is None:
+        # Show development dashboard
+        console.print("🛠️ [bold blue]Development Tools Dashboard[/bold blue]")
+        console.print("Available development commands:")
+        console.print("  • test - Run test suite")
+        console.print("  • lint - Run code linting")
+        console.print("  • format - Format code")
+        console.print("  • complexity - Check code complexity")
+        console.print("  • version - Manage project version")
+        console.print("\nRun with --help to see all options.")
 
 
 @app.command()

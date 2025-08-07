@@ -2,13 +2,18 @@
 
 import typer
 from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
 from typing import Optional
-import time
 
 console = Console()
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=False)
+
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """🔍 Search operations."""
+    if ctx.invoked_subcommand is None:
+        # Run status command by default
+        status()
 
 
 @app.command()
@@ -23,61 +28,17 @@ def query(
     ),
 ):
     """🔍 Search for documents using semantic similarity."""
-    console.print(f"🔍 [bold blue]Searching for: '{text}'[/bold blue]")
-    console.print(f"  📊 Limit: {limit} results")
-    console.print(f"  🎯 Min score: {min_score}")
+    console.print("❌ [bold red]Semantic search is not implemented yet.[/bold red]")
+    console.print("This command would perform semantic document search but requires:")
+    console.print("  • Search engine integration (vector database)")
+    console.print("  • Embeddings model for query processing")
+    console.print("  • Document index with vector representations")
+    console.print("  • Similarity scoring and ranking")
+    console.print(f"  • Query: '{text}'")
+    console.print(f"  • Limit: {limit}, Min score: {min_score}")
     if document_type:
-        console.print(f"  📄 Type filter: {document_type}")
-
-    # Simulate search with progress
-    with console.status("🧠 Computing semantic embeddings..."):
-        time.sleep(1)
-
-    with console.status("🔍 Searching vector database..."):
-        time.sleep(1.5)
-
-    # Simulate search results
-    results = [
-        ("Ustawa o ochronie danych osobowych", 0.92, "2023-05-15", "ustawa"),
-        ("Rozporządzenie RODO - implementacja", 0.87, "2023-03-22", "rozporządzenie"),
-        ("Ustawa o cyberbezpieczeństwie", 0.82, "2023-07-10", "ustawa"),
-        ("Prawo telekomunikacyjne", 0.78, "2023-01-18", "ustawa"),
-        (
-            "Rozporządzenie o zabezpieczeniu danych",
-            0.74,
-            "2023-04-08",
-            "rozporządzenie",
-        ),
-    ]
-
-    # Filter results
-    filtered_results = [
-        (title, score, date, doc_type)
-        for title, score, date, doc_type in results
-        if score >= min_score and (not document_type or doc_type == document_type)
-    ][:limit]
-
-    if not filtered_results:
-        console.print(
-            "❌ [bold red]No results found matching your criteria.[/bold red]"
-        )
-        return
-
-    # Display results table
-    results_table = Table(title=f"🔍 Search Results ({len(filtered_results)} found)")
-    results_table.add_column("Document", style="cyan", no_wrap=True)
-    results_table.add_column("Score", style="magenta", justify="center")
-    results_table.add_column("Date", style="green", justify="center")
-    results_table.add_column("Type", style="yellow", justify="center")
-
-    for title, score, date, doc_type in filtered_results:
-        score_color = "green" if score >= 0.9 else "yellow" if score >= 0.8 else "red"
-        results_table.add_row(
-            title, f"[{score_color}]{score:.2f}[/{score_color}]", date, doc_type.title()
-        )
-
-    console.print(results_table)
-    console.print("💡 [dim]Search completed in 2.5 seconds[/dim]")
+        console.print(f"  • Type filter: {document_type}")
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -94,55 +55,16 @@ def similar(
 ):
     """🔗 Find documents similar to a given document."""
     console.print(
-        f"🔗 [bold blue]Finding documents similar to: {document_id}[/bold blue]"
+        "❌ [bold red]Document similarity search is not implemented yet.[/bold red]"
     )
-
-    with console.status("📄 Loading source document..."):
-        time.sleep(0.5)
-
-    with console.status("🧠 Computing similarities..."):
-        time.sleep(2)
-
-    # Display source document info
-    source_panel = Panel(
-        "Ustawa z dnia 10 maja 2018 r. o ochronie danych osobowych\n"
-        "[dim]Type: ustawa | Date: 2018-05-10 | ELI: pol_2018_583[/dim]",
-        title="📄 Source Document",
-        border_style="blue",
-    )
-    console.print(source_panel)
-
-    # Simulate similar documents
-    similar_docs = [
-        ("Rozporządzenie RODO", 0.89, "Implementacja RODO w Polsce"),
-        ("Ustawa o cyberbezpieczeństwie", 0.76, "Ochrona systemów informatycznych"),
-        ("Prawo telekomunikacyjne", 0.68, "Ochrona danych w telekomunikacji"),
-        (
-            "Ustawa o świadczeniu usług płatniczych",
-            0.62,
-            "Bezpieczeństwo danych finansowych",
-        ),
-    ]
-
-    filtered_docs = [
-        (title, score, desc)
-        for title, score, desc in similar_docs
-        if score >= threshold
-    ][:limit]
-
-    # Results table
-    similar_table = Table(title=f"🔗 Similar Documents ({len(filtered_docs)} found)")
-    similar_table.add_column("Document", style="cyan")
-    similar_table.add_column("Similarity", style="magenta", justify="center")
-    similar_table.add_column("Description", style="green")
-
-    for title, score, desc in filtered_docs:
-        score_color = "green" if score >= 0.8 else "yellow" if score >= 0.7 else "red"
-        similar_table.add_row(
-            title, f"[{score_color}]{score:.2f}[/{score_color}]", desc
-        )
-
-    console.print(similar_table)
+    console.print("This command would find similar documents but requires:")
+    console.print("  • Document retrieval by ID")
+    console.print("  • Vector similarity computation")
+    console.print("  • Document embeddings database")
+    console.print("  • Similarity ranking and filtering")
+    console.print(f"  • Source document ID: {document_id}")
+    console.print(f"  • Limit: {limit}, Threshold: {threshold}")
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -155,29 +77,17 @@ def reindex(
     ),
 ):
     """🔄 Rebuild the search index."""
-    console.print("🔄 [bold blue]Rebuilding search index...[/bold blue]")
-
-    if force:
-        console.print("  ⚠️ [bold yellow]Force mode: Complete reindexing[/bold yellow]")
-    else:
-        console.print("  🔄 [bold blue]Incremental indexing[/bold blue]")
-
-    console.print(f"  📦 Batch size: {batch_size}")
-
-    # Simulate reindexing process
-    from rich.progress import Progress
-
-    total_docs = 2500 if force else 150
-
-    with Progress() as progress:
-        task = progress.add_task("🔄 Reindexing documents...", total=total_docs)
-
-        for i in range(0, total_docs, batch_size):
-            time.sleep(0.1)
-            progress.update(task, advance=min(batch_size, total_docs - i))
-
-    console.print("✅ [bold green]Search index rebuilt successfully![/bold green]")
-    console.print(f"  📊 Indexed {total_docs:,} documents")
+    console.print(
+        "❌ [bold red]Search index rebuilding is not implemented yet.[/bold red]"
+    )
+    console.print("This command would rebuild the search index but requires:")
+    console.print("  • Document embeddings generation pipeline")
+    console.print("  • Vector database integration")
+    console.print("  • Batch processing and progress tracking")
+    console.print("  • Index optimization and validation")
+    console.print(f"  • Force mode: {force}")
+    console.print(f"  • Batch size: {batch_size}")
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -188,61 +98,27 @@ def benchmark(
     ),
 ):
     """📊 Run search performance benchmarks."""
-    console.print("📊 [bold blue]Running search performance benchmarks[/bold blue]")
-    console.print(f"  🔍 Test queries: {queries}")
-    console.print(f"  🔄 Concurrent requests: {concurrent}")
-
-    from rich.progress import Progress
-
-    with Progress() as progress:
-        task = progress.add_task("🚀 Running benchmark...", total=queries)
-
-        for i in range(queries):
-            time.sleep(0.05)  # Simulate query time
-            progress.update(task, advance=1)
-
-    # Display benchmark results
-    results_table = Table(title="📊 Benchmark Results")
-    results_table.add_column("Metric", style="cyan")
-    results_table.add_column("Value", style="green")
-    results_table.add_column("Unit", style="yellow")
-
-    results_table.add_row("Total Queries", f"{queries:,}", "queries")
-    results_table.add_row("Avg Response Time", "45.2", "ms")
-    results_table.add_row("95th Percentile", "78.5", "ms")
-    results_table.add_row("Queries/Second", "221.3", "qps")
-    results_table.add_row("Success Rate", "99.8", "%")
-
-    console.print(results_table)
+    console.print("❌ [bold red]Search benchmarking is not implemented yet.[/bold red]")
+    console.print("This command would run search performance tests but requires:")
+    console.print("  • Search system implementation")
+    console.print("  • Performance testing framework")
+    console.print("  • Query load generation")
+    console.print("  • Metrics collection and analysis")
+    console.print(f"  • Test queries: {queries}")
+    console.print(f"  • Concurrent requests: {concurrent}")
+    raise typer.Exit(1)
 
 
 @app.command()
 def status():
     """📊 Show search system status."""
-    console.print("📊 [bold blue]Search System Status[/bold blue]")
-
-    # Index statistics
-    index_table = Table(title="Search Index Statistics")
-    index_table.add_column("Property", style="cyan")
-    index_table.add_column("Value", style="green")
-
-    index_table.add_row("Total Documents", "12,456")
-    index_table.add_row("Indexed Documents", "12,456")
-    index_table.add_row("Embedding Dimensions", "768")
-    index_table.add_row("Index Size", "234.7 MB")
-    index_table.add_row("Last Update", "2025-08-06 04:15:23")
-
-    console.print(index_table)
-
-    # Performance metrics
-    perf_table = Table(title="Performance Metrics (Last 24h)")
-    perf_table.add_column("Metric", style="cyan")
-    perf_table.add_column("Value", style="magenta")
-    perf_table.add_column("Status", style="green")
-
-    perf_table.add_row("Queries Processed", "8,932", "✅ Normal")
-    perf_table.add_row("Avg Response Time", "42.3 ms", "✅ Good")
-    perf_table.add_row("Cache Hit Rate", "87.2%", "✅ Excellent")
-    perf_table.add_row("Error Rate", "0.1%", "✅ Good")
-
-    console.print(perf_table)
+    console.print(
+        "❌ [bold red]Search system status is not implemented yet.[/bold red]"
+    )
+    console.print("This command would show search system metrics but requires:")
+    console.print("  • Search index statistics collection")
+    console.print("  • Performance metrics tracking")
+    console.print("  • Database query monitoring")
+    console.print("  • System health indicators")
+    console.print("  • Index size and document count analysis")
+    raise typer.Exit(1)

@@ -59,14 +59,26 @@ class RedisConfig(BaseSettings):
         """Create configuration for baremetal deployment (no password)."""
         return cls(host="localhost", port=6379, password=None, db=0)
 
+    @classmethod
+    def for_p7(cls) -> "RedisConfig":
+        """Create configuration for p7 server deployment."""
+        return cls(host="p7", port=6379, password=None, db=0)
+
 
 def get_redis_config() -> RedisConfig:
     """Get Redis configuration based on environment."""
+    # Check CLI environment first (from --env flag)
+    cli_env = os.getenv("SEJM_WHIZ_CLI_ENV", "")
     deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
 
-    if deployment_env == "k3s":
+    # Prioritize CLI environment setting
+    env = cli_env or deployment_env
+
+    if env == "k3s":
         return RedisConfig.for_k3s()
-    elif deployment_env == "baremetal":
+    elif env == "baremetal":
         return RedisConfig.for_baremetal()
+    elif env == "p7":
+        return RedisConfig.for_p7()
     else:
         return RedisConfig.for_local_dev()

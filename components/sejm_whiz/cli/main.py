@@ -79,10 +79,16 @@ def main(
 
     # Store global context for subcommands
     ctx.ensure_object(dict)
-    ctx.obj["env"] = env or _detect_environment()
+    current_env = env or _detect_environment()
+    ctx.obj["env"] = current_env
     ctx.obj["profile"] = profile
     ctx.obj["config_file"] = config_file
     ctx.obj["verbose"] = verbose
+
+    # Set environment variable for configuration modules to pick up
+    import os
+
+    os.environ["SEJM_WHIZ_CLI_ENV"] = current_env
 
     # Always show environment info (unless showing version or help only)
     if ctx.invoked_subcommand is not None:

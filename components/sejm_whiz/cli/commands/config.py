@@ -8,7 +8,15 @@ from typing import Optional, Union, Any
 import json
 
 console = Console()
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=False)
+
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """⚙️ Configuration management operations."""
+    if ctx.invoked_subcommand is None:
+        # Run show command by default
+        show(None, "table")
 
 
 @app.command()

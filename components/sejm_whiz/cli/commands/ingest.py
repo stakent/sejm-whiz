@@ -2,12 +2,27 @@
 
 import typer
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from typing import Optional
-import time
 
 console = Console()
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=False)
+
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """📥 Data ingestion management operations."""
+    if ctx.invoked_subcommand is None:
+        # Run status command by default if it exists, otherwise show help
+        try:
+            status()
+        except NameError:
+            # If status command doesn't exist, show basic info
+            console.print("📥 [bold blue]Data Ingestion Management[/bold blue]")
+            console.print("Available commands:")
+            console.print("  • documents - Ingest legal documents")
+            console.print("  • schedule - Manage ingestion schedules")
+            console.print("  • status - Check ingestion system status")
+            console.print("\nRun with --help to see all options.")
 
 
 @app.command()
@@ -33,15 +48,23 @@ def documents(
     ),
 ):
     """📥 Ingest legal documents from external APIs."""
+    import asyncio
+    from datetime import datetime, timedelta
+    import re
+
     console.print(
         f"📥 [bold blue]Ingesting documents from {source.upper()} API[/bold blue]"
     )
 
-    # Handle date parameters
-    from datetime import datetime, timedelta
-    import re
+    # Validate source parameter
+    valid_sources = ["eli", "sejm", "both"]
+    if source not in valid_sources:
+        console.print(
+            f"❌ [bold red]Invalid source '{source}'. Valid options: {', '.join(valid_sources)}[/bold red]"
+        )
+        raise typer.Exit(1)
 
-    # Process date range
+    # Process date range parameters
     start_date = None
     end_date = datetime.now()
 
@@ -105,38 +128,39 @@ def documents(
         date_range_days = (end_date - start_date).days
         console.print(f"  📊 Date range: {date_range_days} days")
 
-    # Simulate document ingestion with progress
-    total_docs = limit or 5000
+    console.print()
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        # Phase 1: Fetch documents
-        fetch_task = progress.add_task("🔍 Fetching document list...", total=None)
-        time.sleep(2)
-        progress.update(
-            fetch_task, description="✅ Document list fetched", completed=True
-        )
+    # Execute ingestion pipeline
+    try:
+        from .pipeline_bridge import CliPipelineOrchestrator
 
-        # Phase 2: Process documents
-        process_task = progress.add_task(
-            f"📝 Processing {total_docs:,} documents", total=total_docs
-        )
-
-        for i in range(0, total_docs, batch_size):
-            batch_end = min(i + batch_size, total_docs)
-            progress.update(
-                process_task,
-                description=f"📝 Processing batch {i//batch_size + 1} ({i+1}-{batch_end})",
-                advance=batch_size,
+        orchestrator = CliPipelineOrchestrator(console)
+        result = asyncio.run(
+            orchestrator.execute_ingestion(
+                source=source,
+                start_date=start_date,
+                end_date=end_date,
+                limit=limit,
+                batch_size=batch_size,
+                force=force,
             )
-            time.sleep(0.1)
+        )
 
-    console.print(
-        f"✅ [bold green]Ingested {total_docs:,} documents successfully![/bold green]"
-    )
+        # Display final results
+        console.print()
+        console.print("✅ [bold green]Ingestion completed successfully![/bold green]")
+        console.print(f"  📄 Documents processed: {result.get('processed', 0):,}")
+        console.print(f"  💾 Documents stored: {result.get('stored', 0):,}")
+        console.print(f"  ⏭️ Documents skipped: {result.get('skipped', 0):,}")
+        console.print(f"  ❌ Documents failed: {result.get('failed', 0):,}")
+        console.print(f"  ⏱️ Duration: {result.get('duration', 'unknown')}")
+
+    except ImportError:
+        console.print("❌ [bold red]Pipeline bridge not found. Creating...[/bold red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"❌ [bold red]Ingestion failed: {str(e)}[/bold red]")
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -150,29 +174,15 @@ def embeddings(
     gpu: bool = typer.Option(True, "--gpu/--cpu", help="Use GPU acceleration"),
 ):
     """🧠 Generate document embeddings."""
-    console.print(f"🧠 [bold blue]Generating embeddings with {model}[/bold blue]")
-    console.print(f"  🖥️ Device: {'GPU' if gpu else 'CPU'}")
-    console.print(f"  📦 Batch size: {batch_size}")
-
-    # Check for unprocessed documents
-    pending_docs = 1250  # Simulated count
-
-    if pending_docs == 0:
-        console.print(
-            "✅ [bold green]All documents already have embeddings![/bold green]"
-        )
-        return
-
-    with Progress() as progress:
-        task = progress.add_task(
-            f"🧠 Generating embeddings for {pending_docs} documents", total=pending_docs
-        )
-
-        for i in range(0, pending_docs, batch_size):
-            time.sleep(0.2)  # Simulate processing time
-            progress.update(task, advance=min(batch_size, pending_docs - i))
-
-    console.print("✅ [bold green]Embeddings generated successfully![/bold green]")
+    console.print(
+        "❌ [bold red]Embedding generation is not yet implemented.[/bold red]"
+    )
+    console.print("This command will:")
+    console.print("  • Load HerBERT model for Polish text")
+    console.print("  • Generate embeddings for ingested documents")
+    console.print("  • Store embeddings in PostgreSQL with pgvector")
+    console.print("  • Support GPU/CPU processing modes")
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -182,57 +192,25 @@ def schedule(
     time_str: str = typer.Option("02:00", "--time", "-t", help="Schedule time (HH:MM)"),
 ):
     """⏰ Schedule automatic data ingestion jobs."""
-    console.print(f"⏰ [bold blue]Scheduling {source.upper()} ingestion[/bold blue]")
-    console.print(f"  📅 Interval: {interval}")
-    console.print(f"  🕐 Time: {time_str}")
-
-    # Simulate job scheduling
-    time.sleep(1)
-
-    job_id = f"{source}-ingestion-{interval}"
-    console.print(f"✅ [bold green]Scheduled job '{job_id}' successfully![/bold green]")
-    console.print(f"  📋 Next run: Tomorrow at {time_str}")
+    console.print("❌ [bold red]Job scheduling is not yet implemented.[/bold red]")
+    console.print("This command will:")
+    console.print("  • Set up cron-like job scheduling")
+    console.print("  • Configure automatic ingestion intervals")
+    console.print("  • Manage recurring data updates")
+    console.print("  • Send notifications on job completion")
+    raise typer.Exit(1)
 
 
 @app.command()
 def status():
     """📊 Show ingestion pipeline status."""
-    from rich.table import Table
-
-    console.print("📊 [bold blue]Ingestion Pipeline Status[/bold blue]")
-
-    # Jobs table
-    jobs_table = Table(title="Scheduled Jobs")
-    jobs_table.add_column("Job ID", style="cyan")
-    jobs_table.add_column("Source", style="magenta")
-    jobs_table.add_column("Schedule", style="green")
-    jobs_table.add_column("Last Run", style="yellow")
-    jobs_table.add_column("Status", style="blue")
-
-    jobs_table.add_row(
-        "eli-daily", "ELI API", "Daily 02:00", "2025-08-06 02:00", "✅ Success"
-    )
-    jobs_table.add_row(
-        "sejm-weekly", "Sejm API", "Weekly Sun 03:00", "2025-08-04 03:00", "✅ Success"
-    )
-    jobs_table.add_row(
-        "embeddings-daily", "Local", "Daily 04:00", "2025-08-06 04:00", "✅ Success"
-    )
-
-    console.print(jobs_table)
-
-    # Statistics table
-    stats_table = Table(title="Ingestion Statistics (Last 30 Days)")
-    stats_table.add_column("Source", style="cyan")
-    stats_table.add_column("Documents", style="magenta")
-    stats_table.add_column("Success Rate", style="green")
-    stats_table.add_column("Avg Duration", style="yellow")
-
-    stats_table.add_row("ELI API", "1,245", "98.5%", "12m 34s")
-    stats_table.add_row("Sejm API", "892", "99.2%", "8m 15s")
-    stats_table.add_row("Embeddings", "2,137", "99.8%", "45m 22s")
-
-    console.print(stats_table)
+    console.print("❌ [bold red]Status reporting is not yet implemented.[/bold red]")
+    console.print("This command will show:")
+    console.print("  • Scheduled job status and history")
+    console.print("  • Document ingestion statistics")
+    console.print("  • Pipeline health metrics")
+    console.print("  • Recent error logs and alerts")
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -242,23 +220,10 @@ def logs(
     follow: bool = typer.Option(False, "--follow", "-f", help="Follow log output"),
 ):
     """📋 View ingestion job logs."""
-    if job_id:
-        console.print(f"📋 [bold blue]Ingestion logs for job '{job_id}'[/bold blue]")
-    else:
-        console.print("📋 [bold blue]Recent ingestion logs[/bold blue]")
-
-    if follow:
-        console.print("Following logs... Press Ctrl+C to stop")
-
-    # Simulate log output
-    sample_logs = [
-        "2025-08-06 02:00:01 [INFO] Starting ELI document ingestion",
-        "2025-08-06 02:00:05 [INFO] Fetched 1,234 document URLs",
-        "2025-08-06 02:02:30 [INFO] Processed batch 1/13 (100 documents)",
-        "2025-08-06 02:05:45 [INFO] Processed batch 2/13 (100 documents)",
-        "2025-08-06 02:12:15 [INFO] All documents ingested successfully",
-        "2025-08-06 02:12:16 [INFO] Ingestion completed in 12m 15s",
-    ]
-
-    for log_line in sample_logs[-lines:]:
-        console.print(log_line)
+    console.print("❌ [bold red]Log viewing is not yet implemented.[/bold red]")
+    console.print("This command will:")
+    console.print("  • Display ingestion job logs")
+    console.print("  • Filter logs by job ID or date range")
+    console.print("  • Follow live log streams")
+    console.print("  • Export logs to files for analysis")
+    raise typer.Exit(1)

@@ -1,10 +1,12 @@
 """Cache integration for API clients and data processing pipelines."""
 
 import logging
-from typing import Any, Dict, Optional, Callable, Awaitable
+from typing import Any, Dict, Optional, Callable, Awaitable, Union, Tuple
 from functools import wraps
 
 from .manager import CacheManager, get_cache_manager
+from .document_cache import DocumentContentCache, get_document_cache
+from .processed_text_cache import ProcessedTextCache, get_processed_text_cache
 
 logger = logging.getLogger(__name__)
 
@@ -254,11 +256,122 @@ class CacheAwareEmbeddingProcessor:
         return embeddings
 
 
+class CacheAwareDocumentProcessor:
+    """Document processor with comprehensive caching for content and processed text."""
+
+    def __init__(
+        self,
+        original_processor,
+        document_cache: Optional[DocumentContentCache] = None,
+        text_cache: Optional[ProcessedTextCache] = None,
+    ):
+        self.processor = original_processor
+        self.document_cache = document_cache or get_document_cache()
+        self.text_cache = text_cache or get_processed_text_cache()
+        logger.info("Document processor wrapped with comprehensive caching")
+
+    def cache_source_document(
+        self,
+        document_id: str,
+        content: Union[str, bytes],
+        content_type: str,
+        source_url: Optional[str] = None,
+    ) -> Tuple[str, str]:
+        """Cache the original source document (HTML/PDF)."""
+        return self.document_cache.cache_document_content(
+            document_id=document_id,
+            content=content,
+            content_type=content_type,
+            source_url=source_url,
+        )
+
+    def get_cached_source_document(
+        self, document_id: str, content_type: str
+    ) -> Optional[Tuple[Union[str, bytes], Dict[str, Any]]]:
+        """Get cached source document."""
+        return self.document_cache.get_cached_document_content(
+            document_id, content_type
+        )
+
+    def process_and_cache_text(
+        self,
+        document_id: str,
+        stage: str,
+        processing_params: Dict[str, Any],
+        force_reprocess: bool = False,
+    ) -> str:
+        """Process document text and cache the result."""
+        # Check if we already have processed text for these parameters
+        if not force_reprocess:
+            cached_result = self.text_cache.get_processed_text(
+                document_id, stage, processing_params
+            )
+            if cached_result is not None:
+                text, metadata = cached_result
+                logger.info(f"Using cached processed text for {document_id}/{stage}")
+                return text
+
+        # Process the text (delegate to original processor)
+        logger.info(f"Processing text for {document_id}/{stage}")
+        import time
+
+        start_time = time.time()
+
+        processed_text = self.processor.process_text(
+            document_id, stage, processing_params
+        )
+
+        processing_time_ms = (time.time() - start_time) * 1000
+
+        # Cache the processed text
+        self.text_cache.cache_processed_text(
+            document_id=document_id,
+            stage=stage,
+            processed_text=processed_text,
+            processing_params=processing_params,
+            processing_time_ms=processing_time_ms,
+        )
+
+        return processed_text
+
+    def get_processing_pipeline_status(self, document_id: str) -> Dict[str, Any]:
+        """Get comprehensive status of document processing pipeline."""
+        status = {
+            "document_id": document_id,
+            "source_content": {},
+            "processed_text": {},
+            "cache_info": {},
+        }
+
+        # Check source document cache
+        doc_info = self.document_cache.get_document_cache_info(document_id)
+        if doc_info:
+            status["source_content"] = doc_info.get("content_versions", {})
+
+        # Check processed text cache
+        text_info = self.text_cache.get_processing_history(document_id)
+        if text_info:
+            status["processed_text"] = text_info.get("processing_stages", {})
+
+        # Summary statistics
+        status["cache_info"] = {
+            "source_content_types": len(status["source_content"]),
+            "processing_stages": len(status["processed_text"]),
+            "total_cached_items": len(status["source_content"])
+            + len(status["processed_text"]),
+        }
+
+        return status
+
+
 def create_cache_aware_clients(
     sejm_client=None,
     eli_client=None,
     embedding_processor=None,
+    document_processor=None,
     cache_manager: Optional[CacheManager] = None,
+    document_cache: Optional[DocumentContentCache] = None,
+    text_cache: Optional[ProcessedTextCache] = None,
 ) -> Dict[str, Any]:
     """Create cache-aware versions of API clients and processors."""
     cache = cache_manager or get_cache_manager()
@@ -276,4 +389,41 @@ def create_cache_aware_clients(
             embedding_processor, cache
         )
 
+    if document_processor:
+        result["document_processor"] = CacheAwareDocumentProcessor(
+            document_processor, document_cache, text_cache
+        )
+
     return result
+
+
+def get_comprehensive_cache_status() -> Dict[str, Any]:
+    """Get status of all cache components."""
+    try:
+        # Get cache managers
+        cache_manager = get_cache_manager()
+        document_cache = get_document_cache()
+        text_cache = get_processed_text_cache()
+
+        status = {
+            "timestamp": logging.Formatter().formatTime(
+                logging.LogRecord("", 0, "", 0, "", (), None)
+            ),
+            "cache_components": {
+                "api_cache": cache_manager.get_cache_stats(),
+                "document_cache": document_cache.get_document_cache_info("summary")
+                or {},
+                "processed_text_cache": text_cache.get_cache_statistics(),
+            },
+        }
+
+        return status
+
+    except Exception as e:
+        logger.error(f"Failed to get comprehensive cache status: {e}")
+        return {
+            "error": str(e),
+            "timestamp": logging.Formatter().formatTime(
+                logging.LogRecord("", 0, "", 0, "", (), None)
+            ),
+        }
