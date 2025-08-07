@@ -192,6 +192,7 @@ Desktop.ini
 .cache/
 .pytest_cache/
 .mypy_cache/
+cache/
 
 # Virtual environments
 .venv/
