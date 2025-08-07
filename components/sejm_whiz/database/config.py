@@ -16,7 +16,7 @@ class DatabaseConfig(BaseSettings):
     port: int = Field(default=5432, env="DATABASE_PORT")
     database: str = Field(default="sejm_whiz", env="DATABASE_NAME")
     username: str = Field(default="sejm_whiz_user", env="DATABASE_USER")
-    password: str = Field(default="sejm_whiz_password", env="DATABASE_PASSWORD")
+    password: str | None = Field(default="sejm_whiz_password", env="DATABASE_PASSWORD")
 
     # Connection pool settings
     pool_size: int = Field(default=10, env="DATABASE_POOL_SIZE")
@@ -40,8 +40,15 @@ class DatabaseConfig(BaseSettings):
     @property
     def database_url(self) -> str:
         """Construct database URL for SQLAlchemy."""
+        if self.host == "/var/run/postgresql":
+            # Unix socket connection
+            return f"postgresql:///{self.database}?host={self.host}&sslmode={self.ssl_mode}"
+        elif self.password:
+            auth_part = f"{self.username}:{self.password}@"
+        else:
+            auth_part = f"{self.username}@"
         return (
-            f"postgresql://{self.username}:{self.password}@"
+            f"postgresql://{auth_part}"
             f"{self.host}:{self.port}/{self.database}"
             f"?sslmode={self.ssl_mode}"
         )
@@ -49,8 +56,12 @@ class DatabaseConfig(BaseSettings):
     @property
     def async_database_url(self) -> str:
         """Construct async database URL for SQLAlchemy."""
+        if self.password:
+            auth_part = f"{self.username}:{self.password}@"
+        else:
+            auth_part = f"{self.username}@"
         return (
-            f"postgresql+asyncpg://{self.username}:{self.password}@"
+            f"postgresql+asyncpg://{auth_part}"
             f"{self.host}:{self.port}/{self.database}"
             f"?sslmode={self.ssl_mode}"
         )
@@ -81,6 +92,18 @@ class DatabaseConfig(BaseSettings):
             ssl_mode="prefer",
         )
 
+    @classmethod
+    def for_baremetal(cls) -> "DatabaseConfig":
+        """Create configuration for baremetal deployment with system PostgreSQL."""
+        return cls(
+            host="localhost",
+            port=5432,
+            database="sejm_whiz",
+            username="sejm_whiz_user",
+            password="sejm_whiz_password",
+            ssl_mode="disable",
+        )
+
 
 # Global configuration instance
 db_config = DatabaseConfig()
@@ -92,6 +115,8 @@ def get_database_config() -> DatabaseConfig:
 
     if deployment_env == "k3s":
         return DatabaseConfig.for_k3s()
+    elif deployment_env == "baremetal":
+        return DatabaseConfig.for_baremetal()
     elif deployment_env in ["docker-compose", "development"]:
         # Use environment variables for Docker Compose and development
         return DatabaseConfig(

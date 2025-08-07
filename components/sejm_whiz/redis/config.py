@@ -54,6 +54,11 @@ class RedisConfig(BaseSettings):
         """Create configuration for local development."""
         return cls(host="localhost", port=6379, password="redis_password", db=0)
 
+    @classmethod
+    def for_baremetal(cls) -> "RedisConfig":
+        """Create configuration for baremetal deployment (no password)."""
+        return cls(host="localhost", port=6379, password=None, db=0)
+
 
 def get_redis_config() -> RedisConfig:
     """Get Redis configuration based on environment."""
@@ -61,5 +66,7 @@ def get_redis_config() -> RedisConfig:
 
     if deployment_env == "k3s":
         return RedisConfig.for_k3s()
+    elif deployment_env == "baremetal":
+        return RedisConfig.for_baremetal()
     else:
         return RedisConfig.for_local_dev()
