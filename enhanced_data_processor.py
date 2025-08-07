@@ -446,6 +446,7 @@ class EnhancedDatabaseStorageStep(PipelineStep):
     def __init__(self):
         super().__init__("enhanced_database_storage")
         from sejm_whiz.database import get_database_config
+
         db_config = get_database_config()
         self.db = DocumentOperations(db_config)
         self.vector_db = VectorDBOperations()
@@ -481,7 +482,7 @@ class EnhancedDatabaseStorageStep(PipelineStep):
 
                         # Create document record
                         document_id = self.db.create_document(
-                            title=document.get("title", f"Document {i+1}"),
+                            title=document.get("title", f"Document {i + 1}"),
                             content=document.get("processed_content", ""),
                             document_type=doc_type,
                             eli_identifier=document.get("eli_identifier")
@@ -547,13 +548,14 @@ async def create_comprehensive_pipeline() -> DataPipeline:
 
 async def main():
     """Main entry point for enhanced data processor."""
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
+    # Configure enhanced logging with file paths
+    from sejm_whiz.logging import setup_enhanced_logging
 
-    logger = logging.getLogger("enhanced_data_processor")
+    setup_enhanced_logging(level=logging.INFO, include_source=True)
+
+    from sejm_whiz.logging import get_enhanced_logger
+
+    logger = get_enhanced_logger("enhanced_data_processor")
     logger.info("Starting enhanced comprehensive data processor")
 
     try:

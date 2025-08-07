@@ -1,6 +1,5 @@
 """Database operations for legal documents and embeddings."""
 
-import logging
 from typing import List, Optional, Dict, Tuple, Any
 from uuid import UUID
 from datetime import datetime, UTC
@@ -10,8 +9,9 @@ from sqlalchemy import func, or_
 from .models import LegalDocument, LegalAmendment, CrossReference, DocumentEmbedding
 from .connection import get_db_session
 from .config import DatabaseConfig
+from sejm_whiz.logging import get_enhanced_logger
 
-logger = logging.getLogger(__name__)
+logger = get_enhanced_logger(__name__)
 
 
 class DocumentOperations:
@@ -124,7 +124,7 @@ class DocumentOperations:
         raw_content: str,
         processed_text: str,
         metadata: Dict[str, Any],
-        **kwargs
+        **kwargs,
     ) -> Optional[Dict[str, Any]]:
         """Store a legal document with all required fields."""
         with get_db_session() as session:
@@ -142,21 +142,21 @@ class DocumentOperations:
                     source_url=source_url,
                     raw_content=raw_content,
                     metadata=metadata,
-                    **kwargs
+                    **kwargs,
                 )
                 session.add(document)
                 session.flush()
                 session.refresh(document)
-                
+
                 result = {
                     "id": str(document.id),
                     "eli_identifier": document.eli_identifier,
                     "title": document.title,
-                    "document_type": document.document_type
+                    "document_type": document.document_type,
                 }
-                
+
                 return result
-                
+
             except Exception as e:
                 logger.error(f"Failed to store document {eli_identifier}: {e}")
                 session.rollback()
