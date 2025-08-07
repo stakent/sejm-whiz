@@ -3,7 +3,7 @@
 import httpx
 import asyncio
 import logging
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Tuple, TYPE_CHECKING
 from datetime import datetime, timedelta
 from urllib.parse import urljoin, quote
 import time
@@ -11,6 +11,9 @@ from dataclasses import dataclass
 
 from .models import LegalDocument, Amendment, DocumentSearchResult
 from .utils import validate_eli_id, sanitize_query
+
+if TYPE_CHECKING:
+    from sejm_whiz.document_ingestion.config import DocumentIngestionConfig
 
 logger = logging.getLogger(__name__)
 
@@ -587,6 +590,7 @@ class EliApiClient:
                 f"Failed to fetch document content for {document_id}: {e} url: {getattr(self, '_last_url', 'unknown')}"
             )
             return None
+
 
 # Global client instance for convenience
 _client: Optional[EliApiClient] = None
