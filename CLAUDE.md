@@ -175,3 +175,55 @@ Versions are automatically updated in:
 
 - `components/sejm_whiz/__init__.py` (__version__)
 - `CHANGELOG.md` (with commitizen)
+
+## CLI Management
+
+The project includes a comprehensive CLI for system management:
+
+### CLI Usage
+
+```bash
+# Main CLI entry point
+uv run python sejm-whiz-cli.py
+
+# Or after installation
+sejm-whiz-cli
+
+# Get comprehensive help
+sejm-whiz-cli help
+
+# Install shell completion
+./scripts/install-completion.sh
+```
+
+### Key CLI Commands
+
+```bash
+# System management
+sejm-whiz-cli system status          # Check system health
+sejm-whiz-cli system start           # Start services
+
+# Data ingestion with date filtering
+sejm-whiz-cli ingest documents --since 30d           # Last 30 days
+sejm-whiz-cli ingest documents --from 2025-01-13     # From specific date
+
+# Search operations
+sejm-whiz-cli search query "ustawa RODO"             # Semantic search
+sejm-whiz-cli search reindex                         # Rebuild index
+
+# Database operations
+sejm-whiz-cli db migrate                             # Run migrations
+sejm-whiz-cli db backup                              # Create backup
+
+# Development tools
+sejm-whiz-cli dev test                               # Run tests
+sejm-whiz-cli dev lint --fix                        # Fix code issues
+sejm-whiz-cli dev complexity                        # Check complexity
+```
+
+### CLI Documentation
+
+- **Complete Guide**: `CLI_README.md` - Comprehensive CLI documentation
+- **Built-in Help**: `sejm-whiz-cli help` - Quick reference and examples
+- **Command Help**: `sejm-whiz-cli COMMAND --help` - Detailed command help
+
