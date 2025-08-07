@@ -92,6 +92,27 @@ uv run poly test
 uv run python development/main.py
 ```
 
+## Deployment Options
+
+For production-style deployments, several approaches are documented:
+
+### Baremetal Deployment (Recommended)
+
+- **[Complete Baremetal Setup](deployments/baremetal/README.md)** - Production deployment on Debian 12
+  - **Infrastructure Guides**:
+    - [PostgreSQL 17 + pgvector Setup](deployments/baremetal/docs/P7_POSTGRESQL_SETUP.md) - Database configuration for AI workloads
+    - [Redis 7.0 Setup](deployments/baremetal/docs/P7_REDIS_SETUP.md) - High-performance caching configuration
+  - SystemD service management
+  - Network-accessible deployment architecture
+  - Performance optimization for AI workloads
+
+### Alternative Deployments
+
+- **[Docker Deployment](deployments/docker/README.md)** - Containerized deployment with Docker Compose
+- **[K3s Deployment](deployments/k3s/README.md)** - Kubernetes deployment for container orchestration
+
+> **Note**: The baremetal approach provides the most control and performance for AI workloads, with comprehensive infrastructure setup guides specifically written for Debian 12 environments.
+
 ## Version Management
 
 This project follows [Semantic Versioning 2.0.0](https://semver.org/) and uses [Conventional Commits](https://conventionalcommits.org/) for automated version management:

@@ -28,11 +28,71 @@ deployments/baremetal/
 
 ## Prerequisites
 
-- Ubuntu/Debian system with systemd
-- PostgreSQL server running (local or remote)
-- Redis server running (local or remote)
+- **Ubuntu/Debian 12 system** with systemd (tested on Debian 12)
+- **PostgreSQL 17** with pgvector extension (see [Infrastructure Setup](#infrastructure-setup))
+- **Redis 7.0+** server (see [Infrastructure Setup](#infrastructure-setup))
 - Python 3.12+
 - Root access for installation
+
+## Infrastructure Setup
+
+### Architecture Overview
+
+The baremetal deployment requires two core infrastructure services:
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Application   │    │   PostgreSQL    │    │      Redis      │
+│     Host        │    │   Database      │    │     Cache       │
+├─────────────────┤    ├─────────────────┤    ├─────────────────┤
+│ • API Server    │◄───┤ • Document data │    │ • Job queues    │
+│ • Data Processor│    │ • Vector embeds │    │ • Search cache  │
+│ • Web UI        │    │ • ML models     │◄───┤ • Sessions      │
+│                 │    │ • pgvector ext  │    │                 │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+     Debian 12              Debian 12              Debian 12
+```
+
+### Infrastructure Components
+
+For **Debian 12** hosts, comprehensive setup guides are provided:
+
+#### Database Layer
+
+- **[PostgreSQL 17 + pgvector Setup](docs/P7_POSTGRESQL_SETUP.md)**
+  - Production-grade configuration for AI workloads
+  - Network accessibility from application hosts
+  - Performance tuning for vector operations (HerBERT embeddings)
+  - Memory optimization for large document datasets
+  - Security hardening and monitoring
+
+#### Caching Layer
+
+- **[Redis 7.0 Setup](docs/P7_REDIS_SETUP.md)**
+  - High-performance configuration for caching and job queues
+  - Network accessibility for distributed deployments
+  - Memory management for AI cache patterns
+  - Job queue optimization for document processing
+  - System-level performance tuning
+
+### Configuration Requirements
+
+Both infrastructure components **must be configured** for network access if running on separate hosts:
+
+| Component  | Network Config           | Performance Config   | Security Config     |
+| ---------- | ------------------------ | -------------------- | ------------------- |
+| PostgreSQL | `listen_addresses = '*'` | Memory tuning for AI | `pg_hba.conf` rules |
+| Redis      | `bind 0.0.0.0 ::`        | Cache policies       | `protected-mode no` |
+
+> **⚠️ Critical**: The default installations listen only on localhost. The setup guides include all necessary network configuration changes to enable distributed deployment.
+
+### Tested Environment
+
+- **OS**: Debian 12 (Bookworm)
+- **PostgreSQL**: 17.5 with pgvector 0.8.0
+- **Redis**: 7.0.15
+- **Python**: 3.12+
+- **Architecture**: x86_64
 
 ## Installation Steps
 
@@ -56,6 +116,7 @@ cd /root/tmp/sejm-whiz-baremetal
 ```
 
 This script will:
+
 - Create system user `sejm-whiz`
 - Install system dependencies (Python 3.12, uv, etc.)
 - Create directories (`/opt/sejm-whiz`, `/etc/sejm-whiz`, etc.)
@@ -72,6 +133,7 @@ sudo vim /etc/sejm-whiz/environment.env
 ```
 
 Update database and Redis connection settings:
+
 ```bash
 DATABASE_HOST=localhost  # or your PostgreSQL server
 DATABASE_PORT=5432
@@ -93,11 +155,13 @@ sudo -u sejm-whiz uv run alembic upgrade head
 ### 5. Deploy Services
 
 Deploy all services at once:
+
 ```bash
 sudo ./deployments/baremetal/scripts/deploy-all.sh
 ```
 
 Or deploy individually:
+
 ```bash
 sudo ./deployments/baremetal/scripts/deploy-api-server.sh
 sudo ./deployments/baremetal/scripts/deploy-data-processor.sh
@@ -129,6 +193,7 @@ sudo ./deployments/baremetal/scripts/manage-services.sh enable
 ```
 
 Or use systemctl directly:
+
 ```bash
 # Individual service management
 sudo systemctl status sejm-whiz-api
@@ -143,18 +208,21 @@ sudo journalctl -u sejm-whiz-processor -n 50
 ## Service Details
 
 ### API Server (sejm-whiz-api)
+
 - **Port**: 8001
 - **Type**: Long-running service
 - **Endpoints**: `/docs`, `/health`, etc.
 - **Dependencies**: PostgreSQL, Redis
 
 ### Data Processor (sejm-whiz-processor)
+
 - **Type**: Scheduled task (systemd timer)
 - **Schedule**: Every 6 hours
 - **Manual run**: `sudo systemctl start sejm-whiz-processor`
 - **Dependencies**: PostgreSQL, Redis, external APIs
 
 ### Web UI (sejm-whiz-web-ui)
+
 - **Port**: 8002
 - **Type**: Long-running service
 - **Endpoints**: `/dashboard`, `/home`, `/health`
@@ -171,6 +239,7 @@ sudo journalctl -u sejm-whiz-processor -n 50
 ## Access URLs
 
 After deployment:
+
 - **API Server**: http://p7:8001
 - **API Documentation**: http://p7:8001/docs
 - **Web UI Home**: http://p7:8002/home
@@ -179,6 +248,7 @@ After deployment:
 ## Troubleshooting
 
 ### Check Service Status
+
 ```bash
 sudo systemctl status sejm-whiz-api
 sudo systemctl status sejm-whiz-processor.timer
@@ -186,6 +256,7 @@ sudo systemctl status sejm-whiz-web-ui
 ```
 
 ### View Logs
+
 ```bash
 # Real-time logs
 sudo journalctl -u sejm-whiz-api -f
@@ -200,9 +271,23 @@ sudo ./deployments/baremetal/scripts/manage-services.sh logs
 ### Common Issues
 
 1. **Service won't start**: Check environment configuration and dependencies
-2. **Database connection issues**: Verify PostgreSQL settings in environment.env
-3. **Permission errors**: Ensure sejm-whiz user has proper permissions
-4. **Port conflicts**: Check if ports 8001/8002 are available
+1. **Database connection issues**:
+   - Verify PostgreSQL settings in environment.env
+   - Ensure PostgreSQL is configured for network access (see [PostgreSQL Setup Guide](docs/P7_POSTGRESQL_SETUP.md))
+   - Test connection: `psql -h <host> -U sejm_whiz_user -d sejm_whiz`
+1. **Redis connection issues**:
+   - Verify Redis settings in environment.env
+   - Ensure Redis is configured for network access (see [Redis Setup Guide](docs/P7_REDIS_SETUP.md))
+   - Test connection: `redis-cli -h <host> ping`
+1. **Permission errors**: Ensure sejm-whiz user has proper permissions
+1. **Port conflicts**: Check if ports 8001/8002 are available
+
+### Infrastructure Troubleshooting
+
+For database and cache issues, refer to the comprehensive troubleshooting sections in:
+
+- [PostgreSQL Troubleshooting](docs/P7_POSTGRESQL_SETUP.md#troubleshooting-commands)
+- [Redis Troubleshooting](docs/P7_REDIS_SETUP.md#troubleshooting-commands)
 
 ### Manual Service Updates
 

@@ -8,7 +8,15 @@ import os
 import json
 
 console = Console()
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=False)
+
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """🌍 Environment and deployment management operations."""
+    if ctx.invoked_subcommand is None:
+        # Run list command by default
+        list()
 
 
 @app.command()

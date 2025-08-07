@@ -4,10 +4,17 @@ import typer
 from rich.console import Console
 from rich.table import Table
 from typing import Optional
-import time
 
 console = Console()
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=False)
+
+
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """🔧 System management operations."""
+    if ctx.invoked_subcommand is None:
+        # Run status command by default
+        status(ctx)
 
 
 @app.command()
@@ -35,7 +42,6 @@ def status(ctx: typer.Context):
 
     for service_name, check_func, description in services:
         with console.status(f"Checking {service_name}..."):
-            time.sleep(0.5)  # Simulate check time
             status, details = check_func()
         table.add_row(service_name, status, f"{description} - {details}")
 
@@ -49,21 +55,13 @@ def start(
     ),
 ):
     """🚀 Start system services."""
-    console.print(f"🚀 [bold green]Starting services: {services}[/bold green]")
-
-    if services in ["all", "db"]:
-        console.print("📦 Starting PostgreSQL...")
-        # Implementation would start PostgreSQL service
-
-    if services in ["all", "redis"]:
-        console.print("🔴 Starting Redis...")
-        # Implementation would start Redis service
-
-    if services in ["all", "api"]:
-        console.print("🌐 Starting API server...")
-        # Implementation would start FastAPI server
-
-    console.print("✅ [bold green]Services started successfully![/bold green]")
+    console.print("❌ [bold red]Service management is not implemented yet.[/bold red]")
+    console.print("This command would start system services but requires:")
+    console.print("  • Service management integration (systemd, docker-compose)")
+    console.print("  • Service configuration and health checks")
+    console.print("  • Proper permissions and deployment setup")
+    console.print(f"  • Requested services: {services}")
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -73,18 +71,13 @@ def stop(
     ),
 ):
     """🛑 Stop system services."""
-    console.print(f"🛑 [bold red]Stopping services: {services}[/bold red]")
-
-    if services in ["all", "api"]:
-        console.print("🌐 Stopping API server...")
-
-    if services in ["all", "redis"]:
-        console.print("🔴 Stopping Redis...")
-
-    if services in ["all", "db"]:
-        console.print("📦 Stopping PostgreSQL...")
-
-    console.print("✅ [bold green]Services stopped successfully![/bold green]")
+    console.print("❌ [bold red]Service management is not implemented yet.[/bold red]")
+    console.print("This command would stop system services but requires:")
+    console.print("  • Service management integration (systemd, docker-compose)")
+    console.print("  • Service process identification and control")
+    console.print("  • Graceful shutdown procedures")
+    console.print(f"  • Requested services: {services}")
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -94,17 +87,13 @@ def restart(
     ),
 ):
     """🔄 Restart system services."""
-    console.print(f"🔄 [bold yellow]Restarting services: {services}[/bold yellow]")
-
-    # Stop services
-    console.print("🛑 Stopping services...")
-    time.sleep(1)
-
-    # Start services
-    console.print("🚀 Starting services...")
-    time.sleep(1)
-
-    console.print("✅ [bold green]Services restarted successfully![/bold green]")
+    console.print("❌ [bold red]Service management is not implemented yet.[/bold red]")
+    console.print("This command would restart system services but requires:")
+    console.print("  • Service management integration (systemd, docker-compose)")
+    console.print("  • Coordinated stop/start procedures")
+    console.print("  • Service dependency management")
+    console.print(f"  • Requested services: {services}")
+    raise typer.Exit(1)
 
 
 @app.command()
@@ -116,55 +105,137 @@ def logs(
     lines: int = typer.Option(50, "--lines", "-n", help="Number of lines to show"),
 ):
     """📋 View system logs."""
-    if follow:
-        console.print(f"📋 [bold blue]Following logs for {service}...[/bold blue]")
-        console.print("Press Ctrl+C to stop")
-        # Implementation would tail logs
-    else:
-        console.print(f"📋 [bold blue]Last {lines} lines from {service}:[/bold blue]")
-        # Implementation would show recent logs
+    console.print("❌ [bold red]Log viewing is not implemented yet.[/bold red]")
+    console.print("This command would display service logs but requires:")
+    console.print("  • Log file location detection")
+    console.print("  • Log format parsing and filtering")
+    console.print("  • Real-time log streaming for --follow")
+    console.print(f"  • Requested service: {service}")
+    console.print(f"  • Show {lines} lines, follow: {follow}")
+    raise typer.Exit(1)
 
 
 def _check_postgres():
     """Check PostgreSQL connection."""
     try:
-        # Simulate database check
-        return "✅ Online", "Connected, pgvector loaded"
-    except Exception:
-        return "❌ Offline", "Connection failed"
+        from sejm_whiz.database import get_database_config, DatabaseManager
+
+        config = get_database_config()
+        db_manager = DatabaseManager(config)
+
+        # Test basic connectivity
+        if db_manager.test_connection():
+            # Check for pgvector extension
+            if db_manager.test_pgvector_extension():
+                return "✅ Online", "Connected, pgvector loaded"
+            else:
+                return "⚠️ Partial", "Connected, pgvector missing"
+        else:
+            return "❌ Offline", "Connection test failed"
+    except Exception as e:
+        return "❌ Offline", f"Connection failed: {str(e)}"
 
 
 def _check_redis():
     """Check Redis connection."""
     try:
-        # Simulate Redis check
-        return "✅ Online", "Connected, 0 jobs queued"
-    except Exception:
-        return "❌ Offline", "Connection failed"
+        from sejm_whiz.redis import check_redis_health, get_redis_client
+
+        # Test Redis connection health
+        health_result = check_redis_health()
+        if health_result.get("connection") and health_result.get("ping"):
+            # Get queue info
+            try:
+                client = get_redis_client()
+                queue_length = client.llen("job_queue") or 0
+                return "✅ Online", f"Connected, {queue_length} jobs queued"
+            except Exception:
+                return "✅ Online", "Connected, queue status unknown"
+        else:
+            error_msg = health_result.get("error", "Health check failed")
+            return "❌ Offline", f"Health check failed: {error_msg}"
+    except Exception as e:
+        return "❌ Offline", f"Connection failed: {str(e)}"
 
 
 def _check_api():
     """Check API server."""
     try:
-        # Simulate API check
-        return "✅ Online", "Port 8000, 0 requests/min"
-    except Exception:
-        return "❌ Offline", "Server not responding"
+        import httpx
+        import os
+
+        # Environment-aware host detection
+        cli_env = os.getenv("SEJM_WHIZ_CLI_ENV", "local")
+
+        if cli_env == "p7":
+            api_host = "p7"
+            api_port = "8001"
+        else:
+            # Default to environment variables or localhost
+            api_host = os.getenv("API_HOST", "localhost")
+            api_port = os.getenv("API_PORT", "8001")
+
+        api_url = f"http://{api_host}:{api_port}/health"
+
+        # Test API health endpoint
+        with httpx.Client(timeout=5.0) as client:
+            response = client.get(api_url)
+            if response.status_code == 200:
+                return "✅ Online", f"Host {api_host}:{api_port}, health check passed"
+            else:
+                return (
+                    "⚠️ Issues",
+                    f"Host {api_host}:{api_port}, HTTP {response.status_code}",
+                )
+
+    except Exception as e:
+        return "❌ Offline", f"Server not responding at {api_host}:{api_port}: {str(e)}"
 
 
 def _check_embeddings():
     """Check embeddings model."""
     try:
-        # Simulate model check
-        return "✅ Ready", "HerBERT model loaded"
-    except Exception:
-        return "❌ Error", "Model not available"
+        from sejm_whiz.embeddings import HerBERTEncoder
+
+        # Try to initialize the model
+        encoder = HerBERTEncoder()
+        test_text = "Test embedding"
+        embeddings = encoder.encode([test_text])
+
+        if embeddings and len(embeddings) > 0:
+            return "✅ Ready", f"HerBERT model loaded, dims: {len(embeddings[0])}"
+        else:
+            return "❌ Error", "Model failed to generate embeddings"
+
+    except ImportError:
+        return "❌ Missing", "HerBERT encoder not available"
+    except Exception as e:
+        return "❌ Error", f"Model error: {str(e)}"
 
 
 def _check_search_index():
     """Check search index."""
     try:
-        # Simulate index check
-        return "✅ Ready", "1,234 documents indexed"
-    except Exception:
-        return "❌ Error", "Index not available"
+        from sejm_whiz.database import get_database_config, DatabaseManager
+        from sqlalchemy import text
+
+        # Check document count in database
+        config = get_database_config()
+        db_manager = DatabaseManager(config)
+
+        # Count documents with embeddings
+        with db_manager.engine.connect() as conn:
+            # Simple query to count documents with embeddings
+            query = text(
+                "SELECT COUNT(*) FROM legal_documents WHERE embedding IS NOT NULL"
+            )
+            result = conn.execute(query)
+            doc_count = result.scalar() or 0
+
+        if doc_count > 0:
+            return "✅ Ready", f"{doc_count:,} documents indexed"
+        else:
+            return "⚠️ Empty", "No documents indexed yet"
+
+    except Exception as e:
+        return "❌ Error", f"Index check failed: {str(e)}"

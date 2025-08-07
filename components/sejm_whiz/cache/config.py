@@ -10,7 +10,7 @@ class CacheConfig(BaseSettings):
     """Configuration for persistent disc cache system."""
 
     # Base cache directory
-    cache_root: str = Field(default="/home/sejm-whiz/cache", env="CACHE_ROOT")
+    cache_root: str = Field(default="/var/lib/sejm-whiz/cache", env="CACHE_ROOT_DIR")
 
     # API response cache settings
     api_cache_ttl: int = Field(default=86400, env="API_CACHE_TTL")  # 24 hours
@@ -75,7 +75,7 @@ class CacheConfig(BaseSettings):
     @classmethod
     def for_baremetal(cls) -> "CacheConfig":
         """Create configuration for baremetal deployment."""
-        return cls(cache_root="/home/sejm-whiz/cache")
+        return cls(cache_root="/var/lib/sejm-whiz/cache")
 
     @classmethod
     def for_local_dev(cls) -> "CacheConfig":
@@ -87,7 +87,7 @@ def get_cache_config() -> CacheConfig:
     """Get cache configuration based on environment."""
     deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
 
-    if deployment_env == "baremetal":
+    if deployment_env in ["baremetal", "p7_baremetal", "p7"]:
         return CacheConfig.for_baremetal()
     else:
         return CacheConfig.for_local_dev()
