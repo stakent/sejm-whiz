@@ -29,7 +29,7 @@ mkdir -p "$COMPLETION_DIR"
 echo "⚙️ Generating completion script..."
 if [ "$SHELL_TYPE" = "zsh" ]; then
     # Generate zsh completion
-    uv run python cli.py --install-completion zsh > "$COMPLETION_DIR/_$CLI_NAME"
+    uv run python sejm-whiz-cli.py --install-completion zsh > "$COMPLETION_DIR/_$CLI_NAME"
     echo "✅ Zsh completion installed to: $COMPLETION_DIR/_$CLI_NAME"
 
     # Add to fpath if not already there
@@ -43,7 +43,7 @@ if [ "$SHELL_TYPE" = "zsh" ]; then
 
 elif [ "$SHELL_TYPE" = "bash" ]; then
     # Generate bash completion
-    uv run python cli.py --install-completion bash > "$COMPLETION_DIR/$CLI_NAME"
+    uv run python sejm-whiz-cli.py --install-completion bash > "$COMPLETION_DIR/$CLI_NAME"
     echo "✅ Bash completion installed to: $COMPLETION_DIR/$CLI_NAME"
 
     # Source completion in .bashrc if not already there

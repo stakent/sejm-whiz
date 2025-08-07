@@ -4,7 +4,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 from rich.syntax import Syntax
-from typing import Optional
+from typing import Optional, Union, Any
 import json
 
 console = Console()
@@ -55,7 +55,13 @@ def show(
         )
         console.print(syntax)
     elif format_output == "yaml":
-        import yaml
+        try:
+            import yaml  # type: ignore[import-untyped]
+        except ImportError:
+            console.print(
+                "❌ [bold red]PyYAML not installed. Install with: uv add pyyaml[/bold red]"
+            )
+            raise typer.Exit(1)
 
         yaml_str = yaml.dump(display_config, default_flow_style=False)
         syntax = Syntax(yaml_str, "yaml", theme="monokai", line_numbers=True)
@@ -94,6 +100,7 @@ def set(
     section, setting = key.split(".", 1)
 
     # Convert value based on type
+    typed_value: Union[str, int, float, bool]
     if config_type == "auto":
         # Auto-detect type
         if value.lower() in ["true", "false"]:
@@ -110,7 +117,7 @@ def set(
             config_type = "str"
     else:
         # Explicit type conversion
-        type_converters = {
+        type_converters: dict[str, Any] = {
             "str": str,
             "int": int,
             "bool": lambda x: x.lower() == "true",
