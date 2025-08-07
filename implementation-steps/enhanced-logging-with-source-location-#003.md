@@ -34,6 +34,7 @@ Implementation Strategy:
 ### Phase 1: Centralized Logging Configuration (30 minutes)
 
 **1.1 Create Enhanced Logging Component**
+
 - Create `components/sejm_whiz/logging/` component directory
 - Implement `enhanced_logger.py` with source location tracking
 - Add `SourceLocationFormatter` class for filename:line_number display
@@ -41,8 +42,9 @@ Implementation Strategy:
 - Create `setup_enhanced_logging()` function to replace scattered `basicConfig()` calls
 
 **1.2 Update Existing Entry Points (8 files identified)**
+
 - `enhanced_data_processor.py:551` - Replace basicConfig with setup_enhanced_logging
-- `simple_full_ingestion.py:245` - Update logging configuration  
+- `simple_full_ingestion.py:245` - Update logging configuration
 - `projects/data_processor/main.py:374` - Centralize logging setup
 - `full_2025_ingestion.py:429` - Update to use enhanced logging
 - Other ingestion scripts: `ingest_february_2024.py`, `ingest_january_2024.py`
@@ -52,32 +54,37 @@ Implementation Strategy:
 ### Phase 2: Enhanced Exception Handling (45 minutes)
 
 **2.1 ELI API Client Enhancement (client.py)**
+
 - Line 288: `logger.warning(f"Failed to parse document: {e}")` → Add document context
 - Line 330: `logger.error(f"Failed to fetch document {eli_id}: {e}")` → Add caller info
 - Line 407: `logger.error(f"Failed to fetch amendments for {eli_id}: {e}")` → Enhance
 - Line 435: `logger.error(f"Failed to fetch recent {doc_type} documents: {e}")` → Context
 - Line 536: `logger.error(f"Failed to fetch document {eli_id} in batch: {e}")` → Batch info
 
-**2.2 Sejm API Client Enhancement (sejm_api/client.py)**  
+**2.2 Sejm API Client Enhancement (sejm_api/client.py)**
+
 - Line 769: `logger.error(f"Health check failed: {e}")` → Add URL context
 - Add source location to rate limiting warnings and request errors
 - Enhance validation error messages with parameter context
 
 **2.3 Database Operations Enhancement**
+
 - `database/operations.py` - Add source location to SQL errors
-- `database/connection.py` - Enhance connection failure messages  
+- `database/connection.py` - Enhance connection failure messages
 - `vector_db/operations.py` - Add context to vector operation failures
 - Include transaction IDs and operation context in error messages
 
 ### Phase 3: Validation and Model Error Enhancement (30 minutes)
 
 **3.1 Pydantic Model Validation**
+
 - Enhance validation error handling in data models
 - Add source location context to model validation failures
 - Improve error messages for ELI document parsing errors
 - Add context about input data that caused validation failures
 
 **3.2 Configuration and Setup Errors**
+
 - Enhance configuration loading error messages
 - Add source location to environment setup failures
 - Improve error context for missing dependencies or configurations
@@ -85,11 +92,13 @@ Implementation Strategy:
 ### Phase 4: Integration and Testing (15 minutes)
 
 **4.1 CLI Integration**
+
 - Ensure enhanced logging works with Rich console output
 - Maintain readable error messages in CLI commands
 - Add debug mode with extended source location information
 
 **4.2 Performance Validation**
+
 - Benchmark logging overhead with source location tracking
 - Ensure performance impact is acceptable
 - Add configuration option to disable source location in production if needed
@@ -103,6 +112,7 @@ Technical Implementation Details:
 **Timestamp Issue**: Need to ensure timestamps are clearly visible at the start of every log message
 
 **Logging Usage Patterns Found**:
+
 - 60+ files use `logger = logging.getLogger(__name__)`
 - Multiple `logging.basicConfig()` configurations across entry points
 - Error logging in critical paths: ELI API (line 288), Sejm API, database operations
@@ -119,14 +129,14 @@ from typing import Optional
 
 class SourceLocationFormatter(logging.Formatter):
     """Custom formatter that adds relative file path and line number to log records."""
-    
+
     def format(self, record):
         # Convert absolute path to relative path from project root
         if hasattr(record, 'pathname'):
             # Find the project root (where pyproject.toml or .git exists)
             current_path = os.path.abspath(record.pathname)
             project_root = self._find_project_root(current_path)
-            
+
             if project_root:
                 # Get relative path from project root
                 try:
@@ -138,14 +148,14 @@ class SourceLocationFormatter(logging.Formatter):
                 record.filepath = os.path.basename(current_path)
         else:
             record.filepath = 'unknown'
-            
+
         return super().format(record)
-    
+
     def _find_project_root(self, start_path):
         """Find project root by looking for pyproject.toml or .git directory."""
         current_path = os.path.dirname(start_path)
         while current_path != os.path.dirname(current_path):  # Not at filesystem root
-            if (os.path.exists(os.path.join(current_path, 'pyproject.toml')) or 
+            if (os.path.exists(os.path.join(current_path, 'pyproject.toml')) or
                 os.path.exists(os.path.join(current_path, '.git'))):
                 return current_path
             current_path = os.path.dirname(current_path)
@@ -153,7 +163,7 @@ class SourceLocationFormatter(logging.Formatter):
 
 class EnhancedLogger(logging.Logger):
     """Logger that automatically includes caller context in error messages."""
-    
+
     def error(self, msg, *args, **kwargs):
         if not kwargs.get('exc_info') and not kwargs.get('stack_info'):
             # Add caller context for error messages
@@ -171,14 +181,14 @@ def setup_enhanced_logging(level=logging.INFO, include_source=True, timestamp_fo
         format_string = "%(asctime)s | %(levelname)s | %(filepath)s:%(lineno)d | %(message)s"
     else:
         format_string = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
-    
+
     logging.basicConfig(
         level=level,
         format=format_string,
         datefmt=timestamp_format,
         handlers=[logging.StreamHandler()]
     )
-    
+
     # Set our custom formatter for all handlers with timestamp format
     formatter = SourceLocationFormatter(format_string)
     formatter.datefmt = timestamp_format
@@ -207,7 +217,7 @@ def enhanced_exception_handler(func):
             frame = inspect.currentframe()
             filename = frame.f_code.co_filename
             line_number = frame.f_lineno
-            
+
             logger.error(
                 f"Exception in {func.__name__} at {os.path.basename(filename)}:{line_number}: {e}",
                 exc_info=True
@@ -222,7 +232,7 @@ def enhanced_exception_handler(func):
 # Enhanced Pydantic model with better error context
 class LegalDocument(BaseModel):
     eli_id: str
-    
+
     @validator('eli_id')
     def validate_eli_id(cls, v):
         if not v or not v.strip():
@@ -236,6 +246,7 @@ class LegalDocument(BaseModel):
 Example Enhanced Error Messages:
 
 **Before (line 288 in client.py):**
+
 ```
 2025-01-13 10:30:15 - sejm_whiz.eli_api.client - WARNING - Failed to parse document: 1 validation error for LegalDocument
 eli_id
@@ -243,6 +254,7 @@ eli_id
 ```
 
 **After with Enhanced Logging (file path format):**
+
 ```
 2025-01-13 10:30:15 | WARNING | components/sejm_whiz/eli_api/client.py:288 | Failed to parse document: 1 validation error for LegalDocument (at client.py:288)
 eli_id
@@ -251,7 +263,8 @@ eli_id
 ```
 
 **Critical Path Examples:**
-- `components/sejm_whiz/eli_api/client.py:288` - Document parsing failures in ELI API responses  
+
+- `components/sejm_whiz/eli_api/client.py:288` - Document parsing failures in ELI API responses
 - `components/sejm_whiz/eli_api/client.py:330` - Document fetch failures with ELI IDs
 - `components/sejm_whiz/eli_api/client.py:407` - Amendment fetch errors
 - `components/sejm_whiz/database/operations.py:XX` - Database operation failures
