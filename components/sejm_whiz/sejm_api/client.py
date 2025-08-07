@@ -47,6 +47,7 @@ class SejmApiClient:
         self.rate_limit_window = rate_limit_window
 
         self._client: Optional[httpx.AsyncClient] = None
+        self._last_url: str = ""  # Store for error logging
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -253,6 +254,7 @@ class SejmApiClient:
         # Validate endpoint to prevent URL manipulation
         validated_endpoint = self._validate_endpoint(endpoint)
         url = f"{self.BASE_URL}/{validated_endpoint}"
+        self._last_url = url  # Store for error logging
 
         for attempt in range(self.max_retries):
             try:
@@ -281,7 +283,7 @@ class SejmApiClient:
                     # Sanitize error message to prevent information disclosure
                     sanitized_message = self._sanitize_error_message(e.response.text)
                     raise SejmApiError(
-                        f"HTTP {e.response.status_code}: {sanitized_message}"
+                        f"HTTP {e.response.status_code}: {sanitized_message} url: {url}"
                     ) from e
 
             except httpx.RequestError as e:
@@ -291,9 +293,9 @@ class SejmApiClient:
                     await asyncio.sleep(wait_time)
                     continue
                 else:
-                    raise SejmApiError(f"Request failed: {e}") from e
+                    raise SejmApiError(f"Request failed: {e} url: {url}") from e
 
-        raise SejmApiError("Max retries exceeded")
+        raise SejmApiError(f"Max retries exceeded url: {url}")
 
     # Session and Sitting methods
 
@@ -764,5 +766,5 @@ class SejmApiClient:
             await self._make_request("current-term")
             return True
         except Exception as e:
-            logger.error(f"Health check failed: {e}")
+            logger.error(f"Health check failed: {e} url: {getattr(self, '_last_url', 'unknown')}")
             return False
