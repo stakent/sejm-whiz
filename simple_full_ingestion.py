@@ -188,6 +188,7 @@ class SimpleStorage(PipelineStep):
     def __init__(self):
         super().__init__("simple_storage")
         from sejm_whiz.database import get_database_config
+
         db_config = get_database_config()
         self.db = DocumentOperations(db_config)
         self.vector_db = VectorDBOperations()
@@ -242,12 +243,12 @@ class SimpleStorage(PipelineStep):
 async def main():
     """Main execution."""
     # Setup logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
+    # Configure enhanced logging with file paths
+    from sejm_whiz.logging import setup_enhanced_logging, get_enhanced_logger
 
-    logger = logging.getLogger("simple_full_ingestion")
+    setup_enhanced_logging(level=logging.INFO, include_source=True)
+
+    logger = get_enhanced_logger("simple_full_ingestion")
     logger.info("Starting simple full dataset ingestion")
 
     try:

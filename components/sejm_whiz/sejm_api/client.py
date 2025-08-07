@@ -2,7 +2,6 @@ import asyncio
 from typing import Dict, List, Optional, Any
 import httpx
 from datetime import datetime, date, timedelta
-import logging
 import re
 
 from .models import (
@@ -16,8 +15,9 @@ from .models import (
 )
 from .rate_limiter import rate_limit
 from .exceptions import SejmApiError, RateLimitExceeded, ValidationError
+from sejm_whiz.logging import get_enhanced_logger, add_context_to_message
 
-logger = logging.getLogger(__name__)
+logger = get_enhanced_logger(__name__)
 
 
 class SejmApiClient:
@@ -280,8 +280,17 @@ class SejmApiClient:
                     await asyncio.sleep(wait_time)
                     continue
                 else:
-                    # Sanitize error message to prevent information disclosure
+                    # Enhanced error logging with HTTP context
                     sanitized_message = self._sanitize_error_message(e.response.text)
+                    context_msg = add_context_to_message(
+                        logger,
+                        "ERROR",
+                        f"HTTP {e.response.status_code}: {sanitized_message}",
+                        status_code=e.response.status_code,
+                        api_url=url,
+                        attempt=f"{attempt + 1}/{self.max_retries}",
+                    )
+                    logger.error(context_msg)
                     raise SejmApiError(
                         f"HTTP {e.response.status_code}: {sanitized_message} url: {url}"
                     ) from e
@@ -289,12 +298,36 @@ class SejmApiClient:
             except httpx.RequestError as e:
                 if attempt < self.max_retries - 1:
                     wait_time = 2**attempt
-                    logger.warning(f"Request error {e}, retrying in {wait_time}s")
+                    context_msg = add_context_to_message(
+                        logger,
+                        "WARNING",
+                        f"Request error {e}, retrying in {wait_time}s",
+                        api_url=url,
+                        attempt=f"{attempt + 1}/{self.max_retries}",
+                        retry_delay=f"{wait_time}s",
+                    )
+                    logger.warning(context_msg)
                     await asyncio.sleep(wait_time)
                     continue
                 else:
+                    context_msg = add_context_to_message(
+                        logger,
+                        "ERROR",
+                        f"Request failed: {e}",
+                        api_url=url,
+                        max_retries=self.max_retries,
+                    )
+                    logger.error(context_msg)
                     raise SejmApiError(f"Request failed: {e} url: {url}") from e
 
+        context_msg = add_context_to_message(
+            logger,
+            "ERROR",
+            "Max retries exceeded",
+            api_url=url,
+            max_retries=self.max_retries,
+        )
+        logger.error(context_msg)
         raise SejmApiError(f"Max retries exceeded url: {url}")
 
     # Session and Sitting methods
@@ -766,5 +799,13 @@ class SejmApiClient:
             await self._make_request("current-term")
             return True
         except Exception as e:
-            logger.error(f"Health check failed: {e} url: {getattr(self, '_last_url', 'unknown')}")
+            # Enhanced error logging with health check context
+            context_msg = add_context_to_message(
+                logger,
+                "ERROR",
+                f"Health check failed: {e}",
+                api_endpoint="current-term",
+                api_url=getattr(self, "_last_url", "unknown"),
+            )
+            logger.error(context_msg)
             return False

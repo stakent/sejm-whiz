@@ -2,7 +2,6 @@
 
 import httpx
 import asyncio
-import logging
 from typing import Dict, List, Optional, Any, Union, Tuple, TYPE_CHECKING
 from datetime import datetime, timedelta
 from urllib.parse import urljoin, quote
@@ -11,11 +10,12 @@ from dataclasses import dataclass
 
 from .models import LegalDocument, Amendment, DocumentSearchResult
 from .utils import validate_eli_id, sanitize_query
+from sejm_whiz.logging import get_enhanced_logger, add_context_to_message
 
 if TYPE_CHECKING:
     from sejm_whiz.document_ingestion.config import DocumentIngestionConfig
 
-logger = logging.getLogger(__name__)
+logger = get_enhanced_logger(__name__)
 
 
 @dataclass
@@ -285,7 +285,29 @@ class EliApiClient:
                     document = LegalDocument.from_api_response(doc_data)
                     documents.append(document)
                 except Exception as e:
-                    logger.warning(f"Failed to parse document: {e}")
+                    # Enhanced error logging with context
+                    doc_title = (
+                        doc_data.get("title", "Unknown")
+                        if isinstance(doc_data, dict)
+                        else "Unknown"
+                    )
+                    doc_id = (
+                        doc_data.get("identifier", doc_data.get("eli_id", "Unknown"))
+                        if isinstance(doc_data, dict)
+                        else "Unknown"
+                    )
+                    context_msg = add_context_to_message(
+                        logger,
+                        "WARNING",
+                        f"Failed to parse document: {e}",
+                        document_title=doc_title[:50] + "..."
+                        if len(str(doc_title)) > 50
+                        else doc_title,
+                        document_id=doc_id,
+                        api_endpoint=getattr(self, "_last_url", "unknown"),
+                        total_processed=len(documents),
+                    )
+                    logger.warning(context_msg)
                     continue
 
             search_result = DocumentSearchResult(
@@ -299,9 +321,18 @@ class EliApiClient:
             return search_result
 
         except Exception as e:
-            logger.error(
-                f"Document search failed: {e} url: {getattr(self, '_last_url', 'unknown')}"
+            # Enhanced error logging with search context
+            context_msg = add_context_to_message(
+                logger,
+                "ERROR",
+                f"Document search failed: {e}",
+                search_query=query or "None",
+                date_from=date_from.strftime("%Y-%m-%d") if date_from else "None",
+                date_to=date_to.strftime("%Y-%m-%d") if date_to else "None",
+                limit=limit,
+                api_endpoint=getattr(self, "_last_url", "unknown"),
             )
+            logger.error(context_msg)
             raise
 
     async def get_document(self, eli_id: str) -> LegalDocument:
@@ -327,7 +358,15 @@ class EliApiClient:
             logger.warning(f"Document not found: {eli_id}")
             raise
         except Exception as e:
-            logger.error(f"Failed to fetch document {eli_id}: {e}")
+            # Enhanced error logging with document context
+            context_msg = add_context_to_message(
+                logger,
+                "ERROR",
+                f"Failed to fetch document {eli_id}: {e}",
+                eli_id=eli_id,
+                api_endpoint=getattr(self, "_last_url", "unknown"),
+            )
+            logger.error(context_msg)
             raise
 
     async def get_document_content(self, eli_id: str, format: str = "html") -> str:
@@ -404,7 +443,15 @@ class EliApiClient:
             logger.warning(f"No amendments found for document: {eli_id}")
             return []
         except Exception as e:
-            logger.error(f"Failed to fetch amendments for {eli_id}: {e}")
+            # Enhanced error logging with amendment context
+            context_msg = add_context_to_message(
+                logger,
+                "ERROR",
+                f"Failed to fetch amendments for {eli_id}: {e}",
+                eli_id=eli_id,
+                api_endpoint=getattr(self, "_last_url", "unknown"),
+            )
+            logger.error(context_msg)
             raise
 
     async def get_recent_documents(
@@ -432,7 +479,16 @@ class EliApiClient:
                 )
 
             except Exception as e:
-                logger.error(f"Failed to fetch recent {doc_type} documents: {e}")
+                # Enhanced error logging with document type context
+                context_msg = add_context_to_message(
+                    logger,
+                    "ERROR",
+                    f"Failed to fetch recent {doc_type} documents: {e}",
+                    document_type=doc_type,
+                    days_back=days,
+                    api_endpoint=getattr(self, "_last_url", "unknown"),
+                )
+                logger.error(context_msg)
                 continue
 
         # Sort by publication date
@@ -533,7 +589,16 @@ class EliApiClient:
                     logger.warning(f"Document not found in batch: {eli_id}")
                     return None
                 except Exception as e:
-                    logger.error(f"Failed to fetch document {eli_id} in batch: {e}")
+                    # Enhanced error logging with batch context
+                    context_msg = add_context_to_message(
+                        logger,
+                        "ERROR",
+                        f"Failed to fetch document {eli_id} in batch: {e}",
+                        eli_id=eli_id,
+                        batch_size=len(unique_eli_ids),
+                        api_endpoint=getattr(self, "_last_url", "unknown"),
+                    )
+                    logger.error(context_msg)
                     return None
 
         # Execute all requests concurrently with semaphore control
@@ -586,9 +651,16 @@ class EliApiClient:
                 return None
 
         except Exception as e:
-            logger.error(
-                f"Failed to fetch document content for {document_id}: {e} url: {getattr(self, '_last_url', 'unknown')}"
+            # Enhanced error logging with content fetch context
+            context_msg = add_context_to_message(
+                logger,
+                "ERROR",
+                f"Failed to fetch document content for {document_id}: {e}",
+                document_id=document_id,
+                document_url=document_url,
+                api_endpoint=getattr(self, "_last_url", "unknown"),
             )
+            logger.error(context_msg)
             return None
 
 
