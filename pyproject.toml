@@ -61,6 +61,7 @@ dev = [
     "commitizen>=4.8.3",
     "bumpversion>=0.6.0",
     "types-pyyaml>=6.0.12.20250516",
+    "ruff>=0.12.7",
 ]
 
 [tool.hatch.build]
