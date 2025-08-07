@@ -58,9 +58,10 @@ def documents(
                 start_date = end_date - timedelta(days=amount * 30)  # Approximate
             elif unit == "y":
                 start_date = end_date - timedelta(days=amount * 365)  # Approximate
-            console.print(
-                f"  📅 Since: {since} ago ({start_date.strftime('%Y-%m-%d')})"
-            )
+            if start_date:
+                console.print(
+                    f"  📅 Since: {since} ago ({start_date.strftime('%Y-%m-%d')})"
+                )
         else:
             console.print(
                 "❌ [bold red]Invalid --since format. Use: 1d, 1w, 1m, 1y[/bold red]"
