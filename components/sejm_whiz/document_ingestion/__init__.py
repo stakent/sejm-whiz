@@ -5,7 +5,6 @@ from sejm_whiz.eli_api.client import (
     EliApiClient as ELIClient,
     get_client as get_eli_client,
     EliApiError as ELIApiError,
-    EliRateLimitError as ELIRateLimitError,
 )
 from .text_processor import TextProcessor, ProcessedDocument, LegalStructure
 from .ingestion_pipeline import (
@@ -22,7 +21,6 @@ __all__ = [
     "ELIClient",
     "get_eli_client",
     "ELIApiError",
-    "ELIRateLimitError",
     # Text processing
     "TextProcessor",
     "ProcessedDocument",

@@ -3,7 +3,7 @@
 import httpx
 import asyncio
 import logging
-from typing import Dict, List, Optional, Any, Union, Tuple
+from typing import Dict, List, Optional, Any, Union, Tuple, TYPE_CHECKING
 from datetime import datetime, timedelta
 from urllib.parse import urljoin, quote
 import time
@@ -12,11 +12,8 @@ from dataclasses import dataclass
 from .models import LegalDocument, Amendment, DocumentSearchResult
 from .utils import validate_eli_id, sanitize_query
 
-# Import for compatibility with document ingestion
-try:
+if TYPE_CHECKING:
     from sejm_whiz.document_ingestion.config import DocumentIngestionConfig
-except ImportError:
-    DocumentIngestionConfig = None
 
 logger = logging.getLogger(__name__)
 
@@ -88,20 +85,33 @@ class RateLimiter:
 class EliApiClient:
     """Client for Polish ELI (European Legislation Identifier) API."""
 
-    def __init__(self, config: Optional[Union[EliApiConfig, 'DocumentIngestionConfig']] = None):
+    def __init__(
+        self, config: Optional[Union[EliApiConfig, "DocumentIngestionConfig"]] = None
+    ):
+        # Import for compatibility with document ingestion
+        try:
+            from sejm_whiz.document_ingestion.config import DocumentIngestionConfig
+        except ImportError:
+            DocumentIngestionConfig = None
+
         # Handle compatibility with DocumentIngestionConfig
-        if config and DocumentIngestionConfig and isinstance(config, DocumentIngestionConfig):
+        if (
+            config
+            and DocumentIngestionConfig
+            and isinstance(config, DocumentIngestionConfig)
+        ):
             # Convert DocumentIngestionConfig to EliApiConfig
             self.config = EliApiConfig(
-                base_url=getattr(config, 'eli_api_base_url', 'https://api.sejm.gov.pl'),
-                rate_limit=getattr(config, 'eli_api_rate_limit', 10),
-                timeout=getattr(config, 'eli_api_timeout', 30),
-                max_retries=getattr(config, 'eli_api_max_retries', 3),
-                user_agent=getattr(config, 'user_agent', 'sejm-whiz/1.0 (legal document analysis)')
+                base_url=getattr(config, "eli_api_base_url", "https://api.sejm.gov.pl"),
+                rate_limit=getattr(config, "eli_api_rate_limit", 10),
+                timeout=getattr(config, "eli_api_timeout", 30),
+                max_retries=getattr(config, "eli_api_max_retries", 3),
+                user_agent=getattr(
+                    config, "user_agent", "sejm-whiz/1.0 (legal document analysis)"
+                ),
             )
         else:
             self.config = config or EliApiConfig()
-        
         self._client: Optional[httpx.AsyncClient] = None
         self._rate_limiter = RateLimiter(self.config.rate_limit)
         self._last_url: str = ""
@@ -289,7 +299,9 @@ class EliApiClient:
             return search_result
 
         except Exception as e:
-            logger.error(f"Document search failed: {e} url: {getattr(self, '_last_url', 'unknown')}")
+            logger.error(
+                f"Document search failed: {e} url: {getattr(self, '_last_url', 'unknown')}"
+            )
             raise
 
     async def get_document(self, eli_id: str) -> LegalDocument:
@@ -427,7 +439,7 @@ class EliApiClient:
         all_documents.sort(key=lambda x: x.published_date or datetime.min, reverse=True)
 
         logger.info(f"Total recent documents found: {len(all_documents)}")
-        
+
         # For compatibility with document ingestion pipeline, convert to dict format
         documents_as_dicts = []
         for doc in all_documents:
@@ -436,7 +448,7 @@ class EliApiClient:
                     "id": doc.id,
                     "identifier": doc.id,
                     "title": doc.title,
-                    "url": getattr(doc, 'url', ''),
+                    "url": getattr(doc, "url", ""),
                     "document_type": doc.document_type,
                     "published_date": doc.published_date,
                     "language": doc.language,
@@ -445,7 +457,7 @@ class EliApiClient:
             except Exception as e:
                 logger.warning(f"Failed to convert document to dict format: {e}")
                 continue
-        
+
         return documents_as_dicts
 
     async def batch_get_documents(
@@ -564,15 +576,19 @@ class EliApiClient:
                 # Try other formats if HTML fails
                 for format_type in ["xml", "txt"]:
                     try:
-                        content = await self.get_document_content(document_id, format_type)
+                        content = await self.get_document_content(
+                            document_id, format_type
+                        )
                         return content, format_type, metadata
                     except Exception:
                         continue
-                
+
                 return None
 
         except Exception as e:
-            logger.error(f"Failed to fetch document content for {document_id}: {e} url: {getattr(self, '_last_url', 'unknown')}")
+            logger.error(
+                f"Failed to fetch document content for {document_id}: {e} url: {getattr(self, '_last_url', 'unknown')}"
+            )
             return None
 
 

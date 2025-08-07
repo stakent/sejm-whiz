@@ -13,7 +13,7 @@ from sejm_whiz.cache import (
 )
 
 from .config import DocumentIngestionConfig
-from .eli_client import ELIClient
+from sejm_whiz.eli_api.client import EliApiClient as ELIClient
 from .ingestion_pipeline import DocumentIngestionPipeline, IngestionPipelineError
 
 logger = logging.getLogger(__name__)
@@ -338,7 +338,7 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
                 documents = cached_search.get("documents", [])
             else:
                 logger.info(f"Searching ELI API for documents from last {days} days")
-                documents = await eli_client.search_recent_documents(days=days)
+                documents = await eli_client.get_recent_documents(days=days)
 
                 # Cache the search results
                 search_result = {"documents": documents}
