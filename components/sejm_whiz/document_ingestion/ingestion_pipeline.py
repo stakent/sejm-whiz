@@ -10,7 +10,7 @@ from sejm_whiz.database import DocumentOperations, get_database_config
 from sejm_whiz.redis import get_redis_cache, get_redis_queue, JobPriority
 
 from .config import get_ingestion_config, DocumentIngestionConfig
-from .eli_client import ELIClient
+from sejm_whiz.eli_api.client import EliApiClient as ELIClient
 from .text_processor import TextProcessor
 
 logger = logging.getLogger(__name__)

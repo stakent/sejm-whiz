@@ -82,10 +82,36 @@ class RateLimiter:
 class EliApiClient:
     """Client for Polish ELI (European Legislation Identifier) API."""
 
-    def __init__(self, config: Optional[EliApiConfig] = None):
-        self.config = config or EliApiConfig()
+    def __init__(
+        self, config: Optional[Union[EliApiConfig, "DocumentIngestionConfig"]] = None
+    ):
+        # Import for compatibility with document ingestion
+        try:
+            from sejm_whiz.document_ingestion.config import DocumentIngestionConfig
+        except ImportError:
+            DocumentIngestionConfig = None
+
+        # Handle compatibility with DocumentIngestionConfig
+        if (
+            config
+            and DocumentIngestionConfig
+            and isinstance(config, DocumentIngestionConfig)
+        ):
+            # Convert DocumentIngestionConfig to EliApiConfig
+            self.config = EliApiConfig(
+                base_url=getattr(config, "eli_api_base_url", "https://api.sejm.gov.pl"),
+                rate_limit=getattr(config, "eli_api_rate_limit", 10),
+                timeout=getattr(config, "eli_api_timeout", 30),
+                max_retries=getattr(config, "eli_api_max_retries", 3),
+                user_agent=getattr(
+                    config, "user_agent", "sejm-whiz/1.0 (legal document analysis)"
+                ),
+            )
+        else:
+            self.config = config or EliApiConfig()
         self._client: Optional[httpx.AsyncClient] = None
         self._rate_limiter = RateLimiter(self.config.rate_limit)
+        self._last_url: str = ""
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -126,6 +152,7 @@ class EliApiClient:
             endpoint = "/" + endpoint
 
         url = urljoin(self.config.base_url, endpoint)
+        self._last_url = url  # Store for error logging
 
         for attempt in range(self.config.max_retries):
             try:
@@ -269,7 +296,9 @@ class EliApiClient:
             return search_result
 
         except Exception as e:
-            logger.error(f"Document search failed: {e}")
+            logger.error(
+                f"Document search failed: {e} url: {getattr(self, '_last_url', 'unknown')}"
+            )
             raise
 
     async def get_document(self, eli_id: str) -> LegalDocument:
@@ -407,7 +436,26 @@ class EliApiClient:
         all_documents.sort(key=lambda x: x.published_date or datetime.min, reverse=True)
 
         logger.info(f"Total recent documents found: {len(all_documents)}")
-        return all_documents
+
+        # For compatibility with document ingestion pipeline, convert to dict format
+        documents_as_dicts = []
+        for doc in all_documents:
+            try:
+                doc_dict = {
+                    "id": doc.id,
+                    "identifier": doc.id,
+                    "title": doc.title,
+                    "url": getattr(doc, "url", ""),
+                    "document_type": doc.document_type,
+                    "published_date": doc.published_date,
+                    "language": doc.language,
+                }
+                documents_as_dicts.append(doc_dict)
+            except Exception as e:
+                logger.warning(f"Failed to convert document to dict format: {e}")
+                continue
+
+        return documents_as_dicts
 
     async def batch_get_documents(
         self, eli_ids: List[str], max_batch_size: int = 50, max_concurrent: int = 10
@@ -499,6 +547,46 @@ class EliApiClient:
         )
         return final_results
 
+    async def fetch_document_content(
+        self, document_id: str, document_url: str
+    ) -> Optional[Tuple[Union[str, bytes], str, Dict[str, Any]]]:
+        """Fetch document content with metadata (compatibility method for document ingestion)."""
+        try:
+            # Try to get document metadata first
+            try:
+                document = await self.get_document(document_id)
+                metadata = {
+                    "title": document.title,
+                    "document_type": document.document_type,
+                    "published_date": document.published_date,
+                    "language": document.language,
+                }
+            except Exception:
+                # If metadata fetch fails, use basic metadata
+                metadata = {"title": document_id, "document_type": "unknown"}
+
+            # Fetch content in HTML format
+            try:
+                content = await self.get_document_content(document_id, "html")
+                return content, "html", metadata
+            except EliNotFoundError:
+                # Try other formats if HTML fails
+                for format_type in ["xml", "txt"]:
+                    try:
+                        content = await self.get_document_content(
+                            document_id, format_type
+                        )
+                        return content, format_type, metadata
+                    except Exception:
+                        continue
+
+                return None
+
+        except Exception as e:
+            logger.error(
+                f"Failed to fetch document content for {document_id}: {e} url: {getattr(self, '_last_url', 'unknown')}"
+            )
+            return None
 
 # Global client instance for convenience
 _client: Optional[EliApiClient] = None

@@ -359,7 +359,9 @@ class Enhanced2025Storage(PipelineStep):
 
     def __init__(self):
         super().__init__("enhanced_2025_storage")
-        self.db = DocumentOperations()
+        from sejm_whiz.database import get_database_config
+        db_config = get_database_config()
+        self.db = DocumentOperations(db_config)
         self.vector_db = VectorDBOperations()
 
     async def process(self, data):
