@@ -84,13 +84,17 @@ def main(
     ctx.obj["config_file"] = config_file
     ctx.obj["verbose"] = verbose
 
-    # Show environment info in verbose mode
-    if verbose:
-        console.print(f"🌍 [dim]Environment: {ctx.obj['env']}[/dim]")
-        if profile:
-            console.print(f"📋 [dim]Profile: {profile}[/dim]")
-        if config_file:
-            console.print(f"⚙️ [dim]Config file: {config_file}[/dim]")
+    # Always show environment info (unless showing version or help only)
+    if ctx.invoked_subcommand is not None:
+        current_env = ctx.obj["env"]
+        env_color = _get_environment_color(current_env)
+        console.print(f"🌍 [{env_color}]Environment: {current_env}[/{env_color}]")
+        if verbose:
+            if profile:
+                console.print(f"📋 [dim]Profile: {profile}[/dim]")
+            if config_file:
+                console.print(f"⚙️ [dim]Config file: {config_file}[/dim]")
+        console.print()  # Add spacing
 
     # If no subcommand is invoked, show help
     if ctx.invoked_subcommand is None:
@@ -116,6 +120,20 @@ def _detect_environment() -> str:
         return "k8s"
     else:
         return "local"
+
+
+def _get_environment_color(env: str) -> str:
+    """Get color for environment display."""
+    color_map = {
+        "local": "cyan",
+        "dev": "blue",
+        "staging": "yellow",
+        "prod": "red",
+        "p7": "magenta",
+        "docker": "blue",
+        "k8s": "green",
+    }
+    return color_map.get(env, "white")
 
 
 @app.command()
