@@ -101,6 +101,7 @@ def main(
         console.print(ctx.get_help())
         raise typer.Exit()
 
+
 def _detect_environment() -> str:
     """Detect current environment from various sources."""
     import os
