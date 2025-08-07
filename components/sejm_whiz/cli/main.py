@@ -17,7 +17,7 @@ app = typer.Typer(
     help="🏛️ Polish Legal Document Analysis System",
     add_completion=True,
     rich_markup_mode="rich",
-    no_args_is_help=True,
+    no_args_is_help=False,
 )
 
 # Add subcommands
@@ -31,11 +31,12 @@ app.add_typer(env.app, name="env", help="🌍 Environment management")
 app.add_typer(dev.app, name="dev", help="🛠️ Development tools")
 
 
-@app.callback()
+
+@app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
     version: Optional[bool] = typer.Option(
-        None, "--version", "-v", help="Show version and exit"
+        None, "--version", help="Show version and exit"
     ),
     env: Optional[str] = typer.Option(
         None, "--env", "-e", help="Target environment (local, dev, staging, prod, p7)"
@@ -46,7 +47,9 @@ def main(
     config_file: Optional[str] = typer.Option(
         None, "--config", "-c", help="Custom configuration file path"
     ),
-    verbose: bool = typer.Option(False, "--verbose", help="Enable verbose output"),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose output"
+    ),
 ):
     """
     🏛️ **Sejm-Whiz**: Polish Legal Document Analysis System
@@ -86,6 +89,11 @@ def main(
             console.print(f"📋 [dim]Profile: {profile}[/dim]")
         if config_file:
             console.print(f"⚙️ [dim]Config file: {config_file}[/dim]")
+
+    # If no subcommand is invoked, show help
+    if ctx.invoked_subcommand is None:
+        console.print(ctx.get_help())
+        raise typer.Exit()
 
 
 def _detect_environment() -> str:

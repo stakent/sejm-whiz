@@ -226,4 +226,3 @@ sejm-whiz-cli dev complexity                        # Check complexity
 - **Complete Guide**: `CLI_README.md` - Comprehensive CLI documentation
 - **Built-in Help**: `sejm-whiz-cli help` - Quick reference and examples
 - **Command Help**: `sejm-whiz-cli COMMAND --help` - Detailed command help
-
