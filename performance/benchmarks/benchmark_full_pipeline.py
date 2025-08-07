@@ -80,7 +80,9 @@ class PipelineBenchmark:
 
         # Initialize database components
         self.vector_db = VectorDBOperations()
-        self.doc_ops = DocumentOperations()
+        from sejm_whiz.database import get_database_config
+        db_config = get_database_config()
+        self.doc_ops = DocumentOperations(db_config)
 
         # Initialize pipeline
         self.pipeline = DocumentIngestionPipeline()
