@@ -125,6 +125,8 @@ ssh root@p7 "cd /root/tmp/sejm-whiz && docker compose -f docker-compose.dev-p7.y
 ## Deployment Memories
 
 - Use `root@p7:/root/tmp/sejm-whiz-baremetal/` directory for deployments to p7
+- For p7 baremetal deployment:
+  - Use sejm-whiz linux, database user for running code, files ownership
 
 ## Git Workflow Memories
 
