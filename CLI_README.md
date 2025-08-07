@@ -9,21 +9,24 @@
 uv sync --dev
 ./scripts/install-completion.sh
 
-# Basic usage
-sejm-whiz-cli --help
-sejm-whiz-cli info
+# Basic usage (run with uv)
+uv run python uv run python sejm-whiz-cli.py.py --help
+uv run python uv run python sejm-whiz-cli.py.py info
+
+# Or create alias for convenience
+alias uv run python sejm-whiz-cli.py="uv run python ./uv run python sejm-whiz-cli.py.py"
 
 # Check system health
-sejm-whiz-cli system status
+uv run python uv run python sejm-whiz-cli.py.py system status
 
 # Start ingesting documents
-sejm-whiz-cli ingest documents --source eli --since 30d
+uv run python uv run python sejm-whiz-cli.py.py ingest documents --source eli --since 30d
 ```
 
 ## 📋 Command Overview
 
 ```
-sejm-whiz-cli
+uv run python sejm-whiz-cli.py
 ├── 📊 info             # System overview
 ├── 🔧 system           # System management
 ├── 🗄️ db               # Database operations
@@ -40,39 +43,39 @@ sejm-whiz-cli
 
 ```bash
 # Comprehensive system health check
-sejm-whiz-cli system status
+uv run python uv run python sejm-whiz-cli.py.py system status
 
 # Show system information
-sejm-whiz-cli info
+uv run python uv run python sejm-whiz-cli.py.py info
 ```
 
 ### Service Control
 
 ```bash
 # Start all services
-sejm-whiz-cli system start
+uv run python uv run python sejm-whiz-cli.py.py system start
 
 # Start specific services
-sejm-whiz-cli system start --services api,db
+uv run python uv run python sejm-whiz-cli.py.py system start --services api,db
 
 # Stop services
-sejm-whiz-cli system stop
+uv run python uv run python sejm-whiz-cli.py.py system stop
 
 # Restart services
-sejm-whiz-cli system restart
+uv run python uv run python sejm-whiz-cli.py.py system restart
 ```
 
 ### Log Management
 
 ```bash
 # View recent logs
-sejm-whiz-cli system logs
+uv run python uv run python sejm-whiz-cli.py.py system logs
 
 # Follow logs in real-time
-sejm-whiz-cli system logs --follow
+uv run python uv run python sejm-whiz-cli.py.py system logs --follow
 
 # View specific service logs
-sejm-whiz-cli system logs --service api --lines 100
+uv run python uv run python sejm-whiz-cli.py.py system logs --service api --lines 100
 ```
 
 ## 🗄️ Database Operations
@@ -81,39 +84,39 @@ sejm-whiz-cli system logs --service api --lines 100
 
 ```bash
 # Run database migrations
-sejm-whiz-cli db migrate
+uv run python uv run python sejm-whiz-cli.py.py db migrate
 
 # Migrate to specific revision
-sejm-whiz-cli db migrate --revision abc123
+uv run python sejm-whiz-cli.py db migrate --revision abc123
 ```
 
 ### Data Management
 
 ```bash
 # Seed with sample data
-sejm-whiz-cli db seed
+uv run python sejm-whiz-cli.py db seed
 
 # Seed with full dataset
-sejm-whiz-cli db seed --dataset full
+uv run python sejm-whiz-cli.py db seed --dataset full
 
 # Check database status
-sejm-whiz-cli db status
+uv run python sejm-whiz-cli.py db status
 ```
 
 ### Backup & Restore
 
 ```bash
 # Create backup
-sejm-whiz-cli db backup
+uv run python sejm-whiz-cli.py db backup
 
 # Create backup with custom name
-sejm-whiz-cli db backup --output my-backup.sql
+uv run python sejm-whiz-cli.py db backup --output my-backup.sql
 
 # Restore from backup
-sejm-whiz-cli db restore backup-file.sql
+uv run python sejm-whiz-cli.py db restore backup-file.sql
 
 # Reset database (⚠️ DANGEROUS)
-sejm-whiz-cli db reset --yes
+uv run python sejm-whiz-cli.py db reset --yes
 ```
 
 ## 📥 Data Ingestion
@@ -122,16 +125,16 @@ sejm-whiz-cli db reset --yes
 
 ```bash
 # Basic document ingestion
-sejm-whiz-cli ingest documents --source eli
+uv run python sejm-whiz-cli.py ingest documents --source eli
 
 # Ingest with date range
-sejm-whiz-cli ingest documents --from 2025-01-13 --to 2025-02-01
+uv run python sejm-whiz-cli.py ingest documents --from 2025-01-13 --to 2025-02-01
 
 # Ingest from last 30 days
-sejm-whiz-cli ingest documents --since 30d --limit 1000
+uv run python sejm-whiz-cli.py ingest documents --since 30d --limit 1000
 
 # Force re-ingestion
-sejm-whiz-cli ingest documents --force --batch-size 50
+uv run python sejm-whiz-cli.py ingest documents --force --batch-size 50
 ```
 
 #### Date Parameters
@@ -154,26 +157,26 @@ sejm-whiz-cli ingest documents --force --batch-size 50
 
 ```bash
 # Generate embeddings for new documents
-sejm-whiz-cli ingest embeddings
+uv run python sejm-whiz-cli.py ingest embeddings
 
 # Use CPU instead of GPU
-sejm-whiz-cli ingest embeddings --cpu
+uv run python sejm-whiz-cli.py ingest embeddings --cpu
 
 # Custom batch size
-sejm-whiz-cli ingest embeddings --batch-size 16 --model herbert
+uv run python sejm-whiz-cli.py ingest embeddings --batch-size 16 --model herbert
 ```
 
 ### Scheduled Jobs
 
 ```bash
 # Schedule daily ingestion
-sejm-whiz-cli ingest schedule --interval daily --time 02:00
+uv run python sejm-whiz-cli.py ingest schedule --interval daily --time 02:00
 
 # Check ingestion status
-sejm-whiz-cli ingest status
+uv run python sejm-whiz-cli.py ingest status
 
 # View ingestion logs
-sejm-whiz-cli ingest logs --follow
+uv run python sejm-whiz-cli.py ingest logs --follow
 ```
 
 ## 🔍 Search Operations
@@ -182,39 +185,39 @@ sejm-whiz-cli ingest logs --follow
 
 ```bash
 # Semantic search
-sejm-whiz-cli search query "ustawa o ochronie danych"
+uv run python sejm-whiz-cli.py search query "ustawa o ochronie danych"
 
 # Search with filters
-sejm-whiz-cli search query "RODO" --limit 20 --min-score 0.8
+uv run python sejm-whiz-cli.py search query "RODO" --limit 20 --min-score 0.8
 
 # Search specific document type
-sejm-whiz-cli search query "cyberbezpieczeństwo" --type ustawa
+uv run python sejm-whiz-cli.py search query "cyberbezpieczeństwo" --type ustawa
 ```
 
 ### Similar Documents
 
 ```bash
 # Find similar documents
-sejm-whiz-cli search similar DOC_ID_123
+uv run python sejm-whiz-cli.py search similar DOC_ID_123
 
 # Adjust similarity threshold
-sejm-whiz-cli search similar DOC_ID_123 --threshold 0.7 --limit 10
+uv run python sejm-whiz-cli.py search similar DOC_ID_123 --threshold 0.7 --limit 10
 ```
 
 ### Search Management
 
 ```bash
 # Rebuild search index
-sejm-whiz-cli search reindex
+uv run python sejm-whiz-cli.py search reindex
 
 # Force complete reindexing
-sejm-whiz-cli search reindex --force
+uv run python sejm-whiz-cli.py search reindex --force
 
 # Run search benchmarks
-sejm-whiz-cli search benchmark --queries 500 --concurrent 20
+uv run python sejm-whiz-cli.py search benchmark --queries 500 --concurrent 20
 
 # Check search system status
-sejm-whiz-cli search status
+uv run python sejm-whiz-cli.py search status
 ```
 
 ## 🤖 Model Management
@@ -223,20 +226,20 @@ sejm-whiz-cli search status
 
 ```bash
 # List available models
-sejm-whiz-cli model list
+uv run python sejm-whiz-cli.py model list
 
 # Filter by model type
-sejm-whiz-cli model list --type embedding
+uv run python sejm-whiz-cli.py model list --type embedding
 ```
 
 ### Model Training
 
 ```bash
 # Train model with default settings
-sejm-whiz-cli model train legal-classifier
+uv run python sejm-whiz-cli.py model train legal-classifier
 
 # Custom training parameters
-sejm-whiz-cli model train similarity-predictor \
+uv run python sejm-whiz-cli.py model train similarity-predictor \
   --dataset latest \
   --epochs 20 \
   --batch-size 64 \
@@ -247,17 +250,17 @@ sejm-whiz-cli model train similarity-predictor \
 
 ```bash
 # Evaluate model performance
-sejm-whiz-cli model evaluate legal-classifier \
+uv run python sejm-whiz-cli.py model evaluate legal-classifier \
   --dataset test \
   --metrics accuracy,precision,recall
 
 # Deploy model to staging
-sejm-whiz-cli model deploy legal-classifier \
+uv run python sejm-whiz-cli.py model deploy legal-classifier \
   --env staging \
   --replicas 2
 
 # Check deployment status
-sejm-whiz-cli model status --model herbert-embeddings
+uv run python sejm-whiz-cli.py model status --model herbert-embeddings
 ```
 
 ## ⚙️ Configuration Management
@@ -266,43 +269,43 @@ sejm-whiz-cli model status --model herbert-embeddings
 
 ```bash
 # Show all configuration
-sejm-whiz-cli config show
+uv run python sejm-whiz-cli.py config show
 
 # Show specific section
-sejm-whiz-cli config show --section database
+uv run python sejm-whiz-cli.py config show --section database
 
 # Export as JSON/YAML
-sejm-whiz-cli config show --format json
-sejm-whiz-cli config show --format yaml
+uv run python sejm-whiz-cli.py config show --format json
+uv run python sejm-whiz-cli.py config show --format yaml
 ```
 
 ### Update Configuration
 
 ```bash
 # Set configuration value
-sejm-whiz-cli config set database.pool_size 20
+uv run python sejm-whiz-cli.py config set database.pool_size 20
 
 # Set with explicit type
-sejm-whiz-cli config set api.debug true --type bool
+uv run python sejm-whiz-cli.py config set api.debug true --type bool
 
 # Validate configuration
-sejm-whiz-cli config validate
+uv run python sejm-whiz-cli.py config validate
 ```
 
 ### Import/Export Configuration
 
 ```bash
 # Export configuration
-sejm-whiz-cli config export --output config-backup.json
+uv run python sejm-whiz-cli.py config export --output config-backup.json
 
 # Export as environment variables
-sejm-whiz-cli config export --format env --output .env
+uv run python sejm-whiz-cli.py config export --format env --output .env
 
 # Import configuration
-sejm-whiz-cli config import config.json --merge
+uv run python sejm-whiz-cli.py config import config.json --merge
 
 # Reset to defaults
-sejm-whiz-cli config reset --section database
+uv run python sejm-whiz-cli.py config reset --section database
 ```
 
 ## 🛠️ Development Tools
@@ -311,57 +314,57 @@ sejm-whiz-cli config reset --section database
 
 ```bash
 # Run full test suite
-sejm-whiz-cli dev test
+uv run python sejm-whiz-cli.py dev test
 
 # Test specific component
-sejm-whiz-cli dev test --component embeddings
+uv run python sejm-whiz-cli.py dev test --component embeddings
 
 # Run with coverage
-sejm-whiz-cli dev test --coverage --verbose
+uv run python sejm-whiz-cli.py dev test --coverage --verbose
 ```
 
 ### Code Quality
 
 ```bash
 # Run linting
-sejm-whiz-cli dev lint
+uv run python sejm-whiz-cli.py dev lint
 
 # Auto-fix issues
-sejm-whiz-cli dev lint --fix
+uv run python sejm-whiz-cli.py dev lint --fix
 
 # Format code
-sejm-whiz-cli dev format
+uv run python sejm-whiz-cli.py dev format
 
 # Check formatting only
-sejm-whiz-cli dev format --check
+uv run python sejm-whiz-cli.py dev format --check
 ```
 
 ### Complexity Analysis
 
 ```bash
 # Check code complexity
-sejm-whiz-cli dev complexity
+uv run python sejm-whiz-cli.py dev complexity
 
 # Set complexity threshold
-sejm-whiz-cli dev complexity --threshold B
+uv run python sejm-whiz-cli.py dev complexity --threshold B
 
 # Check specific component
-sejm-whiz-cli dev complexity --component search
+uv run python sejm-whiz-cli.py dev complexity --component search
 ```
 
 ### Version Management
 
 ```bash
 # Show current version
-sejm-whiz-cli dev version show
+uv run python sejm-whiz-cli.py dev version show
 
 # Bump version
-sejm-whiz-cli dev version bump --type patch
-sejm-whiz-cli dev version bump --type minor
-sejm-whiz-cli dev version bump --type major
+uv run python sejm-whiz-cli.py dev version bump --type patch
+uv run python sejm-whiz-cli.py dev version bump --type minor
+uv run python sejm-whiz-cli.py dev version bump --type major
 
 # Create git tag
-sejm-whiz-cli dev version tag
+uv run python sejm-whiz-cli.py dev version tag
 ```
 
 ## 🐚 Shell Completion
@@ -373,22 +376,22 @@ sejm-whiz-cli dev version tag
 ./scripts/install-completion.sh
 
 # Manual installation
-sejm-whiz-cli --install-completion bash
-sejm-whiz-cli --install-completion zsh
+uv run python sejm-whiz-cli.py --install-completion bash
+uv run python sejm-whiz-cli.py --install-completion zsh
 ```
 
 ### Using Completion
 
 ```bash
 # Show all commands
-sejm-whiz-cli <TAB><TAB>
+uv run python sejm-whiz-cli.py <TAB><TAB>
 
 # Show subcommands
-sejm-whiz-cli system <TAB>
-sejm-whiz-cli db <TAB>
+uv run python sejm-whiz-cli.py system <TAB>
+uv run python sejm-whiz-cli.py db <TAB>
 
 # Complete parameters
-sejm-whiz-cli ingest documents --<TAB>
+uv run python sejm-whiz-cli.py ingest documents --<TAB>
 ```
 
 ## 🎯 Common Workflows
@@ -397,48 +400,48 @@ sejm-whiz-cli ingest documents --<TAB>
 
 ```bash
 # Morning health check
-sejm-whiz-cli system status
-sejm-whiz-cli ingest status
+uv run python sejm-whiz-cli.py system status
+uv run python sejm-whiz-cli.py ingest status
 
 # Check for new documents
-sejm-whiz-cli ingest documents --since 1d --source eli
+uv run python sejm-whiz-cli.py ingest documents --since 1d --source eli
 
 # Monitor search performance
-sejm-whiz-cli search status
+uv run python sejm-whiz-cli.py search status
 ```
 
 ### Development Workflow
 
 ```bash
 # Pre-commit checks
-sejm-whiz-cli dev test --component mycomponent
-sejm-whiz-cli dev lint --fix
-sejm-whiz-cli dev complexity
+uv run python sejm-whiz-cli.py dev test --component mycomponent
+uv run python sejm-whiz-cli.py dev lint --fix
+uv run python sejm-whiz-cli.py dev complexity
 
 # Database development
-sejm-whiz-cli db migrate
-sejm-whiz-cli db seed --dataset sample
+uv run python sejm-whiz-cli.py db migrate
+uv run python sejm-whiz-cli.py db seed --dataset sample
 
 # Model development
-sejm-whiz-cli model train my-model --epochs 5
-sejm-whiz-cli model evaluate my-model
+uv run python sejm-whiz-cli.py model train my-model --epochs 5
+uv run python sejm-whiz-cli.py model evaluate my-model
 ```
 
 ### Production Deployment
 
 ```bash
 # Pre-deployment checks
-sejm-whiz-cli config validate
-sejm-whiz-cli system status
-sejm-whiz-cli dev test
+uv run python sejm-whiz-cli.py config validate
+uv run python sejm-whiz-cli.py system status
+uv run python sejm-whiz-cli.py dev test
 
 # Deploy new model
-sejm-whiz-cli model deploy classifier-v2 --env production
-sejm-whiz-cli model status
+uv run python sejm-whiz-cli.py model deploy classifier-v2 --env production
+uv run python sejm-whiz-cli.py model status
 
 # Post-deployment verification
-sejm-whiz-cli search benchmark
-sejm-whiz-cli system logs --follow
+uv run python sejm-whiz-cli.py search benchmark
+uv run python sejm-whiz-cli.py system logs --follow
 ```
 
 ## 🚨 Troubleshooting
@@ -448,38 +451,38 @@ sejm-whiz-cli system logs --follow
 **Services not starting:**
 
 ```bash
-sejm-whiz-cli system status
-sejm-whiz-cli config validate
-sejm-whiz-cli system logs --service api
+uv run python sejm-whiz-cli.py system status
+uv run python sejm-whiz-cli.py config validate
+uv run python sejm-whiz-cli.py system logs --service api
 ```
 
 **Database connection issues:**
 
 ```bash
-sejm-whiz-cli db status
-sejm-whiz-cli config show --section database
+uv run python sejm-whiz-cli.py db status
+uv run python sejm-whiz-cli.py config show --section database
 ```
 
 **Search not working:**
 
 ```bash
-sejm-whiz-cli search status
-sejm-whiz-cli search reindex
+uv run python sejm-whiz-cli.py search status
+uv run python sejm-whiz-cli.py search reindex
 ```
 
 **Ingestion failures:**
 
 ```bash
-sejm-whiz-cli ingest status
-sejm-whiz-cli ingest logs --lines 100
+uv run python sejm-whiz-cli.py ingest status
+uv run python sejm-whiz-cli.py ingest logs --lines 100
 ```
 
 ### Debug Mode
 
 ```bash
 # Enable verbose output for any command
-sejm-whiz-cli --verbose system status
-sejm-whiz-cli --verbose ingest documents --source eli
+uv run python sejm-whiz-cli.py --verbose system status
+uv run python sejm-whiz-cli.py --verbose ingest documents --source eli
 ```
 
 ## 🔗 Integration Examples
@@ -488,10 +491,10 @@ sejm-whiz-cli --verbose ingest documents --source eli
 
 ```bash
 # Daily ingestion at 2 AM
-0 2 * * * /path/to/venv/bin/sejm-whiz-cli ingest documents --since 1d
+0 2 * * * /path/to/venv/bin/uv run python sejm-whiz-cli.py ingest documents --since 1d
 
 # Weekly full reindex on Sunday
-0 3 * * 0 /path/to/venv/bin/sejm-whiz-cli search reindex
+0 3 * * 0 /path/to/venv/bin/uv run python sejm-whiz-cli.py search reindex
 ```
 
 ### CI/CD Pipeline
@@ -499,35 +502,35 @@ sejm-whiz-cli --verbose ingest documents --source eli
 ```bash
 #!/bin/bash
 # Pre-deployment script
-sejm-whiz-cli config validate
-sejm-whiz-cli dev test
-sejm-whiz-cli dev lint
-sejm-whiz-cli dev complexity --threshold B
+uv run python sejm-whiz-cli.py config validate
+uv run python sejm-whiz-cli.py dev test
+uv run python sejm-whiz-cli.py dev lint
+uv run python sejm-whiz-cli.py dev complexity --threshold B
 ```
 
 ### Docker Integration
 
 ```dockerfile
 # Add CLI to Docker image
-COPY sejm-whiz-cli.py /usr/local/bin/sejm-whiz-cli
-RUN chmod +x /usr/local/bin/sejm-whiz-cli
+COPY uv run python sejm-whiz-cli.py.py /usr/local/bin/uv run python sejm-whiz-cli.py
+RUN chmod +x /usr/local/bin/uv run python sejm-whiz-cli.py
 
 # Health check
-HEALTHCHECK CMD sejm-whiz-cli system status || exit 1
+HEALTHCHECK CMD uv run python sejm-whiz-cli.py system status || exit 1
 ```
 
 ## 📚 Additional Resources
 
 - **API Documentation**: `/docs` endpoint when API server is running
-- **Configuration Schema**: `sejm-whiz-cli config show --format yaml`
-- **Component Architecture**: `sejm-whiz-cli info`
-- **Performance Metrics**: `sejm-whiz-cli search benchmark`
+- **Configuration Schema**: `uv run python sejm-whiz-cli.py config show --format yaml`
+- **Component Architecture**: `uv run python sejm-whiz-cli.py info`
+- **Performance Metrics**: `uv run python sejm-whiz-cli.py search benchmark`
 
 ## 💡 Tips & Best Practices
 
-1. **Always validate configuration** before deploying: `sejm-whiz-cli config validate`
+1. **Always validate configuration** before deploying: `uv run python sejm-whiz-cli.py config validate`
 1. **Use date filtering** for efficient ingestion: `--since 1d` instead of full ingestion
-1. **Monitor system health** regularly: `sejm-whiz-cli system status`
+1. **Monitor system health** regularly: `uv run python sejm-whiz-cli.py system status`
 1. **Set up shell completion** for faster workflow: `./scripts/install-completion.sh`
 1. **Use batch processing** for large operations: `--batch-size 100`
 1. **Check logs** when troubleshooting: `--follow` for real-time monitoring
@@ -537,6 +540,6 @@ ______________________________________________________________________
 *For additional help on any command, use `--help`:*
 
 ```bash
-sejm-whiz-cli COMMAND --help
-sejm-whiz-cli COMMAND SUBCOMMAND --help
+uv run python sejm-whiz-cli.py COMMAND --help
+uv run python sejm-whiz-cli.py COMMAND SUBCOMMAND --help
 ```
