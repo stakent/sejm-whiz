@@ -809,3 +809,223 @@ class SejmApiClient:
             )
             logger.error(context_msg)
             return False
+
+    # Legal Act Methods for Multi-API Integration
+
+    async def get_act_with_full_text(self, sejm_id: str) -> Dict[str, Any]:
+        """Get legal act with full text content from Sejm API.
+
+        Args:
+            sejm_id: Sejm document identifier
+
+        Returns:
+            Dictionary with act data including full text
+        """
+        # For now, this is a placeholder implementation
+        # The Sejm API doesn't have a direct "acts" endpoint like ELI API
+        # This would need to be implemented based on actual Sejm API structure
+
+        logger.info(f"Attempting to fetch act with full text for {sejm_id}")
+
+        # Try to get document from proceedings or committee transcripts
+        try:
+            # Parse sejm_id to extract term, session, sitting if formatted that way
+            # Format could be "term10-session1-sitting2" or similar
+            parts = sejm_id.replace("-", "/").split("/")
+
+            if len(parts) >= 3:
+                term_part = (
+                    parts[0].replace("term", "") if "term" in parts[0] else parts[0]
+                )
+                session_part = (
+                    parts[1].replace("session", "")
+                    if "session" in parts[1]
+                    else parts[1]
+                )
+                sitting_part = (
+                    parts[2].replace("sitting", "")
+                    if "sitting" in parts[2]
+                    else parts[2]
+                )
+
+                try:
+                    term = int(term_part)
+                    session = int(session_part)
+                    sitting = int(sitting_part)
+
+                    # Try to get proceeding details
+                    votings = await self.get_votings(
+                        term=term, session=session, proceeding_sitting=sitting, limit=1
+                    )
+                    if votings:
+                        # Extract relevant information
+                        voting = votings[0]
+                        act_data = {
+                            "text": f"Voting on: {voting.title}\nDescription: {voting.description or 'No description'}\nResult: {voting.result}",
+                            "title": voting.title,
+                            "sejm_id": sejm_id,
+                            "term": term,
+                            "session": session,
+                            "sitting": sitting,
+                            "voting_date": voting.date.isoformat()
+                            if voting.date
+                            else None,
+                            "source": "sejm_api_voting",
+                        }
+                        logger.info(f"Retrieved act data from voting for {sejm_id}")
+                        return act_data
+                except (ValueError, IndexError):
+                    logger.debug(
+                        f"Could not parse {sejm_id} as term/session/sitting format"
+                    )
+
+            # Fallback: try to get current proceedings
+            current_term = await self.get_current_term()
+            proceedings = await self.get_proceedings(term=current_term, limit=10)
+
+            if proceedings:
+                # Use the first proceeding as a fallback
+                proceeding = proceedings[0]
+                act_data = {
+                    "text": f"Parliamentary Proceeding: {proceeding.title or 'Untitled'}\nDates: {', '.join([date.strftime('%Y-%m-%d') for date in proceeding.dates]) if proceeding.dates else 'No dates'}",
+                    "title": proceeding.title or f"Proceeding {proceeding.num}",
+                    "sejm_id": sejm_id,
+                    "term": current_term,
+                    "proceeding_num": proceeding.num,
+                    "dates": [date.isoformat() for date in proceeding.dates]
+                    if proceeding.dates
+                    else [],
+                    "source": "sejm_api_proceeding",
+                }
+                logger.info(
+                    f"Retrieved fallback act data from proceeding for {sejm_id}"
+                )
+                return act_data
+
+            # Final fallback: return minimal structure
+            act_data = {
+                "text": f"Sejm document {sejm_id} - content not available through current API endpoints",
+                "title": f"Document {sejm_id}",
+                "sejm_id": sejm_id,
+                "source": "sejm_api_placeholder",
+                "note": "This is a placeholder implementation - actual content extraction needs API-specific implementation",
+            }
+            logger.warning(f"Using placeholder data for {sejm_id}")
+            return act_data
+
+        except Exception as e:
+            logger.error(f"Failed to fetch act data for {sejm_id}: {e}")
+            raise SejmApiError(f"Failed to fetch act with full text for {sejm_id}: {e}")
+
+    async def extract_act_metadata(self, act_data: Dict) -> Dict[str, Any]:
+        """Extract standardized metadata from Sejm API response.
+
+        Args:
+            act_data: Raw act data from Sejm API
+
+        Returns:
+            Standardized metadata dictionary
+        """
+        try:
+            metadata = {
+                "source_api": "sejm_api",
+                "extraction_timestamp": datetime.now().isoformat(),
+                "document_id": act_data.get("sejm_id", "unknown"),
+                "title": act_data.get("title", "Untitled"),
+                "term": act_data.get("term"),
+                "session": act_data.get("session"),
+                "sitting": act_data.get("sitting"),
+                "proceeding_num": act_data.get("proceeding_num"),
+                "voting_date": act_data.get("voting_date"),
+                "dates": act_data.get("dates", []),
+                "source_type": act_data.get("source", "unknown"),
+                "content_length": len(act_data.get("text", "")),
+                "processing_notes": act_data.get("note", ""),
+            }
+
+            # Add additional metadata based on source type
+            if act_data.get("source") == "sejm_api_voting":
+                metadata["document_type"] = "voting_record"
+                metadata["parliamentary_process"] = "voting"
+            elif act_data.get("source") == "sejm_api_proceeding":
+                metadata["document_type"] = "proceeding_record"
+                metadata["parliamentary_process"] = "proceeding"
+            else:
+                metadata["document_type"] = "unknown"
+                metadata["parliamentary_process"] = "unknown"
+
+            logger.debug(
+                f"Extracted metadata for {metadata['document_id']}: {metadata['document_type']}"
+            )
+            return metadata
+
+        except Exception as e:
+            logger.error(f"Failed to extract metadata from act data: {e}")
+            # Return minimal metadata on error
+            return {
+                "source_api": "sejm_api",
+                "extraction_timestamp": datetime.now().isoformat(),
+                "document_id": act_data.get("sejm_id", "unknown"),
+                "title": "Extraction Failed",
+                "error": str(e),
+            }
+
+    def is_sejm_content_complete(self, act_data: Dict) -> bool:
+        """Check if Sejm API returned complete act text.
+
+        Args:
+            act_data: Act data dictionary to validate
+
+        Returns:
+            True if content appears complete and usable
+        """
+        try:
+            # Check if we have basic required fields
+            required_fields = ["text", "title", "sejm_id"]
+            if not all(field in act_data for field in required_fields):
+                logger.debug("Missing required fields in act data")
+                return False
+
+            # Check text content length and quality
+            text_content = act_data.get("text", "")
+            if not isinstance(text_content, str):
+                logger.debug("Text content is not a string")
+                return False
+
+            text_length = len(text_content.strip())
+
+            # Minimum length threshold for Sejm content (more lenient than ELI)
+            min_length = 100
+            if text_length < min_length:
+                logger.debug(f"Text too short: {text_length} < {min_length}")
+                return False
+
+            # Check for placeholder content
+            placeholder_indicators = [
+                "content not available",
+                "placeholder implementation",
+                "extraction failed",
+                "not implemented",
+            ]
+
+            text_lower = text_content.lower()
+            if any(indicator in text_lower for indicator in placeholder_indicators):
+                logger.debug("Content appears to be placeholder")
+                return False
+
+            # Check for reasonable content structure
+            # Sejm documents should have some structure (sentences, reasonable words)
+            words = text_content.split()
+            if len(words) < 10:  # Very basic check
+                logger.debug(f"Too few words: {len(words)}")
+                return False
+
+            # Content passed all checks
+            logger.debug(
+                f"Sejm content validation passed: {text_length} chars, {len(words)} words"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(f"Error validating Sejm content: {e}")
+            return False

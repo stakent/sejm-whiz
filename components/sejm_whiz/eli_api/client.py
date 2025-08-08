@@ -10,6 +10,8 @@ from dataclasses import dataclass
 
 from .models import LegalDocument, Amendment, DocumentSearchResult
 from .utils import validate_eli_id, sanitize_query
+from .pdf_converter import BasicPDFConverter
+from .content_validator import BasicContentValidator
 from sejm_whiz.logging import get_enhanced_logger, add_context_to_message
 
 if TYPE_CHECKING:
@@ -115,6 +117,10 @@ class EliApiClient:
         self._client: Optional[httpx.AsyncClient] = None
         self._rate_limiter = RateLimiter(self.config.rate_limit)
         self._last_url: str = ""
+
+        # Initialize PDF converter and content validator for fallback
+        self.pdf_converter = BasicPDFConverter()
+        self.content_validator = BasicContentValidator()
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -418,6 +424,142 @@ class EliApiClient:
         except Exception as e:
             logger.error(f"Failed to fetch content for {eli_id}: {e}")
             raise
+
+    async def get_document_content_with_basic_fallback(
+        self, eli_id: str
+    ) -> Dict[str, Any]:
+        """Get document content with simple HTML→PDF fallback.
+
+        Args:
+            eli_id: ELI identifier for the document
+
+        Returns:
+            Dictionary with content, source, and usability information
+        """
+        result = {"eli_id": eli_id, "content": "", "source": "none", "usable": False}
+
+        # 1. Try HTML first
+        try:
+            html_content = await self.get_document_content(eli_id, "html")
+            if self.content_validator.is_html_content_usable(html_content):
+                result.update(
+                    {"content": html_content, "source": "html", "usable": True}
+                )
+                logger.info(
+                    f"HTML content retrieved for {eli_id}: {len(html_content)} chars"
+                )
+                return result
+            else:
+                logger.debug(
+                    f"HTML content for {eli_id} failed validation (too short or low quality)"
+                )
+        except Exception as e:
+            logger.warning(f"HTML fetch failed for {eli_id}: {e}")
+
+        # 2. Try PDF fallback (simplified)
+        try:
+            pdf_content = await self.get_document_content(eli_id, "pdf")
+            if pdf_content:  # PDF endpoint returns bytes, but our method returns text
+                # The get_document_content method returns text, but for PDF we need bytes
+                # Let's get the raw PDF content instead
+                pdf_bytes = await self._get_document_content_raw(eli_id, "pdf")
+                if pdf_bytes:
+                    text = await self.pdf_converter.convert_pdf_to_text(pdf_bytes)
+                    if self.content_validator.is_pdf_text_usable(text):
+                        result.update(
+                            {"content": text, "source": "pdf", "usable": True}
+                        )
+                        logger.info(
+                            f"PDF content converted for {eli_id}: {len(text)} chars"
+                        )
+                        return result
+                    else:
+                        logger.debug(
+                            f"PDF text for {eli_id} failed validation (too short or low quality)"
+                        )
+        except Exception as e:
+            logger.warning(f"PDF conversion failed for {eli_id}: {e}")
+
+        # 3. Mark as pending (no manual queue for interim goal)
+        logger.info(f"No usable content found for {eli_id} - marking as pending")
+        return result
+
+    async def _get_document_content_raw(
+        self, eli_id: str, format: str = "pdf"
+    ) -> Optional[bytes]:
+        """Get raw document content as bytes (for PDF processing).
+
+        Args:
+            eli_id: ELI identifier
+            format: Content format ('pdf', 'html', etc.)
+
+        Returns:
+            Raw content as bytes, or None if not found
+        """
+        # Validate inputs
+        if not validate_eli_id(eli_id):
+            raise EliValidationError(f"Invalid ELI ID format: {eli_id}")
+
+        valid_formats = ["html", "xml", "txt", "pdf"]
+        if format not in valid_formats:
+            raise EliValidationError(
+                f"Invalid format: {format}. Must be one of {valid_formats}"
+            )
+
+        # Parse ELI ID to extract publisher, year, position
+        parts = eli_id.split("/")
+        if len(parts) != 3:
+            raise EliValidationError(f"Invalid ELI ID format: {eli_id}")
+
+        publisher, year, position = parts
+
+        # Map format to correct endpoint suffix
+        format_map = {
+            "html": "text.html",
+            "pdf": "text.pdf",
+            "xml": "text.xml",
+            "txt": "text.txt",
+        }
+        text_format = format_map.get(format, "text.pdf")
+
+        endpoint = f"/eli/acts/{publisher}/{year}/{position}/{text_format}"
+
+        try:
+            await self._rate_limiter.acquire()
+            await self._ensure_client()
+
+            url = urljoin(self.config.base_url, endpoint)
+
+            # Use appropriate headers for binary content
+            if format == "pdf":
+                content_headers = {
+                    "Accept": "application/pdf,*/*",
+                    "User-Agent": self.config.user_agent,
+                }
+            else:
+                content_headers = {
+                    "Accept": "text/html,text/plain,application/xml,*/*",
+                    "User-Agent": self.config.user_agent,
+                }
+
+            response = await self._client.get(url, headers=content_headers)
+
+            if response.status_code == 404:
+                logger.debug(f"Raw content not found for {eli_id} in format {format}")
+                return None
+
+            response.raise_for_status()
+
+            content_bytes = response.content
+            logger.debug(
+                f"Retrieved raw {format} content for {eli_id}: {len(content_bytes)} bytes"
+            )
+
+            return content_bytes
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch raw {format} content for {eli_id}: {e}")
+            return None
 
     async def get_document_amendments(self, eli_id: str) -> List[Amendment]:
         """Get amendments for a specific document."""
