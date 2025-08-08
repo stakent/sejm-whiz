@@ -14,7 +14,9 @@ from sejm_whiz.cache import (
 
 from .config import DocumentIngestionConfig
 from sejm_whiz.eli_api.client import EliApiClient as ELIClient
+from sejm_whiz.sejm_api.client import SejmApiClient
 from .ingestion_pipeline import DocumentIngestionPipeline, IngestionPipelineError
+from .multi_api_pipeline import MultiApiDocumentProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +39,18 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
             text_cache=self.text_cache,
         )
 
-        logger.info("Cached document ingestion pipeline initialized")
+        # Initialize multi-API processor with clients
+        self.eli_client = ELIClient(config)
+        self.sejm_client = SejmApiClient()
+        self.multi_api_processor = MultiApiDocumentProcessor(
+            sejm_client=self.sejm_client,
+            eli_client=self.eli_client,
+            content_validator=self.eli_client.content_validator,
+        )
+
+        logger.info(
+            "Cached document ingestion pipeline initialized with multi-API support"
+        )
 
     async def _fetch_document_with_cache(
         self, eli_client: ELIClient, document_id: str, document_url: str
@@ -171,6 +184,241 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
         )
 
         return processed_doc.content
+
+    async def process_document_multi_api(
+        self, document_id: str, preferred_source: str = "auto"
+    ) -> Dict[str, Any]:
+        """Process a document using multi-API approach with caching.
+
+        Args:
+            document_id: Document identifier to process
+            preferred_source: "sejm", "eli", or "auto" for automatic selection
+
+        Returns:
+            Processing result with content and metadata
+        """
+        result = {
+            "document_id": document_id,
+            "status": "processing",
+            "source_used": "none",
+            "processing_time_ms": 0,
+            "cache_hits": {},
+        }
+
+        start_time = asyncio.get_event_loop().time()
+
+        try:
+            # Check cache for multi-API processed result
+            cached_result = self.cache_manager.get_cached_api_response(
+                "multi_api",
+                "document_process",
+                {"document_id": document_id, "source": preferred_source},
+            )
+
+            if cached_result:
+                logger.info(f"Using cached multi-API result for {document_id}")
+                result.update(cached_result)
+                result["cache_hits"]["multi_api_result"] = True
+                return result
+
+            # Process using multi-API processor
+            logger.info(
+                f"Processing {document_id} with multi-API processor (preferred: {preferred_source})"
+            )
+
+            # Choose processing method based on preferred source
+            if preferred_source == "sejm":
+                # Try Sejm API first
+                multi_result = await self.multi_api_processor._try_sejm_api(document_id)
+            elif preferred_source == "eli":
+                # Try ELI API first
+                multi_result = (
+                    await self.multi_api_processor._try_eli_api_with_fallback(
+                        document_id
+                    )
+                )
+            else:
+                # Use automatic source selection
+                multi_result = (
+                    await self.multi_api_processor.process_document_from_any_source(
+                        document_id
+                    )
+                )
+
+            if multi_result.success:
+                result.update(
+                    {
+                        "status": "completed",
+                        "act_text": multi_result.act_text,
+                        "metadata": multi_result.metadata,
+                        "source_used": multi_result.source_used,
+                        "content_quality_score": multi_result.content_quality_score,
+                        "text_length": len(multi_result.act_text),
+                        "api_processing_time": multi_result.processing_time,
+                    }
+                )
+
+                # Cache the successful result
+                cache_data = {
+                    "status": "completed",
+                    "act_text": multi_result.act_text,
+                    "metadata": multi_result.metadata,
+                    "source_used": multi_result.source_used,
+                    "content_quality_score": multi_result.content_quality_score,
+                    "text_length": len(multi_result.act_text),
+                }
+                self.cache_manager.cache_api_response(
+                    "multi_api",
+                    "document_process",
+                    {"document_id": document_id, "source": preferred_source},
+                    cache_data,
+                )
+
+                logger.info(
+                    f"Successfully processed {document_id} via {multi_result.source_used}"
+                )
+
+            else:
+                result.update(
+                    {
+                        "status": "failed",
+                        "reason": multi_result.error_message
+                        or "multi_api_processing_failed",
+                        "source_used": multi_result.source_used,
+                    }
+                )
+                logger.warning(
+                    f"Multi-API processing failed for {document_id}: {multi_result.error_message}"
+                )
+
+        except Exception as e:
+            logger.error(f"Multi-API document processing failed for {document_id}: {e}")
+            result.update(
+                {
+                    "status": "failed",
+                    "reason": str(e),
+                    "error_type": "multi_api_exception",
+                }
+            )
+
+        finally:
+            end_time = asyncio.get_event_loop().time()
+            result["processing_time_ms"] = (end_time - start_time) * 1000
+
+        return result
+
+    async def ingest_documents_multi_source(
+        self,
+        document_ids: list,
+        preferred_source: str = "auto",
+        enable_fallback: bool = True,
+    ) -> Dict[str, Any]:
+        """Ingest documents from multiple sources with fallback support.
+
+        Args:
+            document_ids: List of document IDs to process
+            preferred_source: "sejm", "eli", or "auto" for source preference
+            enable_fallback: Whether to enable cross-API fallback
+
+        Returns:
+            Ingestion statistics and results
+        """
+        logger.info(f"Starting multi-source ingestion of {len(document_ids)} documents")
+        logger.info(
+            f"Preferred source: {preferred_source}, Fallback enabled: {enable_fallback}"
+        )
+
+        stats = {
+            "start_time": datetime.now(UTC),
+            "documents_processed": 0,
+            "documents_successful": 0,
+            "documents_failed": 0,
+            "documents_cached": 0,
+            "source_breakdown": {
+                "sejm_api": 0,
+                "eli_api_html": 0,
+                "eli_api_pdf": 0,
+                "failed": 0,
+            },
+            "results": [],
+        }
+
+        # Process documents with concurrency control
+        semaphore = asyncio.Semaphore(self.config.parallel_workers)
+
+        async def process_with_semaphore(doc_id):
+            async with semaphore:
+                return await self.process_document_multi_api(doc_id, preferred_source)
+
+        try:
+            # Process all documents
+            tasks = [process_with_semaphore(doc_id) for doc_id in document_ids]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Collect statistics
+            for i, result in enumerate(results):
+                stats["documents_processed"] += 1
+
+                if isinstance(result, Exception):
+                    logger.error(
+                        f"Document {document_ids[i]} processing exception: {result}"
+                    )
+                    stats["documents_failed"] += 1
+                    stats["source_breakdown"]["failed"] += 1
+                    stats["results"].append(
+                        {
+                            "document_id": document_ids[i],
+                            "status": "exception",
+                            "error": str(result),
+                        }
+                    )
+                elif isinstance(result, dict):
+                    stats["results"].append(result)
+
+                    if result.get("status") == "completed":
+                        stats["documents_successful"] += 1
+
+                        # Track source usage
+                        source_used = result.get("source_used", "unknown")
+                        if "sejm" in source_used:
+                            stats["source_breakdown"]["sejm_api"] += 1
+                        elif "eli_api_html" in source_used:
+                            stats["source_breakdown"]["eli_api_html"] += 1
+                        elif "eli_api_pdf" in source_used:
+                            stats["source_breakdown"]["eli_api_pdf"] += 1
+
+                        # Track cache hits
+                        if result.get("cache_hits", {}).get("multi_api_result"):
+                            stats["documents_cached"] += 1
+
+                    elif result.get("status") == "failed":
+                        stats["documents_failed"] += 1
+                        stats["source_breakdown"]["failed"] += 1
+
+        except Exception as e:
+            logger.error(f"Multi-source document ingestion failed: {e}")
+            raise IngestionPipelineError(f"Multi-source ingestion failed: {e}")
+
+        finally:
+            stats["end_time"] = datetime.now(UTC)
+            stats["total_time_seconds"] = (
+                stats["end_time"] - stats["start_time"]
+            ).total_seconds()
+
+        # Calculate success rate
+        if stats["documents_processed"] > 0:
+            stats["success_rate"] = (
+                stats["documents_successful"] / stats["documents_processed"]
+            )
+        else:
+            stats["success_rate"] = 0.0
+
+        logger.info(
+            f"Multi-source ingestion completed: {stats['documents_successful']}/{stats['documents_processed']} successful"
+        )
+        logger.info(f"Source breakdown: {stats['source_breakdown']}")
+
+        return stats
 
     async def process_document(
         self, document_metadata: Dict[str, Any], eli_client: ELIClient
