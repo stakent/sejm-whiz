@@ -135,7 +135,14 @@ db_config = None  # Will be set on first access
 
 def get_database_config() -> DatabaseConfig:
     """Get database configuration based on environment."""
-    # Check CLI environment first (from --env flag)
+    import socket
+
+    # Check hostname FIRST (most reliable indicator)
+    hostname = socket.gethostname()
+    if hostname == "p7":
+        return DatabaseConfig.for_p7()
+
+    # Check CLI environment (from --env flag)
     cli_env = os.getenv("SEJM_WHIZ_CLI_ENV", "")
     deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
 

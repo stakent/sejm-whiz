@@ -116,6 +116,61 @@ class DocumentOperations:
             )
 
     @staticmethod
+    def create_document_with_raw_content(
+        title: str,
+        content: str,  # Preferred content (PDF or HTML based on priority)
+        document_type: str,
+        eli_identifier: Optional[str] = None,
+        pdf_raw_content: Optional[bytes] = None,
+        html_raw_content: Optional[str] = None,
+        pdf_extracted_text: Optional[str] = None,
+        html_extracted_text: Optional[str] = None,
+        preferred_source: str = "pdf",
+        embedding: Optional[List[float]] = None,
+        **kwargs,
+    ) -> UUID:
+        """Create a new legal document with raw and extracted content storage.
+
+        This method enables future reprocessing with improved extraction methods
+        and supports LLM-assisted processing of complex document layouts.
+
+        Args:
+            title: Document title
+            content: Preferred content (from PDF or HTML based on priority)
+            document_type: Type of legal document
+            eli_identifier: ELI API identifier
+            pdf_raw_content: Raw PDF bytes from ELI API
+            html_raw_content: Raw HTML content from ELI API
+            pdf_extracted_text: Text extracted from PDF
+            html_extracted_text: Text extracted from HTML
+            preferred_source: Which source was used for content field ('pdf' or 'html')
+            embedding: Document embedding vector
+            **kwargs: Additional fields for the document
+
+        Returns:
+            UUID of the created document
+        """
+        with get_db_session() as session:
+            document = LegalDocument(
+                title=title,
+                content=content,
+                document_type=document_type,
+                eli_identifier=eli_identifier,
+                pdf_raw_content=pdf_raw_content,
+                html_raw_content=html_raw_content,
+                pdf_extracted_text=pdf_extracted_text,
+                html_extracted_text=html_extracted_text,
+                preferred_source=preferred_source,
+                embedding=embedding,
+                **kwargs,
+            )
+            session.add(document)
+            session.flush()
+            session.refresh(document)
+            document_id = document.id
+            return document_id
+
+    @staticmethod
     def store_legal_document(
         eli_identifier: str,
         title: str,

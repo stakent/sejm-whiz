@@ -207,8 +207,30 @@ def config(
 def _get_current_environment() -> str:
     """Get the currently active environment."""
     # Check command line context first (passed from main callback)
-    # Fall back to environment variable or detection
-    return os.getenv("SEJM_WHIZ_ENV", "local")
+    # Fall back to environment variable or detection (check DEPLOYMENT_ENV first for consistency)
+    return (
+        os.getenv("DEPLOYMENT_ENV")
+        or os.getenv("SEJM_WHIZ_ENV")
+        or _detect_environment_by_host()
+    )
+
+
+def _detect_environment_by_host() -> str:
+    """Detect environment by hostname and system indicators."""
+    import socket
+
+    # Check hostname FIRST (most reliable indicator)
+    hostname = socket.gethostname()
+    if hostname == "p7":
+        return "p7"
+
+    # Check for other deployment-specific indicators
+    if os.path.exists("/app"):
+        return "docker"
+    elif os.getenv("KUBERNETES_SERVICE_HOST"):
+        return "k8s"
+    else:
+        return "local"
 
 
 def _get_environment_config(env_name: str) -> dict:
@@ -244,8 +266,8 @@ def _get_environment_config(env_name: str) -> dict:
         },
         "p7": {
             "api_url": "http://p7:8001",
-            "database_url": "postgresql://localhost:5433/sejm_whiz",
-            "redis_url": "redis://localhost:6379",
+            "database_url": "postgresql://p7:5432/sejm_whiz",
+            "redis_url": "redis://p7:6379",
             "log_level": "INFO",
             "gpu_enabled": True,
         },

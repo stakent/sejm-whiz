@@ -220,10 +220,11 @@ sudo -u sejm-whiz /opt/sejm-whiz/.local/bin/uv run alembic upgrade head
 ```bash
 cd /opt/sejm-whiz
 sudo -u sejm-whiz /opt/sejm-whiz/.local/bin/uv run python -c "
-from sejm_whiz.database import DocumentOperations
+from sejm_whiz.database import DocumentOperations, get_database_config
 from sejm_whiz.vector_db import VectorDBOperations
 print('Testing database connections...')
-db = DocumentOperations()
+db_config = get_database_config()
+db = DocumentOperations(db_config)
 print('✅ Document operations initialized')
 vector_db = VectorDBOperations()
 print('✅ Vector DB operations initialized')
@@ -251,7 +252,7 @@ redis-cli ping  # Should return "PONG"
 ## Service Ports
 
 - **PostgreSQL**: 5432 (internal)
-- **Redis**: 6379 (internal) 
+- **Redis**: 6379 (internal)
 - **API Server**: 8001 (external)
 - **Web UI**: 8002 (external)
 
@@ -270,19 +271,19 @@ redis-cli ping  # Should return "PONG"
 After completing these steps, you can:
 
 1. **Deploy services**: Use the deployment scripts in `deployments/baremetal/scripts/`
-2. **Test pipeline**: Run the data processing pipeline
-3. **Set up monitoring**: Configure systemd services for automatic startup
-4. **Production hardening**: Additional security configurations as needed
+1. **Test pipeline**: Run the data processing pipeline
+1. **Set up monitoring**: Configure systemd services for automatic startup
+1. **Production hardening**: Additional security configurations as needed
 
 ## Troubleshooting
 
 ### Common Issues
 
 1. **Permission errors**: Ensure sejm-whiz user owns application files
-2. **Database connection**: Check PostgreSQL is running and user has correct permissions
-3. **Redis connection**: Verify Redis service is active
-4. **Python dependencies**: Ensure uv is properly installed for sejm-whiz user
-5. **Port conflicts**: Check no other services are using ports 8001/8002
+1. **Database connection**: Check PostgreSQL is running and user has correct permissions
+1. **Redis connection**: Verify Redis service is active
+1. **Python dependencies**: Ensure uv is properly installed for sejm-whiz user
+1. **Port conflicts**: Check no other services are using ports 8001/8002
 
 ### Log Locations
 

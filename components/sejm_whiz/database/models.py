@@ -13,6 +13,7 @@ from sqlalchemy import (
     JSON,
     Index,
     ForeignKey,
+    LargeBinary,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -32,10 +33,21 @@ class LegalDocument(Base):
 
     # Document metadata
     title = Column(String(500), nullable=False)
-    content = Column(Text, nullable=False)
+    content = Column(
+        Text, nullable=False
+    )  # Preferred content (PDF or HTML based on priority)
     document_type = Column(String(100), nullable=False)  # law, amendment, regulation
     source_url = Column(String(500))
     eli_identifier = Column(String(200), unique=True)  # ELI API identifier
+
+    # Raw content storage for reprocessing and quality analysis
+    pdf_raw_content = Column(LargeBinary)  # Raw PDF bytes from ELI API
+    html_raw_content = Column(Text)  # Raw HTML content from ELI API
+    pdf_extracted_text = Column(Text)  # Text extracted from PDF
+    html_extracted_text = Column(Text)  # Text extracted from HTML
+    preferred_source = Column(
+        String(10), default="pdf"
+    )  # 'pdf' or 'html' - which source was used for content field
 
     # Vector embedding (768 dimensions for HerBERT)
     embedding = Column(Vector(768))
