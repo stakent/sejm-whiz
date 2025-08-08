@@ -25,7 +25,7 @@ Base = declarative_base()
 class LegalDocument(Base):
     """Legal document with vector embeddings."""
 
-    __tablename__ = "legal_documents"
+    __tablename__ = "sejm_whiz_documents"
 
     # Primary key
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -66,21 +66,23 @@ class LegalDocument(Base):
 
     # Indexes
     __table_args__ = (
-        Index("idx_legal_documents_type", "document_type"),
-        Index("idx_legal_documents_domain", "legal_domain"),
-        Index("idx_legal_documents_published", "published_at"),
-        Index("idx_legal_documents_embedding", "embedding", postgresql_using="ivfflat"),
+        Index("idx_sejm_whiz_documents_type", "document_type"),
+        Index("idx_sejm_whiz_documents_domain", "legal_domain"),
+        Index("idx_sejm_whiz_documents_published", "published_at"),
+        Index(
+            "idx_sejm_whiz_documents_embedding", "embedding", postgresql_using="ivfflat"
+        ),
     )
 
 
 class LegalAmendment(Base):
     """Legal amendments and their relationships."""
 
-    __tablename__ = "legal_amendments"
+    __tablename__ = "sejm_whiz_amendments"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     document_id = Column(
-        UUID(as_uuid=True), ForeignKey("legal_documents.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("sejm_whiz_documents.id"), nullable=False
     )
 
     # Amendment details
@@ -105,23 +107,23 @@ class LegalAmendment(Base):
     document = relationship("LegalDocument", back_populates="amendments")
 
     __table_args__ = (
-        Index("idx_amendments_document", "document_id"),
-        Index("idx_amendments_omnibus", "omnibus_bill_id"),
-        Index("idx_amendments_effective", "effective_date"),
+        Index("idx_sejm_whiz_amendments_document", "document_id"),
+        Index("idx_sejm_whiz_amendments_omnibus", "omnibus_bill_id"),
+        Index("idx_sejm_whiz_amendments_effective", "effective_date"),
     )
 
 
 class CrossReference(Base):
     """Cross-references between legal documents."""
 
-    __tablename__ = "cross_references"
+    __tablename__ = "sejm_whiz_cross_references"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     source_document_id = Column(
-        UUID(as_uuid=True), ForeignKey("legal_documents.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("sejm_whiz_documents.id"), nullable=False
     )
     target_document_id = Column(
-        UUID(as_uuid=True), ForeignKey("legal_documents.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("sejm_whiz_documents.id"), nullable=False
     )
 
     # Reference details
@@ -141,20 +143,20 @@ class CrossReference(Base):
     target_document = relationship("LegalDocument", foreign_keys=[target_document_id])
 
     __table_args__ = (
-        Index("idx_cross_refs_source", "source_document_id"),
-        Index("idx_cross_refs_target", "target_document_id"),
-        Index("idx_cross_refs_type", "reference_type"),
+        Index("idx_sejm_whiz_cross_refs_source", "source_document_id"),
+        Index("idx_sejm_whiz_cross_refs_target", "target_document_id"),
+        Index("idx_sejm_whiz_cross_refs_type", "reference_type"),
     )
 
 
 class DocumentEmbedding(Base):
     """Separate table for embedding versions and metadata."""
 
-    __tablename__ = "document_embeddings"
+    __tablename__ = "sejm_whiz_document_embeddings"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     document_id = Column(
-        UUID(as_uuid=True), ForeignKey("legal_documents.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("sejm_whiz_documents.id"), nullable=False
     )
 
     # Embedding metadata
@@ -175,16 +177,18 @@ class DocumentEmbedding(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
-        Index("idx_embeddings_document", "document_id"),
-        Index("idx_embeddings_model", "model_name", "model_version"),
-        Index("idx_embeddings_vector", "embedding", postgresql_using="ivfflat"),
+        Index("idx_sejm_whiz_embeddings_document", "document_id"),
+        Index("idx_sejm_whiz_embeddings_model", "model_name", "model_version"),
+        Index(
+            "idx_sejm_whiz_embeddings_vector", "embedding", postgresql_using="ivfflat"
+        ),
     )
 
 
 class PredictionModel(Base):
     """Model metadata and performance tracking."""
 
-    __tablename__ = "prediction_models"
+    __tablename__ = "sejm_whiz_prediction_models"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
 
@@ -213,7 +217,7 @@ class PredictionModel(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
-        Index("idx_models_active", "is_active"),
-        Index("idx_models_type", "model_type"),
-        Index("idx_models_env", "deployment_env"),
+        Index("idx_sejm_whiz_models_active", "is_active"),
+        Index("idx_sejm_whiz_models_type", "model_type"),
+        Index("idx_sejm_whiz_models_env", "deployment_env"),
     )

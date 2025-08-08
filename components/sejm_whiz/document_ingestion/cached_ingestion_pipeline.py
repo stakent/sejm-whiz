@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import Dict, Any, Optional, Tuple, Union
 from datetime import datetime, timedelta, UTC
+from enum import Enum
 
 from sejm_whiz.cache import (
     CacheAwareDocumentProcessor,
@@ -16,9 +17,25 @@ from .config import DocumentIngestionConfig
 from sejm_whiz.eli_api.client import EliApiClient as ELIClient
 from sejm_whiz.sejm_api.client import SejmApiClient
 from .ingestion_pipeline import DocumentIngestionPipeline, IngestionPipelineError
-from .multi_api_pipeline import MultiApiDocumentProcessor
+from .dual_stream_pipeline import DualApiDocumentProcessor
 
 logger = logging.getLogger(__name__)
+
+
+class StreamType(Enum):
+    """Valid document stream types."""
+
+    ELI = "eli"  # Enacted law documents (law in effect)
+    SEJM = "sejm"  # Legislative work documents (law in development)
+
+
+class ProcessingStatus(Enum):
+    """Document processing status values."""
+
+    PROCESSING = "processing"
+    COMPLETED = "completed"  # Successfully extracted content and metadata, then stored, calculated and stored embeddings
+    FAILED = "failed"  # Could not extract usable content or metadata
+    EXCEPTION = "exception"  # Processing threw an exception
 
 
 class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
@@ -42,7 +59,7 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
         # Initialize multi-API processor with clients
         self.eli_client = ELIClient(config)
         self.sejm_client = SejmApiClient()
-        self.multi_api_processor = MultiApiDocumentProcessor(
+        self.dual_api_processor = DualApiDocumentProcessor(
             sejm_client=self.sejm_client,
             eli_client=self.eli_client,
             content_validator=self.eli_client.content_validator,
@@ -185,14 +202,14 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
 
         return processed_doc.content
 
-    async def process_document_multi_api(
-        self, document_id: str, preferred_source: str = "auto"
+    async def process_document_by_stream(
+        self, document_id: str, stream_type: str
     ) -> Dict[str, Any]:
-        """Process a document using multi-API approach with caching.
+        """Process a document from a specific stream with caching.
 
         Args:
             document_id: Document identifier to process
-            preferred_source: "sejm", "eli", or "auto" for automatic selection
+            stream_type: "eli" (enacted law) or "sejm" (legislative work)
 
         Returns:
             Processing result with content and metadata
@@ -208,91 +225,105 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
         start_time = asyncio.get_event_loop().time()
 
         try:
-            # Check cache for multi-API processed result
+            # Check cache for stream-processed result
             cached_result = self.cache_manager.get_cached_api_response(
-                "multi_api",
-                "document_process",
-                {"document_id": document_id, "source": preferred_source},
+                stream_type,
+                f"{stream_type}_stream_document_process",
+                {"document_id": document_id, "stream": stream_type},
             )
 
             if cached_result:
-                logger.info(f"Using cached multi-API result for {document_id}")
+                logger.info(
+                    f"Using cached {stream_type} stream result for {document_id}"
+                )
                 result.update(cached_result)
-                result["cache_hits"]["multi_api_result"] = True
+                result["cache_hits"][f"{stream_type}_stream_result"] = True
                 return result
 
-            # Process using multi-API processor
-            logger.info(
-                f"Processing {document_id} with multi-API processor (preferred: {preferred_source})"
-            )
+            # Process using stream-specific processor
+            logger.info(f"Processing {document_id} with {stream_type} stream processor")
 
-            # Choose processing method based on preferred source
-            if preferred_source == "sejm":
-                # Try Sejm API first
-                multi_result = await self.multi_api_processor._try_sejm_api(document_id)
-            elif preferred_source == "eli":
-                # Try ELI API first
-                multi_result = (
-                    await self.multi_api_processor._try_eli_api_with_fallback(
-                        document_id
-                    )
+            # Process document from specific stream using enum
+            if stream_type == StreamType.SEJM.value:
+                # Process legislative work-in-progress document
+                stream_result = await self.dual_api_processor.process_sejm_document(
+                    document_id
+                )
+            elif stream_type == StreamType.ELI.value:
+                # Process enacted/historical law document
+                stream_result = await self.dual_api_processor.process_eli_document(
+                    document_id
                 )
             else:
-                # Use automatic source selection
-                multi_result = (
-                    await self.multi_api_processor.process_document_from_any_source(
-                        document_id
-                    )
-                )
+                # Should not reach here due to enum validation above
+                raise ValueError(f"Invalid stream_type '{stream_type}'")
 
-            if multi_result.success:
+            if stream_result.success:
                 result.update(
                     {
-                        "status": "completed",
-                        "act_text": multi_result.act_text,
-                        "metadata": multi_result.metadata,
-                        "source_used": multi_result.source_used,
-                        "content_quality_score": multi_result.content_quality_score,
-                        "text_length": len(multi_result.act_text),
-                        "api_processing_time": multi_result.processing_time,
+                        "status": "failed",  # Will be "completed" when embeddings are implemented
+                        "act_text": stream_result.act_text,
+                        "metadata": stream_result.metadata,
+                        "source_used": stream_result.source_used,
+                        "content_quality_score": stream_result.content_quality_score,
+                        "text_length": len(stream_result.act_text),
+                        "api_processing_time": stream_result.processing_time,
+                        "content_extracted": bool(
+                            stream_result.act_text and stream_result.act_text.strip()
+                        ),
+                        "metadata_extracted": bool(
+                            stream_result.metadata and len(stream_result.metadata) > 0
+                        ),
+                        "embeddings_generated": False,  # Not yet implemented
+                        "reason": "embeddings_not_generated",
                     }
                 )
 
                 # Cache the successful result
                 cache_data = {
-                    "status": "completed",
-                    "act_text": multi_result.act_text,
-                    "metadata": multi_result.metadata,
-                    "source_used": multi_result.source_used,
-                    "content_quality_score": multi_result.content_quality_score,
-                    "text_length": len(multi_result.act_text),
+                    "status": "failed",  # Will be "completed" when embeddings are implemented
+                    "act_text": stream_result.act_text,
+                    "metadata": stream_result.metadata,
+                    "source_used": stream_result.source_used,
+                    "content_quality_score": stream_result.content_quality_score,
+                    "text_length": len(stream_result.act_text),
+                    "content_extracted": bool(
+                        stream_result.act_text and stream_result.act_text.strip()
+                    ),
+                    "metadata_extracted": bool(
+                        stream_result.metadata and len(stream_result.metadata) > 0
+                    ),
+                    "embeddings_generated": False,
+                    "reason": "embeddings_not_generated",
                 }
                 self.cache_manager.cache_api_response(
-                    "multi_api",
-                    "document_process",
-                    {"document_id": document_id, "source": preferred_source},
+                    stream_type,
+                    f"{stream_type}_stream_document_process",
+                    {"document_id": document_id, "stream": stream_type},
                     cache_data,
                 )
 
                 logger.info(
-                    f"Successfully processed {document_id} via {multi_result.source_used}"
+                    f"Successfully processed {document_id} via {stream_result.source_used}"
                 )
 
             else:
                 result.update(
                     {
                         "status": "failed",
-                        "reason": multi_result.error_message
-                        or "multi_api_processing_failed",
-                        "source_used": multi_result.source_used,
+                        "reason": stream_result.error_message
+                        or f"{stream_type}_stream_processing_failed",
+                        "source_used": stream_result.source_used,
                     }
                 )
                 logger.warning(
-                    f"Multi-API processing failed for {document_id}: {multi_result.error_message}"
+                    f"{stream_type.upper()} stream processing failed for {document_id}: {stream_result.error_message}"
                 )
 
         except Exception as e:
-            logger.error(f"Multi-API document processing failed for {document_id}: {e}")
+            logger.error(
+                f"{stream_type.upper()} stream document processing failed for {document_id}: {e}"
+            )
             result.update(
                 {
                     "status": "failed",
@@ -307,38 +338,44 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
 
         return result
 
-    async def ingest_documents_multi_source(
+    async def ingest_documents_by_stream(
         self,
         document_ids: list,
-        preferred_source: str = "auto",
-        enable_fallback: bool = True,
+        stream_type: str,
     ) -> Dict[str, Any]:
-        """Ingest documents from multiple sources with fallback support.
+        """Ingest documents from a specific stream (ELI or Sejm).
 
         Args:
             document_ids: List of document IDs to process
-            preferred_source: "sejm", "eli", or "auto" for source preference
-            enable_fallback: Whether to enable cross-API fallback
+            stream_type: "eli" (enacted law) or "sejm" (legislative work)
 
         Returns:
             Ingestion statistics and results
         """
-        logger.info(f"Starting multi-source ingestion of {len(document_ids)} documents")
         logger.info(
-            f"Preferred source: {preferred_source}, Fallback enabled: {enable_fallback}"
+            f"Starting {stream_type} stream ingestion of {len(document_ids)} documents"
         )
+
+        # Validate stream type using enum
+        try:
+            StreamType(stream_type)
+        except ValueError:
+            valid_streams = [s.value for s in StreamType]
+            raise ValueError(
+                f"Invalid stream_type '{stream_type}'. Must be one of: {valid_streams}"
+            )
 
         stats = {
             "start_time": datetime.now(UTC),
+            "stream_type": stream_type,
             "documents_processed": 0,
             "documents_successful": 0,
             "documents_failed": 0,
             "documents_cached": 0,
-            "source_breakdown": {
-                "sejm_api": 0,
-                "eli_api_html": 0,
-                "eli_api_pdf": 0,
-                "failed": 0,
+            "stream_breakdown": {
+                f"{stream_type}_successful": 0,
+                f"{stream_type}_failed": 0,
+                f"{stream_type}_cached": 0,
             },
             "results": [],
         }
@@ -348,7 +385,7 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
 
         async def process_with_semaphore(doc_id):
             async with semaphore:
-                return await self.process_document_multi_api(doc_id, preferred_source)
+                return await self.process_document_by_stream(doc_id, stream_type)
 
         try:
             # Process all documents
@@ -364,7 +401,7 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
                         f"Document {document_ids[i]} processing exception: {result}"
                     )
                     stats["documents_failed"] += 1
-                    stats["source_breakdown"]["failed"] += 1
+                    stats["stream_breakdown"][f"{stream_type}_failed"] += 1
                     stats["results"].append(
                         {
                             "document_id": document_ids[i],
@@ -375,29 +412,42 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
                 elif isinstance(result, dict):
                     stats["results"].append(result)
 
-                    if result.get("status") == "completed":
+                    # Check for partial success (content + metadata extracted, but no embeddings yet)
+                    if (
+                        result.get("content_extracted")
+                        and result.get("metadata_extracted")
+                        and result.get("reason") == "embeddings_not_generated"
+                    ):
+                        # This is partial success - content and metadata extracted successfully
                         stats["documents_successful"] += 1
-
-                        # Track source usage
-                        source_used = result.get("source_used", "unknown")
-                        if "sejm" in source_used:
-                            stats["source_breakdown"]["sejm_api"] += 1
-                        elif "eli_api_html" in source_used:
-                            stats["source_breakdown"]["eli_api_html"] += 1
-                        elif "eli_api_pdf" in source_used:
-                            stats["source_breakdown"]["eli_api_pdf"] += 1
+                        stats["stream_breakdown"][f"{stream_type}_successful"] += 1
 
                         # Track cache hits
-                        if result.get("cache_hits", {}).get("multi_api_result"):
+                        if result.get("cache_hits", {}).get(
+                            f"{stream_type}_stream_result"
+                        ):
                             stats["documents_cached"] += 1
+                            stats["stream_breakdown"][f"{stream_type}_cached"] += 1
+
+                    elif result.get("status") == "completed":
+                        # True completion (content + metadata + embeddings)
+                        stats["documents_successful"] += 1
+                        stats["stream_breakdown"][f"{stream_type}_successful"] += 1
+
+                        # Track cache hits
+                        if result.get("cache_hits", {}).get(
+                            f"{stream_type}_stream_result"
+                        ):
+                            stats["documents_cached"] += 1
+                            stats["stream_breakdown"][f"{stream_type}_cached"] += 1
 
                     elif result.get("status") == "failed":
                         stats["documents_failed"] += 1
-                        stats["source_breakdown"]["failed"] += 1
+                        stats["stream_breakdown"][f"{stream_type}_failed"] += 1
 
         except Exception as e:
-            logger.error(f"Multi-source document ingestion failed: {e}")
-            raise IngestionPipelineError(f"Multi-source ingestion failed: {e}")
+            logger.error(f"{stream_type.upper()} stream document ingestion failed: {e}")
+            raise IngestionPipelineError(f"{stream_type} stream ingestion failed: {e}")
 
         finally:
             stats["end_time"] = datetime.now(UTC)
@@ -414,9 +464,9 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
             stats["success_rate"] = 0.0
 
         logger.info(
-            f"Multi-source ingestion completed: {stats['documents_successful']}/{stats['documents_processed']} successful"
+            f"{stream_type.upper()} stream ingestion completed: {stats['documents_successful']}/{stats['documents_processed']} successful"
         )
-        logger.info(f"Source breakdown: {stats['source_breakdown']}")
+        logger.info(f"Stream breakdown: {stats['stream_breakdown']}")
 
         return stats
 

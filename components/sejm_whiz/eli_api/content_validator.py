@@ -126,6 +126,12 @@ class BasicContentValidator:
     def get_content_quality_score(self, content: str, source: str) -> float:
         """Get basic quality score for content (0.0 to 1.0).
 
+        NOTE: This scoring function is NOT FINISHED and subject to change when we get
+        actual content to work with. Current implementation is preliminary.
+
+        ASSUMPTION: ELI API returns correct HTTP status codes (not 200) for API errors.
+        Error detection here focuses on content-level issues, not HTTP-level errors.
+
         Args:
             content: Content to score
             source: Source type ('html' or 'pdf')
@@ -133,7 +139,7 @@ class BasicContentValidator:
         Returns:
             Quality score between 0.0 and 1.0
         """
-        if not content:
+        if not content or not isinstance(content, str):
             return 0.0
 
         char_count = len(content.strip())

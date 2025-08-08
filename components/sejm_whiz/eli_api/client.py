@@ -425,64 +425,177 @@ class EliApiClient:
             logger.error(f"Failed to fetch content for {eli_id}: {e}")
             raise
 
-    async def get_document_content_with_basic_fallback(
+    async def get_document_content_with_dual_storage(
         self, eli_id: str
     ) -> Dict[str, Any]:
-        """Get document content with simple HTML→PDF fallback.
+        """Get document content with dual HTML+PDF storage for quality validation.
+
+        Fetches and stores BOTH HTML and PDF content when available to enable:
+        - PDF conversion quality validation against HTML
+        - Content quality comparison
+        - Best content selection based on metrics
 
         Args:
             eli_id: ELI identifier for the document
 
         Returns:
-            Dictionary with content, source, and usability information
+            Dictionary with dual content, quality scores, and best content selection
         """
-        result = {"eli_id": eli_id, "content": "", "source": "none", "usable": False}
+        result = {
+            "eli_id": eli_id,
+            "html_content": None,
+            "pdf_content": None,
+            "html_quality_score": 0.0,
+            "pdf_quality_score": 0.0,
+            "preferred_content": None,
+            "preferred_source": "none",
+            "conversion_accuracy": None,
+            "usable": False,
+        }
 
-        # 1. Try HTML first
+        # 1. Try to fetch HTML content
         try:
             html_content = await self.get_document_content(eli_id, "html")
-            if self.content_validator.is_html_content_usable(html_content):
-                result.update(
-                    {"content": html_content, "source": "html", "usable": True}
-                )
-                logger.info(
-                    f"HTML content retrieved for {eli_id}: {len(html_content)} chars"
-                )
-                return result
-            else:
-                logger.debug(
-                    f"HTML content for {eli_id} failed validation (too short or low quality)"
-                )
+            if html_content:
+                result["html_content"] = html_content
+                if self.content_validator.is_html_content_usable(html_content):
+                    result["html_quality_score"] = (
+                        self.content_validator.get_content_quality_score(
+                            html_content, "html"
+                        )
+                    )
+                    logger.info(
+                        f"HTML content retrieved for {eli_id}: {len(html_content)} chars, quality={result['html_quality_score']}"
+                    )
+                else:
+                    logger.debug(
+                        f"HTML content for {eli_id} failed usability validation"
+                    )
         except Exception as e:
             logger.warning(f"HTML fetch failed for {eli_id}: {e}")
 
-        # 2. Try PDF fallback (simplified)
+        # 2. Try to fetch PDF content
         try:
-            pdf_content = await self.get_document_content(eli_id, "pdf")
-            if pdf_content:  # PDF endpoint returns bytes, but our method returns text
-                # The get_document_content method returns text, but for PDF we need bytes
-                # Let's get the raw PDF content instead
-                pdf_bytes = await self._get_document_content_raw(eli_id, "pdf")
-                if pdf_bytes:
-                    text = await self.pdf_converter.convert_pdf_to_text(pdf_bytes)
-                    if self.content_validator.is_pdf_text_usable(text):
-                        result.update(
-                            {"content": text, "source": "pdf", "usable": True}
+            pdf_bytes = await self._get_document_content_raw(eli_id, "pdf")
+            if pdf_bytes:
+                pdf_text = await self.pdf_converter.convert_pdf_to_text(pdf_bytes)
+                if pdf_text:
+                    result["pdf_content"] = pdf_text
+                    if self.content_validator.is_pdf_text_usable(pdf_text):
+                        result["pdf_quality_score"] = (
+                            self.content_validator.get_content_quality_score(
+                                pdf_text, "pdf"
+                            )
                         )
                         logger.info(
-                            f"PDF content converted for {eli_id}: {len(text)} chars"
+                            f"PDF content converted for {eli_id}: {len(pdf_text)} chars, quality={result['pdf_quality_score']}"
                         )
-                        return result
                     else:
                         logger.debug(
-                            f"PDF text for {eli_id} failed validation (too short or low quality)"
+                            f"PDF content for {eli_id} failed usability validation"
                         )
         except Exception as e:
-            logger.warning(f"PDF conversion failed for {eli_id}: {e}")
+            logger.warning(f"PDF fetch/conversion failed for {eli_id}: {e}")
 
-        # 3. Mark as pending (no manual queue for interim goal)
-        logger.info(f"No usable content found for {eli_id} - marking as pending")
+        # 3. Quality comparison and best content selection
+        if result["html_content"] and result["pdf_content"]:
+            # Both available - compare quality and calculate conversion accuracy
+            html_score = result["html_quality_score"]
+            pdf_score = result["pdf_quality_score"]
+
+            # Calculate conversion accuracy (similarity between HTML and PDF)
+            result["conversion_accuracy"] = self._calculate_content_similarity(
+                result["html_content"], result["pdf_content"]
+            )
+
+            # Choose preferred content based on quality scores
+            if html_score >= pdf_score:
+                result["preferred_content"] = result["html_content"]
+                result["preferred_source"] = "html"
+            else:
+                result["preferred_content"] = result["pdf_content"]
+                result["preferred_source"] = "pdf"
+
+            result["usable"] = True
+            logger.info(
+                f"Dual content available for {eli_id}: HTML={html_score:.2f}, PDF={pdf_score:.2f}, accuracy={result['conversion_accuracy']:.2f}"
+            )
+
+        elif result["html_content"] and result["html_quality_score"] > 0:
+            # Only HTML available
+            result["preferred_content"] = result["html_content"]
+            result["preferred_source"] = "html"
+            result["usable"] = True
+            logger.info(
+                f"HTML-only content for {eli_id}: quality={result['html_quality_score']:.2f}"
+            )
+
+        elif result["pdf_content"] and result["pdf_quality_score"] > 0:
+            # Only PDF available
+            result["preferred_content"] = result["pdf_content"]
+            result["preferred_source"] = "pdf"
+            result["usable"] = True
+            logger.info(
+                f"PDF-only content for {eli_id}: quality={result['pdf_quality_score']:.2f}"
+            )
+
+        else:
+            logger.warning(f"No usable content found for {eli_id}")
+
         return result
+
+    def _calculate_content_similarity(
+        self, html_content: str, pdf_content: str
+    ) -> float:
+        """Calculate similarity between HTML and PDF content for conversion accuracy.
+
+        Args:
+            html_content: HTML text content
+            pdf_content: PDF text content
+
+        Returns:
+            Similarity score between 0.0 and 1.0
+        """
+        if not html_content or not pdf_content:
+            return 0.0
+
+        # Simple similarity based on common words (preliminary implementation)
+        html_words = set(html_content.lower().split())
+        pdf_words = set(pdf_content.lower().split())
+
+        if not html_words and not pdf_words:
+            return 1.0  # Both empty
+        elif not html_words or not pdf_words:
+            return 0.0  # One empty
+
+        intersection = html_words.intersection(pdf_words)
+        union = html_words.union(pdf_words)
+
+        # Jaccard similarity
+        similarity = len(intersection) / len(union) if union else 0.0
+        return similarity
+
+    # Keep the old method for backward compatibility
+    async def get_document_content_with_basic_fallback(
+        self, eli_id: str
+    ) -> Dict[str, Any]:
+        """DEPRECATED: Use get_document_content_with_dual_storage instead.
+
+        Legacy method for backward compatibility.
+        """
+        logger.warning(
+            "get_document_content_with_basic_fallback is deprecated. Use get_document_content_with_dual_storage."
+        )
+
+        dual_result = await self.get_document_content_with_dual_storage(eli_id)
+
+        # Convert to old format for compatibility
+        return {
+            "eli_id": eli_id,
+            "content": dual_result.get("preferred_content", ""),
+            "source": dual_result.get("preferred_source", "none"),
+            "usable": dual_result.get("usable", False),
+        }
 
     async def _get_document_content_raw(
         self, eli_id: str, format: str = "pdf"

@@ -319,6 +319,88 @@ components/infrastructure/
 
 ______________________________________________________________________
 
+## Recent Architectural Improvements ✅ AUGUST 2025
+
+### Database Schema Refactoring ✅ COMPLETED
+
+**Major Enhancement**: Refactored database schema to follow consistent `sejm_whiz` namespace convention.
+
+**Schema Changes**:
+
+- ✅ **Table Renaming**: All database tables now follow `sejm_whiz_*` naming pattern
+  - `legal_documents` → `sejm_whiz_documents`
+  - `legal_amendments` → `sejm_whiz_amendments`
+  - `cross_references` → `sejm_whiz_cross_references`
+  - `document_embeddings` → `sejm_whiz_document_embeddings`
+  - `prediction_models` → `sejm_whiz_prediction_models`
+- ✅ **Index Renaming**: All database indexes updated to match table naming
+  - `idx_legal_documents_*` → `idx_sejm_whiz_documents_*`
+  - `idx_embeddings_*` → `idx_sejm_whiz_embeddings_*`
+  - All foreign key references and constraints properly maintained
+- ✅ **Migration Applied**: Alembic migration `94ff641a7af5` successfully deployed to p7 database
+- ✅ **Data Preservation**: All existing data maintained during schema transformation
+
+**SQLAlchemy Models Updated**:
+
+- `models.py`: All table names and index definitions updated
+- Foreign key references updated to new table names
+- Relationship mappings maintained for cross-table operations
+
+**Benefits Achieved**:
+
+1. **Namespace Consistency**: All database objects follow `sejm_whiz` convention
+1. **Architecture Alignment**: Database naming matches Polylith component structure
+1. **Future Scalability**: Consistent naming enables easier multi-tenant deployments
+1. **Code Maintainability**: Clear ownership and organization of database objects
+
+**Verification Completed**:
+
+- ✅ Database migration successful on p7 production environment
+- ✅ All 5 tables renamed with proper `sejm_whiz_` prefix
+- ✅ Database operations working correctly (3 documents accessible)
+- ✅ Code formatted and linted with ruff
+
+### DocumentIngestionPipeline Architecture Refactoring ✅ COMPLETED
+
+**Major Enhancement**: Refactored document processing architecture for proper separation of concerns and testability.
+
+**Key Changes**:
+
+- ✅ **Pipeline Renaming**: `CachedDocumentIngestionPipeline` → `DocumentIngestionPipeline`
+  - Reasoning: Caching is an implementation detail, not a core responsibility
+  - Improved API clarity and component naming consistency
+- ✅ **CLI Architecture Fix**: Updated `CliPipelineOrchestrator` to use proper abstractions
+  - Before: CLI directly managed low-level processing steps
+  - After: CLI calls high-level `DocumentIngestionPipeline` component
+  - Result: Clean separation between UI layer and business logic
+- ✅ **Integration Test Coverage**: All 11 multi-API integration tests passing
+  - Fixed method signature mismatches in test mocks
+  - Updated document ID parsing to match actual implementation
+  - Comprehensive test coverage for dual-stream processing
+
+**Architectural Flow** (Updated):
+
+```
+CLI Command → CliPipelineOrchestrator → DocumentIngestionPipeline → DualApiDocumentProcessor
+```
+
+**Benefits Achieved**:
+
+1. **Maintainability**: Clear component responsibilities
+1. **Testability**: Proper mocking and integration test coverage
+1. **Extensibility**: Future system components (API, scheduler) can reuse same pipeline
+1. **Separation of Concerns**: UI, orchestration, processing, and storage are cleanly separated
+
+**Files Updated**:
+
+- `components/sejm_whiz/cli/commands/pipeline_bridge.py`: Added missing imports, proper abstraction usage
+- `test/components/sejm_whiz/test_multi_api_integration.py`: Fixed test signatures and document ID formats
+- `ELI_PDF_FALLBACK_IMPLEMENTATION_PLAN.md`: Updated architectural diagrams and documentation
+- `components/sejm_whiz/database/models.py`: Complete schema refactoring with `sejm_whiz` namespace
+- `components/sejm_whiz/database/alembic/versions/94ff641a7af5_*.py`: Database migration for schema refactoring
+
+______________________________________________________________________
+
 ## Current Implementation Status 📊
 
 ### ✅ **Completed Phases**
@@ -360,7 +442,8 @@ ______________________________________________________________________
 - **Document Processing**: 1771+ legal documents retrieved and processed
 - **GPU Acceleration**: 20x+ performance improvement (8 seconds vs hours)
 - **Test Coverage**: 772+ passing tests across 11 components
-- **Database**: PostgreSQL + pgvector operational with vector embeddings
+- **Database**: PostgreSQL + pgvector operational with `sejm_whiz` schema namespace
+- **Schema Consistency**: All 5 database tables follow unified `sejm_whiz_*` naming convention
 - **Infrastructure**: k3s + Docker Compose environments operational
 
 **Performance Validation**:

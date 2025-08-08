@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Data Flow: Dual Sejm & ELI APIs (*.sejm.gov.pl)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+        }
+
+        .flow-diagram {
+            display: grid;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .flow-layer {
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .layer-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            padding: 5px 10px;
+            background: #ecf0f1;
+            border-radius: 5px;
+        }
+
+        .components {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .component {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .entry { background: #e3f2fd; border: 1px solid #2196f3; }
+        .decision { background: #fff3e0; border: 1px solid #ff9800; }
+        .api { background: #e8f5e8; border: 1px solid #4caf50; }
+        .process { background: #f3e5f5; border: 1px solid #9c27b0; }
+        .enhanced { background: #fce4ec; border: 1px solid #e91e63; }
+        .cache { background: #eceff1; border: 1px solid #607d8b; }
+        .storage { background: #f1f8e9; border: 1px solid #689f38; }
+        .manual { background: #fff8e1; border: 1px solid #ffa000; }
+
+        .arrow {
+            text-align: center;
+            font-size: 20px;
+            color: #666;
+            margin: 5px 0;
+        }
+
+        .flow-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 12px;
+        }
+
+        .flow-table th, .flow-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .flow-table th {
+            background: #34495e;
+            color: white;
+            font-weight: bold;
+        }
+
+        .flow-table tr:nth-child(even) {
+            background: #f2f2f2;
+        }
+
+        .highlight-enhanced {
+            background: #ffebee !important;
+            font-weight: bold;
+        }
+
+        .guarantee-box {
+            background: #e8f5e8;
+            border: 2px solid #4caf50;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .guarantee-box h3 {
+            color: #2e7d32;
+            margin-top: 0;
+        }
+
+        .outcome {
+            margin: 10px 0;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .outcome.success { background: #c8e6c9; }
+        .outcome.summary { background: #ffe0b2; }
+        .outcome.manual { background: #f8bbd9; }
+
+        .domain-notice {
+            background: #e1f5fe;
+            border: 2px solid #0277bd;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .domain-notice h3 {
+            color: #0277bd;
+            margin-top: 0;
+        }
+
+        .classification-box {
+            background: #f3e5f5;
+            border: 2px solid #9c27b0;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .classification-box h3 {
+            color: #6a1b9a;
+            margin-top: 0;
+        }
+
+        @media print {
+            body { margin: 10px; font-size: 11px; }
+            .container { max-width: none; }
+            h1 { font-size: 18px; }
+            h2 { font-size: 14px; }
+            .component { font-size: 10px; }
+            .flow-table { font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 Document Data Flow: Dual Sejm & ELI APIs</h1>
+
+        <div class="domain-notice">
+            <h3>🔒 Official Polish Government APIs Only</h3>
+            <p><strong>Data Sources:</strong> Exclusively *.sejm.gov.pl domain - No external scraping or third-party sources</p>
+            <p><strong>APIs Used:</strong> Sejm API & ELI API with PDF fallback • <strong>External Sources:</strong> Removed</p>
+        </div>
+
+        <div class="classification-box">
+            <h3>⚖️ Dual-Stream Processing Architecture</h3>
+            <p><strong>ELI Stream:</strong> Law in effect at present or in the past (finalized legal text with binding effect)</p>
+            <p><strong>Sejm Stream:</strong> Law still in development (legislative process) - proposed text that may become law</p>
+            <p><strong>Critical Principle:</strong> Both streams process simultaneously for complete legal lifecycle coverage</p>
+            <p><strong>Processing Methods:</strong> <code>process_eli_document()</code> and <code>process_sejm_document()</code></p>
+            <p><strong>CLI Default:</strong> No --source specified = dual-stream processing (admin/technical interface)</p>
+            <p><strong>Quality Scoring:</strong> Both streams use ContentValidator.get_content_quality_score() for consistency</p>
+            <p><strong>Unique IDs:</strong> ELI uses "DU/2025/1" format, Sejm uses "term_number" format (e.g., "10_2")</p>
+            <p><strong>Metadata Strategy:</strong> Store all original API fields to preserve complete information</p>
+            <p><strong>⚠️ Note:</strong> Scoring functions are preliminary - subject to change when actual content is available</p>
+        </div>
+
+        <h2>🔄 Simplified Processing Flow</h2>
+        <div class="flow-diagram">
+            <!-- Layer 1: Entry Points -->
+            <div class="flow-layer">
+                <div class="layer-title">1. Entry Points</div>
+                <div class="components">
+                    <div class="component entry">CLI Command<br/>sejm-whiz-cli ingest</div>
+                    <div class="component entry">ingest.py<br/>Document Processing</div>
+                    <div class="component entry">CliPipelineOrchestrator<br/>Execution Control</div>
+                </div>
+            </div>
+
+            <div class="arrow">⬇️</div>
+
+            <!-- Layer 2: Stream Selection -->
+            <div class="flow-layer">
+                <div class="layer-title">2. Stream Selection (Admin/Technical)</div>
+                <div class="components">
+                    <div class="component decision">CLI Source?</div>
+                    <div class="component process">Default: dual-stream</div>
+                    <div class="component process">--source eli</div>
+                    <div class="component process">--source sejm</div>
+                </div>
+            </div>
+
+            <div class="arrow">⬇️</div>
+
+            <!-- Layer 3: Core Pipeline -->
+            <div class="flow-layer">
+                <div class="layer-title">3. Core Pipeline</div>
+                <div class="components">
+                    <div class="component process">CachedDocumentIngestionPipeline<br/>Stream-Based Processing + Caching</div>
+                    <div class="component process">ingest_documents_by_stream</div>
+                    <div class="component process">process_document_by_stream</div>
+                </div>
+            </div>
+
+            <div class="arrow">⬇️</div>
+
+            <!-- Layer 4: Cache Check -->
+            <div class="flow-layer">
+                <div class="layer-title">4. Cache Check</div>
+                <div class="components">
+                    <div class="component cache">Cache Hit?</div>
+                    <div class="component cache">Return Cached Result</div>
+                </div>
+            </div>
+
+            <div class="arrow">⬇️</div>
+
+            <!-- Layer 5: Dual-Stream Processing -->
+            <div class="flow-layer">
+                <div class="layer-title">5. Dual-Stream Processing (*.sejm.gov.pl only)</div>
+                <div class="components">
+                    <div class="component api">DualApiDocumentProcessor</div>
+                    <div class="component api">process_eli_document<br/>(Enacted Law)</div>
+                    <div class="component api">process_sejm_document<br/>(Legislative Work)</div>
+                </div>
+            </div>
+
+            <div class="arrow">⬇️</div>
+
+            <!-- Layer 6: API Sources -->
+            <div class="flow-layer">
+                <div class="layer-title">6. Official API Sources</div>
+                <div class="components">
+                    <div class="component api">Sejm API<br/>get_act_with_full_text</div>
+                    <div class="component api">ELI API<br/>HTML Content + PDF<br/>Store Both When Available</div>
+                </div>
+            </div>
+
+            <div class="arrow">⬇️ If Primary Sources Fail ⬇️</div>
+
+            <!-- Layer 7: Enhanced Processing -->
+            <div class="flow-layer">
+                <div class="layer-title">7. ✅ Enhanced Content Processing (Updated)</div>
+                <div class="components">
+                    <div class="component enhanced">ContentExtractionOrchestrator<br/>2-Phase Processing</div>
+                    <div class="component enhanced">EnhancedContentValidator<br/>Multi-tier Quality</div>
+                    <div class="component enhanced">Rich API Metadata<br/>Direct Storage</div>
+                </div>
+            </div>
+
+            <div class="arrow">⬇️</div>
+
+            <!-- Layer 8: Manual Review -->
+            <div class="flow-layer">
+                <div class="layer-title">8. Manual Review System</div>
+                <div class="components">
+                    <div class="component manual">Manual Review Queue<br/>Rich Context</div>
+                    <div class="component manual">Review Context Generator<br/>Failure Analysis</div>
+                </div>
+            </div>
+
+            <div class="arrow">⬇️</div>
+
+            <!-- Layer 9: Storage -->
+            <div class="flow-layer">
+                <div class="layer-title">9. Text Processing & Storage</div>
+                <div class="components">
+                    <div class="component storage">TextProcessor<br/>process_document</div>
+                    <div class="component storage">DocumentOperations<br/>store_legal_document</div>
+                    <div class="component storage">PostgreSQL<br/>LegalDocument Table</div>
+                    <div class="component storage">📄 Final Document<br/>Text Storage</div>
+                </div>
+            </div>
+        </div>
+
+        <h2>📊 Updated Component Flow (Dual-API Only)</h2>
+        <table class="flow-table">
+            <thead>
+                <tr>
+                    <th>Layer</th>
+                    <th>Component</th>
+                    <th>Function</th>
+                    <th>Data Source</th>
+                    <th>Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>CLI Command</td>
+                    <td>sejm-whiz-cli ingest documents</td>
+                    <td>User Input</td>
+                    <td>Command parameters</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Stream Selection</td>
+                    <td>Route to dual-stream/eli/sejm processing</td>
+                    <td>CLI Parameters</td>
+                    <td>Processing path</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>CachedDocumentIngestionPipeline</td>
+                    <td>Stream-based batch processing with Redis caching</td>
+                    <td>Internal Cache</td>
+                    <td>Stream processing control</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>ingest_documents_by_stream</td>
+                    <td>Process document batch from specific stream (ELI or Sejm)</td>
+                    <td>Stream Logic</td>
+                    <td>Stream batch results</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>process_document_by_stream</td>
+                    <td>Single document processing from specific stream</td>
+                    <td>Stream Logic</td>
+                    <td>Single document result</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Cache Check</td>
+                    <td>Check Redis for cached results</td>
+                    <td>Redis Cache</td>
+                    <td>Cached result or cache miss</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>DualApiDocumentProcessor</td>
+                    <td>Dual-stream processing coordinator</td>
+                    <td>Internal Logic</td>
+                    <td>Stream routing decision</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>process_eli_document</td>
+                    <td>Process enacted/historical law documents</td>
+                    <td>ELI Stream</td>
+                    <td>Enacted law processing result</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>process_sejm_document</td>
+                    <td>Process legislative work-in-progress documents</td>
+                    <td>Sejm Stream</td>
+                    <td>Legislative work processing result</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>SejmApiClient</td>
+                    <td>get_act_with_full_text → extract_metadata (term+number ID) → ContentValidator scoring</td>
+                    <td><strong>api.sejm.gov.pl</strong></td>
+                    <td>Act text + rich metadata (term, number, attachments, dates) + quality score</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>EliApiClient (Dual Content)</td>
+                    <td>Fetch and store both HTML + PDF when available → ContentValidator scoring</td>
+                    <td><strong>api.sejm.gov.pl/eli</strong></td>
+                    <td>HTML content + PDF content + quality comparison</td>
+                </tr>
+                <tr class="highlight-enhanced">
+                    <td>7</td>
+                    <td>✅ ContentExtractionOrchestrator</td>
+                    <td>2-phase processing (primary sources → manual review)</td>
+                    <td>Internal Only</td>
+                    <td>Guaranteed outcome</td>
+                </tr>
+                <tr class="highlight-enhanced">
+                    <td>7</td>
+                    <td>✅ EnhancedContentValidator</td>
+                    <td>Multi-tier quality assessment</td>
+                    <td>Internal Analysis</td>
+                    <td>Quality tier + score</td>
+                </tr>
+                <tr class="highlight-enhanced">
+                    <td>7</td>
+                    <td>✅ Rich API Metadata Storage</td>
+                    <td>Store metadata directly: ELI (title, type, year) + Sejm (term, number, attachments, dates)</td>
+                    <td>API Response</td>
+                    <td>Complete metadata with all original fields</td>
+                </tr>
+                <tr>
+                    <td>8</td>
+                    <td>Manual Review Queue</td>
+                    <td>Rich context for human reviewers</td>
+                    <td>Internal Analysis</td>
+                    <td>Manual review item</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>TextProcessor</td>
+                    <td>Clean and structure document text</td>
+                    <td>Internal Processing</td>
+                    <td>Processed text</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>DocumentOperations</td>
+                    <td>store_legal_document in PostgreSQL</td>
+                    <td>Internal Storage</td>
+                    <td>Database record</td>
+                </tr>
+                <tr>
+                    <td>9</td>
+                    <td>LegalDocument Table</td>
+                    <td>Final text storage with metadata</td>
+                    <td>PostgreSQL</td>
+                    <td>Stored document text</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="guarantee-box">
+            <h3>🎯 Updated Processing Guarantee</h3>
+            <p><strong>Data Sources:</strong> Only official Polish government APIs (*.sejm.gov.pl domain)</p>
+            <p><strong>Processing Flow:</strong> Simplified 3-phase approach without external scraping</p>
+
+            <div class="outcome success">
+                <strong>✅ Success:</strong> Text extracted from official Sejm API or ELI API (HTML/PDF)
+            </div>
+            <div class="outcome summary">
+                <strong>📄 Metadata Success:</strong> Rich document metadata stored directly from API responses
+            </div>
+            <div class="outcome manual">
+                <strong>👥 Manual Review:</strong> Document flagged with comprehensive failure context and recommended actions
+            </div>
+
+            <p><strong>Result:</strong> <em>100% processing guarantee</em> using only official government data sources</p>
+        </div>
+
+        <h2>🔑 Updated Technical Features</h2>
+        <ul>
+            <li><strong>Official APIs Only:</strong> Exclusively *.sejm.gov.pl domain - no external scraping or third-party sources</li>
+            <li><strong>Dual-Stream Architecture:</strong> Simultaneous processing of ELI stream (enacted law) + Sejm stream (legislative work)</li>
+            <li><strong>Stream-Specific Methods:</strong> <code>process_eli_document()</code> and <code>process_sejm_document()</code> for targeted processing</li>
+            <li><strong>Legal Lifecycle Coverage:</strong> Complete legal evolution from legislative proposal to enacted binding law</li>
+            <li><strong>Admin CLI Interface:</strong> Default dual-stream processing, single stream options for diagnostics</li>
+            <li><strong>2-Phase Processing:</strong> Primary APIs (with rich metadata) → Manual review (simplified approach)</li>
+            <li><strong>Unified Quality Scoring:</strong> Both ELI and Sejm streams use ContentValidator.get_content_quality_score() for consistency</li>
+            <li><strong>ELI Dual Content Storage:</strong> Store both HTML and PDF content when available for PDF conversion quality validation</li>
+            <li><strong>ELI API Assumptions:</strong> HTTP status codes handle API errors; content validation focuses on content-level quality</li>
+            <li><strong>Rich API Metadata:</strong> Direct storage of metadata from ELI/Sejm APIs (title, type, year, etc.)</li>
+            <li><strong>Comprehensive Caching:</strong> Multi-level Redis caching for official API responses and processed content</li>
+            <li><strong>Rich Manual Context:</strong> Failure analysis, suggested actions, and priority scoring for human reviewers</li>
+            <li><strong>Guaranteed Processing:</strong> Every document gets extracted content or manual review flagging - no external dependencies</li>
+            <li><strong>⚠️ Quality Scoring Status:</strong> Preliminary implementation - subject to refinement when actual content is available</li>
+        </ul>
+
+        <p style="text-align: center; margin-top: 40px; color: #666; font-size: 12px;">
+            Updated Flow - Official Polish Government APIs Only (*.sejm.gov.pl) • Dual-Stream Processing • No External Scraping
+        </p>
+    </div>
+</body>
+</html>

@@ -1,20 +1,183 @@
-# Multi-API Document Content Implementation Plan
+# Dual-API Document Content Implementation Plan
 
 **Date:** August 8, 2025
-**Objective:** Achieve working [Sejm API, ELI API] → act text, act metadata pipeline
-**Priority:** High (foundational milestone for legal document processing system)
+**Objective:** Ensure 100% document processing coverage with text extraction or manual review flagging
+**Priority:** Critical - Address content availability gaps and achieve complete processing pipeline
 
 ## Executive Summary
 
-**Intermediate Goal:** Establish functional document retrieval from both Sejm API and ELI API sources to extract legal act text and metadata. This foundational milestone focuses on getting basic content extraction working reliably before pursuing advanced optimization.
+**Current State:** Dual-API foundation successfully implemented (Phases 1-5 completed) but experiencing 100% document failure rate due to content availability issues (documents exist in API indexes but content returns 404).
 
-**Current Challenge:** ELI API recent documents (2025) return empty HTML content, requiring PDF fallback strategy to achieve minimum viable content extraction rates.
+**Required Enhancement:** Implement robust content extraction pipeline that guarantees every document matching filters gets either:
 
-**Success Criteria:** Achieve temporary quality targets as stepping stones toward comprehensive legal document processing system.
+1. Successfully extracted text content with metadata
+1. Proper flagging for manual review with detailed failure reasons
 
-## Implementation Architecture
+**Success Criteria:** 0% unprocessed documents - every document gets a processing outcome
 
-### Multi-API Document Processing Flow
+## Gap Analysis
+
+### Current System Performance (P7 Environment)
+
+- ✅ **Dual-API infrastructure working** - Phases 1-5 completed successfully
+- ✅ **HTML → PDF fallback logic implemented** - Basic PDF conversion with pdfplumber
+- ✅ **Cache system operational** - Redis-based caching functional
+- ✅ **CLI integration functional** - Rich progress monitoring and statistics
+- ✅ **Comprehensive testing** - 37 passing integration tests
+- ❌ **100% document failure rate** - all documents return 404s for content
+- ❌ **No fallback for content availability issues** - documents disappear when APIs fail
+- ❌ **No manual review flagging system** - failed documents are not queued for human review
+
+### Root Cause Analysis
+
+1. **Content Availability Gap:** Documents indexed in search but content not available (404 errors)
+1. **Missing Fallback Strategies:** No alternative content sources beyond official API endpoints
+1. **No Manual Review Pipeline:** Failed documents disappear instead of being queued with context
+1. **Limited Content Sources:** Only trying ELI HTML/PDF and Sejm API endpoints
+
+## API Data Source Classification
+
+### Document Status and Legal Effect Classification
+
+**ELI API Documents:**
+
+- **Legal Status:** Law in effect at present or in the past
+- **Document Types:** Constitutional acts, statutes, regulations, decrees
+- **Temporal Scope:** Historical and current legal framework
+- **Content Nature:** Finalized legal text with binding legal effect
+- **Use Case:** Legal research, compliance analysis, historical legal development
+
+**Sejm API Documents:**
+
+- **Legal Status:** Law still in development/legislative process
+- **Document Types:** Bills, draft legislation, committee reports, voting records
+- **Temporal Scope:** Current legislative session work-in-progress
+- **Content Nature:** Proposed legal text that may become binding law
+- **Legislative Pipeline:** Some parts of this work can become law in effect (via ELI API later)
+- **Use Case:** Legislative tracking, policy development analysis, predicting future law
+
+### Dual-API Strategic Importance
+
+This classification enables:
+
+- **Comprehensive Legal Coverage:** Past/present law (ELI) + future law predictions (Sejm)
+- **Legislative Pipeline Tracking:** Follow documents from Sejm proposal → ELI enactment
+- **Temporal Legal Analysis:** Understand legal evolution from draft to binding law
+- **Cross-Reference Validation:** Link active legislation work to existing legal framework
+
+### System Component Responsibility Architecture ✅ IMPLEMENTED
+
+**DocumentIngestionPipeline** (formerly CachedDocumentIngestionPipeline): High-level orchestration component responsible for complete document lifecycle
+
+1. **Process Document**: Using `DualApiDocumentProcessor` with dual-stream processing
+1. **Store to Database**: Save to `legal_documents` table with embeddings
+1. **Report Results**: Actual storage counts and comprehensive statistics
+
+**CLI Role**: ✅ IMPLEMENTED
+
+- Calls the `DocumentIngestionPipeline` component with appropriate parameters
+- Does NOT manage individual processing/storage steps
+- Receives and displays final processing results and statistics
+- Uses `CliPipelineOrchestrator` for progress reporting and user interface
+
+**Current System Integration** (Updated Architecture):
+
+- **CLI Bridge**: `CliPipelineOrchestrator` → `DocumentIngestionPipeline` → `DualApiDocumentProcessor`
+- **API Endpoints**: Will call `DocumentIngestionPipeline` directly (not yet implemented)
+- **Scheduler**: Will call `DocumentIngestionPipeline` with parameters (not yet implemented)
+
+**Separation of Concerns** ✅ IMPLEMENTED:
+
+- **CLI**: User interface, parameter validation, progress reporting via Rich
+- **CliPipelineOrchestrator**: CLI-specific orchestration and user feedback
+- **DocumentIngestionPipeline**: Complete document processing workflow coordination
+- **DualApiDocumentProcessor**: Document content extraction and validation only
+- **Database Operations**: Storage, retrieval, and embeddings management only
+
+**Key Architectural Changes**:
+
+- ✅ **Renamed Pipeline**: `CachedDocumentIngestionPipeline` → `DocumentIngestionPipeline` (caching is implementation detail)
+- ✅ **Proper Abstractions**: CLI uses high-level pipeline instead of direct processor calls
+- ✅ **Test Coverage**: All integration tests updated and passing (11/11)
+- ✅ **Clean Separation**: Each component has single responsibility
+
+### Dual-Stream Processing Architecture
+
+**Critical Architecture Principle:** The system processes **both document streams simultaneously**, not as alternatives:
+
+1. **ELI Stream Processing:**
+
+   - Continuous ingestion of enacted/historical law documents
+   - Uses `process_eli_document()` method
+   - Targets documents with legal effect (past/present)
+
+1. **Sejm Stream Processing:**
+
+   - Continuous ingestion of legislative work-in-progress documents
+   - Uses `process_sejm_document()` method
+   - Targets documents in legislative development pipeline
+
+1. **Parallel Stream Execution:**
+
+   - Both streams run concurrently for complete legal landscape coverage
+   - ELI documents: "What is law now"
+   - Sejm documents: "What might become law"
+   - Combined: Complete legal lifecycle from proposal to enactment
+
+### CLI Interface Design (Technical/Admin Use)
+
+**Default Behavior:** Dual-stream processing (no source specification required)
+
+```bash
+# Default: Process both streams simultaneously
+sejm-whiz-cli ingest documents --limit 100
+# Equivalent to: 50 ELI documents + 50 Sejm documents
+
+# Single stream processing (diagnostic/testing)
+sejm-whiz-cli ingest documents --source eli --limit 100  # ELI stream only
+sejm-whiz-cli ingest documents --source sejm --limit 100  # Sejm stream only
+```
+
+**Design Rationale:**
+
+- **No "--source both" option** - confusing and unnecessary
+- **Default = dual-stream** - aligns with system purpose (comprehensive legal coverage)
+- **Single stream options** - for technical diagnostics, testing specific APIs
+- **Admin-focused** - CLI designed for system administration, not end-user workflows
+
+## Enhanced Implementation Architecture
+
+### Updated System Architecture Flow ✅ IMPLEMENTED (Current Architecture)
+
+```mermaid
+graph TD
+    A[CLI Command] --> B[CliPipelineOrchestrator]
+    B --> C[DocumentIngestionPipeline]
+    C --> D[DualApiDocumentProcessor]
+
+    D --> E{Stream Type}
+    E -->|ELI Stream| F[process_eli_document]
+    E -->|Sejm Stream| G[process_sejm_document]
+
+    F --> H[ELI API: HTML + PDF Fallback]
+    G --> I[Sejm API: Term/Number Parsing]
+
+    H --> J[Content Validation]
+    I --> J
+
+    J --> K[Text Processing + Quality Score]
+    K --> L[Database Storage + Embeddings]
+    L --> M[Statistics Collection]
+    M --> N[Rich CLI Progress Display]
+
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#fff3e0
+    style D fill:#e8f5e8
+    style L fill:#fff8e1
+```
+
+### Original Legacy Flow (Before Architectural Refactoring)
 
 ```mermaid
 graph TD
@@ -36,579 +199,838 @@ graph TD
     L --> M[Queue for Later Retry]
 ```
 
-### Enhanced Component Structure
+### Enhanced Content Extraction Flow (New - Phases 6-9)
+
+```mermaid
+graph TD
+    A[Document Request] --> B[Dual-API Content Extraction]
+
+    B --> C[Try Primary Sources - COMPLETED]
+    C --> D[ELI API HTML + Rich Metadata]
+    C --> E[ELI API PDF + Rich Metadata]
+    C --> F[Sejm API Text + Rich Metadata]
+
+    D --> G{Content Available?}
+    E --> H{PDF Conversion Success?}
+    F --> I{Sejm Text Complete?}
+
+    G -->|Yes| J[Extract & Validate HTML + Store Metadata]
+    G -->|No| K[Store Metadata Only + Flag for Manual Review]
+
+    H -->|Yes| L[Extract & Validate PDF Text + Store Metadata]
+    H -->|No| K
+
+    I -->|Yes| M[Extract & Validate Sejm Text + Store Metadata]
+    I -->|No| K
+
+    J --> N[Quality Check & Complete Storage]
+    L --> N
+    M --> N
+
+    N --> X{Quality Sufficient?}
+
+    X -->|Yes| Y[Store Document with Content & Metadata]
+    X -->|No| Z[Store Metadata + Flag for Manual Review]
+
+    K --> Z
+    Z --> AA[Manual Review Queue with Rich Context]
+    Y --> BB[Successfully Processed]
+```
+
+## Content Quality Scoring (Subject to Change)
+
+**IMPORTANT:** Both ELI and Sejm content quality scoring functions are **NOT FINISHED** and subject to change when actual content becomes available for testing.
+
+### Current Quality Scoring Approach
+
+**ELI API Documents:**
+
+- **Assumption:** ELI API returns correct HTTP status codes (not 200) for API errors
+- **Scoring:** Uses ContentValidator.get_content_quality_score() with sophisticated analysis
+- **Factors:** Character count, readability, gibberish detection, error page detection
+- **Metadata:** Rich metadata provided by API (title, type, year, etc.) stored directly - no reconstruction needed
+- **Dual Content Storage:** Fetch and store BOTH HTML and PDF content when available
+- **Quality Validation:** Compare HTML vs PDF text to validate PDF-to-text conversion accuracy
+- **Content Selection:** Choose best quality content based on comparison metrics
+- **Status:** Preliminary implementation, needs refinement with real content
+
+**Sejm API Documents:**
+
+- **Updated:** Now uses same ContentValidator logic as ELI HTML content (consistency improvement)
+- **Previous:** Simple character count threshold (≥100 chars = 0.9, \<100 = 0.3)
+- **Current:** ContentValidator.get_content_quality_score(content, "html")
+- **Metadata:** API provides rich metadata directly - stored as received with all original fields
+- **Unique ID:** `term + number` format (e.g., "10_2" for term 10, document 2)
+- **Example Fields:** term, number, title, attachments, changeDate, deliveryDate, documentDate, processPrint
+- **Status:** Preliminary implementation, needs refinement with real content
+
+**Quality Score Range:** 0.0 (unusable) to 1.0 (perfect quality)
+
+### API Metadata Comparison
+
+| Feature           | ELI API                                | Sejm API                                     |
+| ----------------- | -------------------------------------- | -------------------------------------------- |
+| **Unique ID**     | `ELI` field (e.g., "DU/2025/1")        | `term + number` (e.g., "10_2")               |
+| **Document Type** | `type` field (e.g., "Rozporządzenie")  | Inferred from API endpoint                   |
+| **Title**         | `title` field                          | `title` field                                |
+| **Date Fields**   | `announcementDate`, `promulgation`     | `changeDate`, `deliveryDate`, `documentDate` |
+| **Additional**    | `status`, `publisher`, `volume`, `pos` | `attachments`, `processPrint`                |
+| **Content Flags** | `textHTML`, `textPDF`                  | PDF attachments in `attachments` array       |
+
+**Storage Strategy:** Store all original API fields to preserve complete metadata for future use
+
+### Sejm API Endpoint Constraints
+
+**📹 AVOID Videos Endpoint**:
+
+- ❌ **DO NOT ACCESS**: `/sejm/term{term}/videos` - Contains video content, not documents
+
+**✅ Primary Document Endpoints**:
+
+- **`/sejm/term{term}/prints/{number}`** - Legislative document metadata and PDF attachment info
+
+  - Example: `https://api.sejm.gov.pl/sejm/term10/prints/19`
+  - Returns: Document metadata, title, dates, PDF attachment names
+  - Contains: `attachments[]`, `additionalPrints[]`, `title`, `documentDate`, etc.
+
+- **`/sejm/term{term}/prints/{number}/{number}.pdf`** - Direct PDF content access
+
+  - Example: `https://api.sejm.gov.pl/sejm/term9/prints/383/383.pdf`
+  - Headers: `Accept: application/pdf`
+  - Returns: Raw PDF binary content for text extraction
+  - Note: Investigating if ready-made text content is also available
+
+**✅ Secondary Document Endpoints**:
+
+- `/sejm/term{term}/interpellations/{number}/body` - Interpellation content (HTML)
+- `/sejm/term{term}/writtenQuestions/{number}/body` - Written question content (HTML)
+
+**✅ Transcript Endpoints** 🎯 **FOUND**:
+
+- **`/sejm/term{term}/proceedings/{id}/{date}/transcripts`** - All statements for a sitting day
+
+  - Returns: Array of all transcript statements for the specific proceeding date
+  - Use proceeding `id` and `date` from `/proceedings` endpoint
+
+- **`/sejm/term{term}/proceedings/{id}/{date}/transcripts/{statementNum}`** - Individual statement transcript
+
+  - Returns: HTML content of specific statement/speech
+  - Use statement number from the transcripts list
+
+- **`/sejm/term{term}/proceedings/{id}/{date}/transcripts/pdf`** - Complete sitting transcript as PDF
+
+  - Returns: PDF document with full day's proceedings transcript
+  - Alternative to individual statement access
+
+**✅ Committee Transcript Endpoints** 🎯 **FOUND**:
+
+- **`/sejm/term{term}/committees/{code}/sittings/{num}/html`** - Committee meeting transcript in HTML format
+
+  - Returns: HTML transcript of specific committee sitting
+  - Use committee `code` from `/committees` and sitting `num` from `/sittings`
+  - Contains: Speaker identification, proceedings, elections, voting results
+
+- **`/sejm/term{term}/committees/{code}/sittings/{num}/pdf`** - Committee meeting transcript in PDF format
+
+  - Returns: PDF transcript of specific committee sitting
+  - Alternative format for same content as HTML endpoint
+
+**Committee Transcript Data Flow**:
+
+1. **List Committees**: `/sejm/term10/committees` → get committee codes
+1. **Find Sittings**: `/committees/{code}/sittings` → get sitting numbers
+1. **Access Transcripts**: `/sittings/{num}/html` → get meeting transcript content
+1. **PDF Option**: `/sittings/{num}/pdf` → complete meeting transcript as PDF
+
+**✅ Committee Information Endpoints**:
+
+- **`/sejm/term{term}/committees`** - Complete committees list with members and structure
+
+  - Example: `https://api.sejm.gov.pl/sejm/term10/committees`
+  - Returns: Array of committee objects with full details
+
+- **`/sejm/term{term}/committees/{code}`** - Individual committee details by code
+
+  - Example: `https://api.sejm.gov.pl/sejm/term10/committees/ASW`
+  - Returns: Single committee object with complete information
+  - Use committee code from list endpoint (e.g., "ASW", "OBN", etc.)
+
+- **`/sejm/term{term}/committees/{code}/sittings`** - Committee meeting sessions and proceedings
+
+  - Example: `https://api.sejm.gov.pl/sejm/term10/committees/ASW/sittings`
+  - Returns: Array of committee sitting objects with meeting details
+  - Contains:
+    - `agenda` - Detailed description of meeting topics (string)
+    - `closed`, `status` - Meeting completion status (boolean, string)
+    - `date`, `startDateTime`, `endDateTime` - Meeting timing
+    - `num` - Meeting sequence number (integer)
+    - `remote` - Virtual meeting indicator (boolean)
+    - `room` - Physical meeting location (string)
+    - `jointWith[]` - Other participating committees (optional array)
+    - `comments`, `notes` - Additional meeting context (optional strings)
+    - Video streaming data:
+      - `playerLink`, `playerLinkIFrame` - Video streaming links
+      - `videoLink` - Direct video stream URL
+      - `transcribe` - Transcription availability (boolean)
+      - `unid` - Unique video identifier
+  - Contains:
+    - `appointmentDate`, `compositionDate` - Committee formation dates
+    - `code` - Committee code (e.g., "OBN" for Defense Committee)
+    - `name`, `nameGenitive` - Committee names in Polish
+    - `members[]` - Array of committee members with:
+      - `id`, `lastFirstName` - Member identification
+      - `club` - Political party/club affiliation
+      - `function` - Role (e.g., "przewodniczący", "zastępca przewodniczącego")
+    - `phone` - Contact information
+    - `scope` - Committee jurisdiction and responsibilities (detailed Polish text)
+    - `subCommittees[]` - Array of sub-committee codes
+    - `type` - Committee type (e.g., "STANDING")
+
+**Committee Data Use Cases**:
+
+- **Legislative Context**: Link documents to responsible committees
+- **Political Analysis**: Track party representation and leadership roles
+- **Process Mapping**: Understanding legislative workflow through committee structure
+- **Contact Information**: Direct communication channels for specific legal domains
+
+**Document Content Strategy**:
+
+- **Primary**: Legislative prints with PDF attachments and rich metadata
+- **Secondary**: Interpellations, written questions, proceedings transcripts
+- **Excluded**: Videos, multimedia content, non-legislative binary files
+
+**PDF Processing Strategy**:
+
+- **Metadata Extraction**: Rich document metadata from `/prints/{number}` endpoint
+- **Direct PDF Access**: Binary PDF content from `/prints/{number}/{number}.pdf` endpoint
+- **Text Extraction**: PDF-to-text conversion using multi-engine approach (pdfplumber, pypdf)
+- **Ready-Made Text**: Investigating if Sejm API provides pre-extracted text content
+- **Fallback Content**: Structured metadata summary when PDF processing fails
+
+**Implementation Priority**:
+
+1. **Phase 1**: Metadata extraction from `/prints/{number}` (✅ COMPLETED)
+1. **Phase 2**: Direct PDF download from `/prints/{number}/{number}.pdf`
+1. **Phase 3**: PDF-to-text conversion using existing ELI API PDF processing
+1. **Phase 4**: Investigate pre-extracted text availability in Sejm API
+
+### Enhanced Component Structure (Updated)
 
 ```
 components/sejm_whiz/sejm_api/
-├── client.py                 # Enhanced Sejm API integration
-└── metadata_extractor.py     # Sejm metadata processing
+├── client.py                 # ✅ COMPLETED - Enhanced Sejm API integration
+└── metadata_extractor.py     # ✅ COMPLETED - Sejm metadata processing
 
 components/sejm_whiz/eli_api/
-├── client.py                 # Enhanced with basic PDF fallback
-├── pdf_converter.py          # NEW: Simple PDF-to-text conversion
-└── content_validator.py      # NEW: Basic content quality checks
+├── client.py                 # ✅ COMPLETED - Enhanced with basic PDF fallback
+├── pdf_converter.py          # ✅ COMPLETED - Basic PDF-to-text conversion
+├── content_validator.py      # ✅ COMPLETED - Basic content quality checks
+├── enhanced_content_validator.py # ✅ COMPLETED - Multi-tier quality validation
+└── advanced_pdf_converter.py # 🆕 NEW - Multi-engine PDF processing with accuracy
 
 components/sejm_whiz/document_ingestion/
-├── multi_api_pipeline.py          # NEW: Unified Sejm+ELI processing
-├── cached_ingestion_pipeline.py   # Enhanced with basic fallback
-└── content_retry_queue.py          # NEW: Simple retry mechanism
+├── dual_stream_pipeline.py         # ✅ REFACTORED - Dual-stream document processor (renamed from multi_api_pipeline.py)
+├── cached_ingestion_pipeline.py    # ✅ REFACTORED - Stream-based processing with caching
+├── content_retry_queue.py           # ✅ COMPLETED - Simple retry mechanism
+├── content_extraction_orchestrator.py # ✅ COMPLETED - 3-phase extraction (no external sources)
+├── manual_review_queue.py           # 🆕 NEW - Queue for human review with context
+├── review_context_generator.py      # 🆕 NEW - Rich context for manual reviewers
+└── guaranteed_processing_pipeline.py # 🆕 NEW - 100% processing guarantee
+
+### Refactored Method Names (Dual-Stream Architecture)
+
+**Core Pipeline Methods:**
+- `ingest_documents_by_stream(document_ids, stream_type)` - Process documents from specific stream
+- `process_document_by_stream(document_id, stream_type)` - Single document stream processing
+
+**Stream-Specific Processing:**
+- `process_eli_document(document_id)` - Process enacted law documents (ELI stream)
+- `process_sejm_document(document_id)` - Process legislative work documents (Sejm stream)
+
+**Statistics Tracking:**
+- `stream_breakdown` - Per-stream success/failure/cache statistics
+- `{stream_type}_successful`, `{stream_type}_failed`, `{stream_type}_cached` counters
 
 test/components/sejm_whiz/
-├── test_multi_api_integration.py   # NEW: Cross-API integration tests
-├── test_basic_pdf_conversion.py    # NEW: Basic PDF conversion tests
-└── test_content_validation.py      # NEW: Content quality tests
+├── test_multi_api_integration.py   # ✅ COMPLETED - Cross-API integration tests
+├── test_basic_pdf_conversion.py    # ✅ COMPLETED - Basic PDF conversion tests
+├── test_content_validation.py      # ✅ COMPLETED - Content quality tests
+├── test_pdf_conversion_accuracy.py # 🆕 NEW - Comprehensive PDF accuracy tests
+└── test_guaranteed_processing.py   # 🆕 NEW - End-to-end guarantee tests
 ```
 
 ## Implementation Tasks
 
-**Revised Scope:** Focus on achieving basic multi-API document extraction with temporary quality targets as foundational milestone.
+**Phases 1-5 Status:** ✅ **COMPLETED** (14 hours) - Dual-API foundation working
 
-### Phase 1: Multi-API Integration Foundation (4 hours)
+### Phase 6: Enhanced Content Extraction (3.5 hours) - ✅ COMPLETED
 
-#### Task 1.1: Basic PDF Converter (2 hours)
+**Focus:** Sejm and ELI APIs only (\*.sejm.gov.pl domain) with enhanced validation and guaranteed processing
 
-**File:** `components/sejm_whiz/eli_api/pdf_converter.py`
+#### Task 6.1: Content Extraction Orchestrator (2 hours) - ✅ COMPLETED
 
-**Simplified Implementation for Interim Goal:**
-
-```python
-class BasicPDFConverter:
-    """Simple PDF-to-text converter for interim milestone."""
-
-    def __init__(self, engine: str = "pdfplumber"):
-        # Single engine implementation for now
-        self.engine = engine
-
-    async def convert_pdf_to_text(self, pdf_content: bytes) -> str:
-        # Basic conversion without complex quality scoring
-        # Goal: Get text extracted, even if imperfect
-
-    def is_conversion_acceptable(self, text: str, min_chars: int = 50) -> bool:
-        # Simple threshold-based validation
-        return len(text.strip()) >= min_chars
-```
-
-**Dependencies to add:**
-
-- `pdfplumber>=0.9.0` (MIT licensed, single engine for now)
-- Alternative fallback: `pypdf>=5.0.0` (BSD-3-Clause licensed)
-
-**License Compliance:** Both libraries use permissive licenses (MIT/BSD) suitable for commercial use. PyMuPDF excluded due to AGPL/commercial dual licensing.
-
-**Estimated Time:** 2 hours
-
-#### Task 1.2: Basic Content Validator (1 hour)
-
-**File:** `components/sejm_whiz/eli_api/content_validator.py`
-
-**Simplified for Interim Milestone:**
+**File:** `components/sejm_whiz/document_ingestion/content_extraction_orchestrator.py`
 
 ```python
-class BasicContentValidator:
-    """Simple content validation for interim goal."""
+class ContentExtractionOrchestrator:
+    """Orchestrates multiple content extraction attempts."""
 
-    MINIMUM_HTML_CHARS = 100
-    MINIMUM_PDF_TEXT_CHARS = 50
+    def __init__(self):
+        self.primary_sources = [EliApiClient(), SejmApiClient()]
+        self.alternative_sources = AlternativeContentSources()
+        self.content_validator = EnhancedContentValidator()
 
-    def is_html_content_usable(self, content: str) -> bool:
-        """Basic HTML content check."""
-        return len(content.strip()) >= self.MINIMUM_HTML_CHARS
+    async def extract_document_content(self, document_id: str) -> DocumentExtractionResult:
+        """Guaranteed content extraction or manual review flagging."""
 
-    def is_pdf_text_usable(self, text: str) -> bool:
-        """Basic PDF text check."""
-        return len(text.strip()) >= self.MINIMUM_PDF_TEXT_CHARS
+        result = DocumentExtractionResult(
+            document_id=document_id,
+            status="processing",
+            attempts_made=[],
+            final_content=None,
+            manual_review_required=False
+        )
 
-    def get_content_source_priority(self) -> List[str]:
-        """Return content source priority: HTML first, then PDF."""
-        return ["html", "pdf"]
-```
+        # Phase 1: Primary sources (current implementation)
+        for source in self.primary_sources:
+            attempt = await self._try_primary_source(source, document_id)
+            result.attempts_made.append(attempt)
+            if attempt.success:
+                result.final_content = attempt.content
+                result.status = "success"
+                return result
 
-**Interim Quality Metrics (Temporary Targets):**
-
-- Minimum character count thresholds (relaxed)
-- Basic text length validation
-- Simple pass/fail decisions
-
-**Estimated Time:** 1 hour
-
-#### Task 1.3: Multi-API Document Processor (1 hour)
-
-**File:** `components/sejm_whiz/document_ingestion/multi_api_pipeline.py`
-
-**Unified Processing for Interim Goal:**
-
-```python
-class MultiApiDocumentProcessor:
-    """Process documents from both Sejm API and ELI API."""
-
-    async def process_document_from_any_source(self, document_id: str) -> DocumentResult:
-        # Try to get content from available APIs
-        # Priority: Sejm API first (more reliable), then ELI API with PDF fallback
-
-    async def extract_act_text_and_metadata(self, source: str, content: str) -> ActDocument:
-        # Basic text and metadata extraction
-        # Goal: Get something working for both APIs
-```
-
-**Estimated Time:** 1 hour
-
-### Phase 2: Enhanced API Client Integration (3 hours)
-
-#### Task 2.1: Basic ELI Client PDF Fallback (1.5 hours)
-
-**File:** `components/sejm_whiz/eli_api/client.py`
-
-**Simplified Implementation for Interim Goal:**
-
-```python
-async def get_document_content_with_basic_fallback(self, eli_id: str) -> Dict[str, Any]:
-    """Get document content with simple HTML→PDF fallback."""
-
-    result = {
-        "eli_id": eli_id,
-        "content": "",
-        "source": "none",
-        "usable": False
-    }
-
-    # 1. Try HTML first
-    try:
-        html_content = await self.get_document_content(eli_id, "html")
-        if self.content_validator.is_html_content_usable(html_content):
-            result.update({
-                "content": html_content,
-                "source": "html",
-                "usable": True
-            })
+        # Phase 2: Alternative sources
+        alt_attempt = await self._try_alternative_sources(document_id)
+        result.attempts_made.append(alt_attempt)
+        if alt_attempt.success:
+            result.final_content = alt_attempt.content
+            result.status = "success_alternative"
             return result
-    except Exception as e:
-        logger.warning(f"HTML fetch failed for {eli_id}: {e}")
 
-    # 2. Try PDF fallback (simplified)
-    try:
-        pdf_content = await self.get_document_content(eli_id, "pdf")
-        if pdf_content:  # PDF endpoint returns bytes
-            text = await self.pdf_converter.convert_pdf_to_text(pdf_content)
-            if self.content_validator.is_pdf_text_usable(text):
-                result.update({
-                    "content": text,
-                    "source": "pdf",
-                    "usable": True
-                })
-                return result
-    except Exception as e:
-        logger.warning(f"PDF conversion failed for {eli_id}: {e}")
+        # Phase 3: Metadata-based summary generation
+        summary_attempt = await self._generate_metadata_summary(document_id)
+        result.attempts_made.append(summary_attempt)
+        if summary_attempt.success:
+            result.final_content = summary_attempt.content
+            result.status = "success_summary"
+            return result
 
-    # 3. Mark as pending (no manual queue for interim goal)
-    logger.info(f"No usable content found for {eli_id} - marking as pending")
-    return result
-```
+        # Phase 4: Flag for manual review
+        result.status = "manual_review_required"
+        result.manual_review_required = True
+        result.manual_review_context = self._prepare_manual_review_context(result)
 
-**Estimated Time:** 1.5 hours
-
-#### Task 2.2: Enhanced Sejm API Integration (1.5 hours)
-
-**File:** `components/sejm_whiz/sejm_api/client.py`
-
-**Enhance existing Sejm API for act text/metadata extraction:**
-
-```python
-class SejmApiClient:
-    """Enhanced Sejm API client for act text and metadata."""
-
-    async def get_act_with_full_text(self, sejm_id: str) -> Dict[str, Any]:
-        """Get legal act with full text content from Sejm API."""
-        # Enhance existing methods to ensure text content retrieval
-
-    async def extract_act_metadata(self, act_data: Dict) -> Dict[str, Any]:
-        """Extract standardized metadata from Sejm API response."""
-        # Standardize metadata format for consistency with ELI API
-
-    def is_sejm_content_complete(self, act_data: Dict) -> bool:
-        """Check if Sejm API returned complete act text."""
-        # Basic validation for Sejm API content completeness
-```
-
-**Goal:** Ensure Sejm API can reliably provide act text as primary source.
-
-**Estimated Time:** 1.5 hours
-
-### Phase 3: Unified Pipeline Integration (3 hours)
-
-#### Task 3.1: Multi-Source Document Processing (2 hours)
-
-**File:** `components/sejm_whiz/document_ingestion/multi_api_pipeline.py`
-
-**Create unified pipeline for both APIs:**
-
-```python
-class UnifiedDocumentPipeline:
-    """Process documents from both Sejm API and ELI API sources."""
-
-    def __init__(self, sejm_client, eli_client, cache_manager):
-        self.sejm_client = sejm_client
-        self.eli_client = eli_client
-        self.cache_manager = cache_manager
-
-    async def process_document_from_best_source(self, document_id: str) -> Dict[str, Any]:
-        """Try multiple sources to get act text and metadata."""
-
-        result = {
-            "document_id": document_id,
-            "act_text": "",
-            "metadata": {},
-            "source_used": "none",
-            "success": False
-        }
-
-        # 1. Try Sejm API first (typically more reliable for full text)
-        try:
-            sejm_data = await self.sejm_client.get_act_with_full_text(document_id)
-            if self.sejm_client.is_sejm_content_complete(sejm_data):
-                result.update({
-                    "act_text": sejm_data.get("text", ""),
-                    "metadata": await self.sejm_client.extract_act_metadata(sejm_data),
-                    "source_used": "sejm_api",
-                    "success": True
-                })
-                return result
-        except Exception as e:
-            logger.warning(f"Sejm API failed for {document_id}: {e}")
-
-        # 2. Try ELI API with PDF fallback
-        try:
-            eli_data = await self.eli_client.get_document_content_with_basic_fallback(document_id)
-            if eli_data["usable"]:
-                result.update({
-                    "act_text": eli_data["content"],
-                    "metadata": {"eli_id": document_id, "content_source": eli_data["source"]},
-                    "source_used": f"eli_api_{eli_data['source']}",
-                    "success": True
-                })
-                return result
-        except Exception as e:
-            logger.warning(f"ELI API failed for {document_id}: {e}")
-
-        # 3. Mark as failed for retry later
-        logger.warning(f"All sources failed for {document_id}")
         return result
 ```
 
 **Estimated Time:** 2 hours
 
-#### Task 3.2: Simple Retry Queue Implementation (1 hour)
+#### Task 6.3: Enhanced Content Validation (1.5 hours)
 
-**File:** `components/sejm_whiz/document_ingestion/content_retry_queue.py`
-
-**Simplified retry mechanism for interim goal:**
+**File:** `components/sejm_whiz/eli_api/enhanced_content_validator.py`
 
 ```python
-class SimpleRetryQueue:
-    """Simple retry queue for failed document processing."""
+class EnhancedContentValidator:
+    """Enhanced validation with multiple quality tiers."""
+
+    QUALITY_TIERS = {
+        "high": {"min_chars": 500, "min_sentences": 10, "metadata_complete": True},
+        "medium": {"min_chars": 200, "min_sentences": 5, "metadata_partial": True},
+        "low": {"min_chars": 50, "min_sentences": 2, "metadata_minimal": True},
+        "summary": {"min_chars": 20, "metadata_only": True}
+    }
+
+    def assess_content_quality(self, content: str, metadata: Dict) -> ContentQualityAssessment:
+        """Multi-tier quality assessment."""
+        assessment = ContentQualityAssessment()
+
+        # Determine quality tier
+        char_count = len(content.strip())
+        sentence_count = len([s for s in content.split('.') if s.strip()])
+
+        for tier_name, requirements in self.QUALITY_TIERS.items():
+            if self._meets_tier_requirements(content, metadata, requirements):
+                assessment.tier = tier_name
+                assessment.usable = True
+                break
+        else:
+            assessment.tier = "insufficient"
+            assessment.usable = False
+
+        assessment.recommendations = self._generate_improvement_recommendations(content, metadata)
+        return assessment
+
+    def _meets_tier_requirements(self, content: str, metadata: Dict, requirements: Dict) -> bool:
+        """Check if content meets specific tier requirements."""
+        # Implementation for tier-specific validation
+        pass
+```
+
+**Estimated Time:** 1.5 hours
+
+### Phase 7: Manual Review System (4 hours)
+
+#### Task 7.1: Manual Review Queue (2 hours)
+
+**File:** `components/sejm_whiz/document_ingestion/manual_review_queue.py`
+
+```python
+@dataclass
+class ManualReviewItem:
+    """Item flagged for manual review."""
+    document_id: str
+    eli_id: Optional[str]
+    flagged_at: datetime
+    failure_reasons: List[str]
+    extraction_attempts: List[Dict]
+    metadata_available: Dict[str, Any]
+    priority: str  # "high", "medium", "low"
+    manual_review_context: Dict[str, Any]
+    estimated_effort: str  # "quick", "medium", "complex"
+
+class ManualReviewQueue:
+    """Queue for documents requiring manual review."""
 
     def __init__(self, redis_client):
         self.redis = redis_client
-        self.retry_key = "document_retry_queue"
+        self.queue_key = "manual_review_queue"
+        self.processed_key = "manual_review_processed"
 
-    async def add_for_retry(self, document_id: str, failure_reason: str):
-        """Add document to retry queue."""
-        retry_data = {
-            "document_id": document_id,
-            "failure_reason": failure_reason,
-            "retry_count": 0,
-            "queued_at": datetime.now().isoformat()
+    async def add_for_manual_review(self, document_id: str, context: Dict[str, Any]) -> bool:
+        """Add document to manual review queue with full context."""
+
+        review_item = ManualReviewItem(
+            document_id=document_id,
+            flagged_at=datetime.now(),
+            failure_reasons=context.get("failure_reasons", []),
+            extraction_attempts=context.get("attempts_made", []),
+            metadata_available=context.get("metadata", {}),
+            priority=self._determine_priority(context),
+            manual_review_context=self._prepare_review_context(context),
+            estimated_effort=self._estimate_review_effort(context)
+        )
+
+        # Store in Redis with priority scoring
+        await self._store_review_item(review_item)
+        return True
+
+    def _determine_priority(self, context: Dict) -> str:
+        """Determine review priority based on document importance."""
+        # High: Recent legislation, constitutional changes
+        # Medium: Regulatory updates, administrative decisions
+        # Low: Historical documents, notices
+        pass
+
+    def _estimate_review_effort(self, context: Dict) -> str:
+        """Estimate manual effort required."""
+        # Quick: Metadata extraction only needed
+        # Medium: Partial content available, needs completion
+        # Complex: No content available, full manual transcription
+        pass
+
+    async def get_manual_review_batch(self, limit: int = 10) -> List[ManualReviewItem]:
+        """Get prioritized batch for manual review."""
+        # Return items sorted by priority and effort estimation
+        pass
+```
+
+**Estimated Time:** 2 hours
+
+#### Task 7.2: Manual Review Context Generator (2 hours)
+
+**File:** `components/sejm_whiz/document_ingestion/review_context_generator.py`
+
+```python
+class ReviewContextGenerator:
+    """Generate rich context for manual review."""
+
+    async def prepare_manual_review_context(self, document_id: str, attempts: List) -> Dict:
+        """Prepare comprehensive context for human reviewers."""
+
+        context = {
+            "document_summary": await self._generate_document_summary(document_id),
+            "extraction_history": self._analyze_extraction_attempts(attempts),
+            "available_metadata": await self._collect_all_metadata(document_id),
+            "similar_documents": await self._find_similar_processed_docs(document_id),
+            "suggested_sources": await self._suggest_alternative_sources(document_id),
+            "automation_recommendations": self._suggest_automation_improvements(attempts)
         }
-        await self.redis.lpush(self.retry_key, json.dumps(retry_data))
 
-    async def get_next_retry_batch(self, limit: int = 10) -> List[Dict]:
-        """Get next batch of documents to retry."""
-        batch = []
-        for _ in range(limit):
-            item = await self.redis.rpop(self.retry_key)
-            if item:
-                batch.append(json.loads(item))
+        return context
+
+    async def _generate_document_summary(self, document_id: str) -> Dict:
+        """Generate summary from available metadata."""
+        # Create human-readable summary of what the document should contain
+        # Based on ELI ID patterns, document type, date, etc.
+        pass
+
+    async def _find_similar_processed_docs(self, document_id: str) -> List[Dict]:
+        """Find similar documents that were successfully processed."""
+        # Look for documents with similar patterns that worked
+        # Help reviewers understand expected content structure
+        pass
+
+    def _suggest_automation_improvements(self, attempts: List) -> Dict:
+        """Suggest how to improve automation for similar cases."""
+        # Analyze failure patterns to suggest system improvements
+        pass
+```
+
+**Estimated Time:** 2 hours
+
+### Phase 8: PDF Text Conversion Accuracy Enhancement (5 hours)
+
+#### Task 8.1: Advanced PDF Processing (3 hours)
+
+**File:** `components/sejm_whiz/eli_api/advanced_pdf_converter.py`
+
+```python
+class AdvancedPDFConverter:
+    """Advanced PDF processing with multiple engines and accuracy testing."""
+
+    def __init__(self):
+        self.engines = {
+            "pdfplumber": PdfplumberEngine(),
+            "pypdf": PyPdfEngine(),
+            "tesseract_fallback": TesseractOCREngine()  # For scanned PDFs
+        }
+        self.polish_text_processor = PolishTextProcessor()
+
+    async def convert_with_accuracy_verification(self, pdf_content: bytes, eli_id: str) -> ConversionResult:
+        """Convert PDF with accuracy verification and multi-engine fallback."""
+
+        result = ConversionResult(eli_id=eli_id)
+
+        # Try each engine in priority order
+        for engine_name, engine in self.engines.items():
+            try:
+                text = await engine.extract_text(pdf_content)
+                accuracy_score = await self._assess_extraction_accuracy(text, pdf_content)
+
+                engine_result = {
+                    "engine": engine_name,
+                    "text": text,
+                    "accuracy_score": accuracy_score,
+                    "character_count": len(text),
+                    "polish_chars_detected": self._count_polish_characters(text),
+                    "confidence": engine.get_confidence_score()
+                }
+
+                result.attempts.append(engine_result)
+
+                # Use first acceptable result
+                if accuracy_score >= 0.7:  # 70% accuracy threshold
+                    result.best_result = engine_result
+                    result.success = True
+                    break
+
+            except Exception as e:
+                result.attempts.append({
+                    "engine": engine_name,
+                    "error": str(e),
+                    "success": False
+                })
+
+        # If no engine achieved good accuracy, try OCR fallback
+        if not result.success and "tesseract_fallback" not in [a.get("engine") for a in result.attempts]:
+            ocr_result = await self._try_ocr_fallback(pdf_content, eli_id)
+            result.attempts.append(ocr_result)
+            if ocr_result.get("accuracy_score", 0) >= 0.5:  # Lower threshold for OCR
+                result.best_result = ocr_result
+                result.success = True
+
+        return result
+
+    async def _assess_extraction_accuracy(self, text: str, pdf_content: bytes) -> float:
+        """Assess extraction accuracy using multiple heuristics."""
+        scores = []
+
+        # 1. Character density analysis
+        char_density = self._calculate_character_density(text)
+        scores.append(char_density)
+
+        # 2. Polish language patterns
+        polish_score = self._assess_polish_language_patterns(text)
+        scores.append(polish_score)
+
+        # 3. Legal document structure
+        legal_structure_score = self._assess_legal_document_structure(text)
+        scores.append(legal_structure_score)
+
+        # 4. Metadata consistency
+        metadata_consistency = await self._check_metadata_consistency(text)
+        scores.append(metadata_consistency)
+
+        return sum(scores) / len(scores)
+```
+
+**Estimated Time:** 3 hours
+
+#### Task 8.2: PDF Conversion Accuracy Tests (2 hours)
+
+**File:** `test/components/sejm_whiz/eli_api/test_pdf_conversion_accuracy.py`
+
+```python
+class TestPDFConversionAccuracy:
+    """Comprehensive PDF conversion accuracy testing."""
+
+    @pytest.fixture
+    def sample_pdfs(self):
+        """Provide test PDFs with known expected content."""
+        return {
+            "simple_text": {
+                "file": "test_data/simple_legal_doc.pdf",
+                "expected_text": "Ustawa z dnia 1 stycznia 2025 r. o przykładowych przepisach...",
+                "expected_accuracy": 0.95,
+                "polish_chars": ["ą", "ć", "ę", "ł", "ń", "ó", "ś", "ź", "ż"]
+            },
+            "complex_layout": {
+                "file": "test_data/complex_legal_doc.pdf",
+                "expected_text": "Rozdział I\\nPrzepisy ogólne\\nArt. 1...",
+                "expected_accuracy": 0.85,
+                "structure_elements": ["Rozdział", "Art.", "§", "ust."]
+            },
+            "scanned_document": {
+                "file": "test_data/scanned_legal_doc.pdf",
+                "expected_text": "DZIENNIK USTAW\\nRZECZYPOSPOLITEJ POLSKIEJ...",
+                "expected_accuracy": 0.70,  # Lower threshold for OCR
+                "ocr_required": True
+            }
+        }
+
+    @pytest.mark.parametrize("pdf_type", ["simple_text", "complex_layout", "scanned_document"])
+    async def test_pdf_extraction_accuracy(self, sample_pdfs, pdf_type):
+        """Test PDF extraction accuracy for different document types."""
+
+        pdf_info = sample_pdfs[pdf_type]
+        converter = AdvancedPDFConverter()
+
+        with open(pdf_info["file"], "rb") as f:
+            pdf_content = f.read()
+
+        result = await converter.convert_with_accuracy_verification(pdf_content, f"test_{pdf_type}")
+
+        assert result.success, f"Failed to extract text from {pdf_type}"
+        assert result.best_result["accuracy_score"] >= pdf_info["expected_accuracy"]
+
+        extracted_text = result.best_result["text"]
+
+        # Test content accuracy
+        expected_text = pdf_info["expected_text"]
+        similarity = self._calculate_text_similarity(extracted_text, expected_text)
+        assert similarity >= pdf_info["expected_accuracy"]
+
+        # Test Polish character preservation
+        if "polish_chars" in pdf_info:
+            for char in pdf_info["polish_chars"]:
+                assert char in extracted_text, f"Polish character '{char}' not preserved"
+
+        # Test document structure preservation
+        if "structure_elements" in pdf_info:
+            for element in pdf_info["structure_elements"]:
+                assert element in extracted_text, f"Structure element '{element}' not found"
+
+    def test_multi_engine_comparison(self, sample_pdfs):
+        """Test accuracy differences between PDF engines."""
+
+        pdf_info = sample_pdfs["simple_text"]
+        converter = AdvancedPDFConverter()
+
+        with open(pdf_info["file"], "rb") as f:
+            pdf_content = f.read()
+
+        # Test each engine individually
+        engine_results = {}
+        for engine_name, engine in converter.engines.items():
+            if engine_name != "tesseract_fallback":  # Skip OCR for this test
+                text = asyncio.run(engine.extract_text(pdf_content))
+                accuracy = asyncio.run(converter._assess_extraction_accuracy(text, pdf_content))
+                engine_results[engine_name] = {"text": text, "accuracy": accuracy}
+
+        # Verify at least one engine meets accuracy threshold
+        assert any(r["accuracy"] >= 0.7 for r in engine_results.values())
+
+        # Log engine comparison for analysis
+        for engine, result in engine_results.items():
+            print(f"{engine}: accuracy={result['accuracy']:.3f}, length={len(result['text'])}")
+
+    def _calculate_text_similarity(self, text1: str, text2: str) -> float:
+        """Calculate similarity between extracted and expected text."""
+        # Implementation using difflib or similar
+        pass
+```
+
+**Estimated Time:** 2 hours
+
+### Phase 9: Integration and Testing (3 hours)
+
+#### Task 9.1: End-to-End Pipeline Integration (2 hours)
+
+**File:** `components/sejm_whiz/document_ingestion/guaranteed_processing_pipeline.py`
+
+```python
+class GuaranteedProcessingPipeline:
+    """Pipeline that guarantees processing outcome for every document."""
+
+    async def process_document_guaranteed(self, document_id: str) -> GuaranteedProcessingResult:
+        """Process document with guaranteed outcome - success or manual review."""
+
+        result = GuaranteedProcessingResult(document_id=document_id)
+
+        try:
+            # Phase 1: Content extraction orchestration
+            extraction_result = await self.content_orchestrator.extract_document_content(document_id)
+
+            if extraction_result.status.startswith("success"):
+                # Successfully extracted content
+                processed_doc = await self._process_extracted_content(extraction_result)
+                result.status = "processed"
+                result.document = processed_doc
+                result.processing_method = extraction_result.status
+
+            elif extraction_result.status == "manual_review_required":
+                # Flag for manual review
+                review_queued = await self.manual_review_queue.add_for_manual_review(
+                    document_id, extraction_result.manual_review_context
+                )
+                result.status = "manual_review_queued"
+                result.manual_review_id = review_queued
+                result.review_context = extraction_result.manual_review_context
+
             else:
-                break
-        return batch
+                # Unexpected status - this should not happen
+                raise ProcessingError(f"Unexpected extraction status: {extraction_result.status}")
 
-    async def increment_retry_count(self, document_id: str, max_retries: int = 3) -> bool:
-        """Check if document should be retried again."""
-        # Simple retry logic - return True if should retry, False if give up
-        return True  # For interim goal, always retry
+        except Exception as e:
+            # Fallback: even exceptions result in manual review
+            await self.manual_review_queue.add_for_manual_review(document_id, {
+                "failure_type": "pipeline_exception",
+                "error_message": str(e),
+                "requires_technical_review": True
+            })
+            result.status = "manual_review_queued_exception"
+            result.error = str(e)
+
+        # Guarantee: result.status is never "failed" - always "processed" or "manual_review_queued"
+        return result
 ```
-
-**Estimated Time:** 1 hour
-
-### Phase 4: Basic Integration Testing (4 hours)
-
-#### Task 4.1: Basic PDF Conversion Tests (2 hours)
-
-**File:** `test/components/sejm_whiz/eli_api/test_basic_pdf_conversion.py`
-
-**Simplified Testing for Interim Goal:**
-
-```python
-class TestBasicPDFConversion:
-    """Basic PDF conversion tests for interim milestone."""
-
-    async def test_pdf_to_text_basic_functionality(self):
-        """Test that PDF conversion produces any usable text."""
-        # Goal: Just verify conversion works, not perfect quality
-
-    def test_minimum_text_extraction(self):
-        """Test that minimum text thresholds are met."""
-        # Verify >50 characters extracted from test PDFs
-
-    def test_polish_character_handling(self):
-        """Basic test for Polish character preservation."""
-        # Test ą, ć, ę, ł, ń, ó, ś, ź, ż handling
-
-    async def test_conversion_fallback_chain(self):
-        """Test HTML→PDF fallback workflow."""
-        # Verify fallback logic works end-to-end
-```
-
-**Relaxed Test Requirements for Interim:**
-
-- 2-3 sample PDF documents (simple cases)
-- Basic text extraction verification
-- Character encoding smoke tests
-- End-to-end workflow validation
 
 **Estimated Time:** 2 hours
 
-#### Task 4.2: Multi-API Integration Tests (2 hours)
+#### Task 9.2: Integration Testing (1 hour)
 
-**File:** `test/components/sejm_whiz/test_multi_api_integration.py`
-
-**Test Cross-API Functionality for Interim Goal:**
+**File:** `test/integration/test_guaranteed_processing.py`
 
 ```python
-class TestMultiApiIntegration:
-    """Test Sejm API + ELI API integration for act text extraction."""
+class TestGuaranteedProcessing:
+    """Test that every document gets processed or flagged."""
 
     @pytest.mark.asyncio
-    async def test_sejm_api_primary_source(self):
-        """Test Sejm API as primary source for act text."""
-        # Verify Sejm API can provide complete act text and metadata
+    async def test_100_percent_processing_guarantee(self):
+        """Test that no document goes unprocessed."""
 
-    @pytest.mark.asyncio
-    async def test_eli_api_fallback_chain(self):
-        """Test ELI API HTML→PDF fallback when Sejm fails."""
-        # Test complete fallback chain for ELI documents
+        test_documents = [
+            "DU/2025/1000",  # Known to fail content fetch
+            "MP/2025/730",   # Another failing document
+            "DU/2024/500",   # Older document (might have content)
+            "invalid/doc/id" # Invalid document ID
+        ]
 
-    async def test_unified_pipeline_source_selection(self):
-        """Test that pipeline selects best available source."""
-        # Verify source priority logic works correctly
+        pipeline = GuaranteedProcessingPipeline()
+        results = []
 
-    async def test_act_text_and_metadata_extraction(self):
-        """Test that both text and metadata are extracted from both APIs."""
-        # Core requirement: get act text + metadata working
-```
+        for doc_id in test_documents:
+            result = await pipeline.process_document_guaranteed(doc_id)
+            results.append(result)
 
-**Focus on Interim Success Criteria:**
+            # Guarantee: every document gets an outcome
+            assert result.status in ["processed", "manual_review_queued", "manual_review_queued_exception"]
+            assert result.status != "failed", f"Document {doc_id} was marked as failed"
 
-- Both APIs can provide act text
-- Metadata extraction works
-- Source priority logic functions
-- End-to-end pipeline produces usable results
+        # Verify statistics
+        processed_count = len([r for r in results if r.status == "processed"])
+        manual_review_count = len([r for r in results if "manual_review" in r.status])
 
-**Estimated Time:** 2 hours
-
-### Phase 3: CLI Integration and Basic Monitoring (2 hours)
-
-#### Task 5.1: Enhanced CLI Commands (1 hour)
-
-**File:** `components/sejm_whiz/cli/commands/pipeline_bridge.py`
-
-**Add Multi-API Support to CLI:**
-
-```python
-# Enhanced CLI for multi-API document processing
-async def ingest_documents_multi_api(
-    source: str = "both",  # "sejm", "eli", or "both"
-    enable_pdf_fallback: bool = True,
-    limit: Optional[int] = None
-):
-    """Ingest documents from multiple API sources."""
-```
-
-**New CLI Commands for Interim Goal:**
-
-```bash
-# Multi-source document ingestion
-uv run python sejm-whiz-cli.py ingest multi-api --source both --limit 10
-uv run python sejm-whiz-cli.py ingest multi-api --source sejm --limit 5
-uv run python sejm-whiz-cli.py ingest multi-api --source eli --enable-pdf-fallback
-
-# Test API integration
-uv run python sejm-whiz-cli.py test api-integration --document <id>
-uv run python sejm-whiz-cli.py status content-sources
+        assert processed_count + manual_review_count == len(test_documents)
+        print(f"Processing results: {processed_count} processed, {manual_review_count} manual review")
 ```
 
 **Estimated Time:** 1 hour
 
-#### Task 5.2: Basic Success Metrics (1 hour)
+## Complete Implementation Timeline
 
-**Track interim milestone progress:**
+### Phases 1-5: Dual-API Foundation - ✅ COMPLETED
 
-```python
-# Interim Metrics to Track:
-interim_metrics = {
-    "sejm_api_success_rate": 0.0,    # Target: >60%
-    "eli_api_html_success_rate": 0.0,  # Target: >30%
-    "eli_api_pdf_success_rate": 0.0,   # Target: >20%
-    "overall_act_extraction_rate": 0.0, # Target: >70%
-    "processing_time_avg": 0.0,        # Target: <10 seconds
-    "documents_with_usable_text": 0     # Target: >50 per day
-}
-```
+- **Total Time:** 14 hours (completed successfully)
+- **Status:** Dual-API infrastructure working, tests passing, CLI functional
 
-**Basic Success Tracking:**
+### Phases 6-9: Enhanced Content Processing - 🆕 NEW PHASES
 
-- Count successful act text extractions by source
-- Track documents with usable content vs. empty/failed
-- Monitor processing times
-- Simple pass/fail ratio reporting
+- **Total Time:** 18 hours (2.25 working days)
+- **Focus:** Guarantee 100% document processing coverage
 
-**Estimated Time:** 1 hour
+| Phase         | Tasks                       | Time     | Status           | Focus                                   |
+| ------------- | --------------------------- | -------- | ---------------- | --------------------------------------- |
+| **Phase 1-5** | Dual-API Foundation         | 14 hours | ✅ **COMPLETED** | Basic pipeline working                  |
+| **Phase 6**   | Enhanced Content Extraction | 6 hours  | 🆕 NEW           | Alternative sources, orchestration      |
+| **Phase 7**   | Manual Review System        | 4 hours  | 🆕 NEW           | Queue management, context generation    |
+| **Phase 8**   | PDF Accuracy Enhancement    | 5 hours  | 🆕 NEW           | Multi-engine processing, accuracy tests |
+| **Phase 9**   | Integration & Testing       | 3 hours  | 🆕 NEW           | End-to-end pipeline, guarantee tests    |
 
-## Revised Implementation Timeline
+### Complete Success Metrics
 
-### Total Estimated Time: 12 hours (1.5 working days)
+**Phases 1-5 Achievements:**
 
-**Focus:** Achieve interim goal of [Sejm API, ELI API] → act text, act metadata extraction
+- ✅ Dual-API document processing pipeline
+- ✅ Basic PDF fallback for ELI API empty content
+- ✅ Unified act text and metadata extraction
+- ✅ Simple retry mechanism for failed documents
+- ✅ CLI integration for multi-source ingestion
+- ✅ 37 passing integration tests
+- ✅ Production deployment on P7 environment
 
-| Phase       | Tasks                     | Time    | Dependencies              |
-| ----------- | ------------------------- | ------- | ------------------------- |
-| **Phase 1** | Multi-API Foundation      | 4 hours | Add pdfplumber dependency |
-| **Phase 2** | API Client Integration    | 3 hours | Phase 1 complete          |
-| **Phase 3** | Unified Pipeline          | 3 hours | Phases 1-2 complete       |
-| **Phase 4** | Basic Integration Testing | 4 hours | Working API integration   |
-| **Phase 5** | CLI & Basic Monitoring    | 2 hours | All phases functional     |
+**Phases 6-9 Guarantee Requirements:**
 
-### Critical Path Dependencies (Simplified)
+- 🆕 **0% unprocessed documents** - every document gets outcome
+- 🆕 **Text extraction or manual review** - no documents lost
+- 🆕 **Rich manual review context** - human reviewers have full information
+- 🆕 **PDF conversion accuracy ≥70%** - verified through comprehensive testing
+- 🆕 **Processing time \<15 seconds** - including alternative source attempts
 
-1. **Single PDF Dependency** (`pdfplumber`) must be added first
-1. **API Client Integration** must work for both Sejm and ELI APIs
-1. **Basic Test Data** (2-3 sample documents) for validation
-1. **Interim Quality Thresholds** are temporary targets, not optimized
+**Quality Tiers (New):**
 
-## Interim Quality Assurance Strategy
+- **Tier 1 (High):** Complete text + full metadata (target: 40% of documents)
+- **Tier 2 (Medium):** Partial text + basic metadata (target: 30% of documents)
+- **Tier 3 (Low):** Summary + metadata only (target: 20% of documents)
+- **Tier 4 (Manual):** Flagged for manual review (target: 10% of documents)
 
-### Temporary Benchmarks (Stepping Stones)
-
-**Interim Acceptance Criteria:**
-
-- **Text Extraction:** Any readable text >50 characters from PDF conversion
-- **Character Handling:** Basic Polish character preservation (not perfect)
-- **Processing Speed:** \<10 seconds per document (relaxed for interim)
-- **Success Rate:** >70% documents yield usable act text from either API
-- **API Coverage:** Both Sejm API and ELI API contribute to successful extractions
-
-### Interim Content Validation Thresholds
-
-```python
-# Temporary thresholds for interim milestone
-INTERIM_THRESHOLDS = {
-    "minimum_html_chars": 100,
-    "minimum_pdf_text_chars": 50,
-    "minimum_sejm_text_chars": 100,
-    "acceptable_success_rate": 0.70,  # 70% of documents should work
-    "max_processing_time": 10.0,      # 10 seconds per document
-    "pdf_conversion_attempts": 1       # Single conversion attempt
-}
-```
-
-### Simplified Test Data Requirements
-
-**Minimal Sample Documents for Interim Testing:**
-
-1. **2-3 Sejm API Documents:** Known working examples with full text
-1. **2-3 ELI API Documents:** 1 with HTML content + 2 requiring PDF fallback
-1. **Basic Edge Cases:** 1 completely failed document for error handling
-
-**Test Document Collection (Simplified):**
-
-```bash
-# Collect minimal test set for validation
-DEPLOYMENT_ENV=p7 uv run python test_multi_api_integration.py \
-  --quick-test \
-  --sample-size 5
-```
-
-## Risk Assessment & Mitigation
+## Risk Mitigation
 
 ### Technical Risks
 
-| Risk                     | Impact | Probability | Mitigation                                                             |
-| ------------------------ | ------ | ----------- | ---------------------------------------------------------------------- |
-| PDF parsing accuracy low | High   | Medium      | Use pdfplumber or pypdf (both permissive licenses), quality thresholds |
-| Performance degradation  | Medium | Low         | Async processing, caching, monitoring                                  |
-| Memory usage spike       | Medium | Medium      | Streaming processing, resource limits                                  |
-| Dependencies conflicts   | Low    | Low         | Version pinning, virtual environments                                  |
-
-**Note:** PyMuPDF excluded due to AGPL/commercial dual licensing restrictions. Using only MIT/BSD licensed alternatives: pdfplumber (MIT) and pypdf (BSD-3-Clause).
+- **Alternative sources availability:** Multiple fallback options implemented
+- **PDF conversion accuracy:** Multi-engine approach with accuracy verification
+- **Processing time limits:** Async processing with timeout controls
+- **Queue overflow:** Priority-based manual review with capacity limits
 
 ### Operational Risks
 
-| Risk                         | Impact | Probability | Mitigation                               |
-| ---------------------------- | ------ | ----------- | ---------------------------------------- |
-| Manual review queue overflow | High   | Medium      | Queue size limits, auto-expiry, alerting |
-| False quality scoring        | Medium | Medium      | Calibration tests, human validation      |
-| Cache storage growth         | Low    | High        | TTL policies, size limits, cleanup       |
+- **Manual review workload:** Context-rich flagging reduces review time
+- **False quality assessments:** Multi-tier validation with human oversight
+- **System complexity:** Comprehensive testing and monitoring
 
-## Interim Success Metrics (Temporary Targets)
+**Note:** PyMuPDF excluded due to AGPL/commercial dual licensing restrictions. Using only MIT/BSD licensed alternatives: pdfplumber (MIT) and pypdf (BSD-3-Clause).
 
-### Foundational Performance Targets
+## Complete Implementation Summary
 
-- **Act Text Extraction Success Rate:** >70% (interim goal, not final target)
-- **Multi-API Coverage:** Both Sejm and ELI APIs contributing to success
-- **Average Processing Time:** \<10 seconds per document (relaxed)
-- **Basic Functionality:** Act text + metadata extraction working
+**Total Development Time:** 32 hours (4 working days)
 
-### Interim Quality Targets (Stepping Stones)
+- **Completed:** 14 hours (Phases 1-5) - Dual-API foundation working
+- **Remaining:** 18 hours (Phases 6-9) - Enhanced processing guarantee
 
-- **PDF Conversion Basic Function:** Text extraction works (not perfect)
-- **API Integration Success:** Both APIs can provide content
-- **Pipeline Functionality:** End-to-end processing completes without crashing
-- **Content Usability:** Extracted text is readable (not optimally structured)
+**Current Status:** Dual-API system deployed and operational, but needs enhancement for complete processing coverage.
 
-**Important Note:** These are temporary targets to achieve foundational functionality. We will implement better quality standards and higher success rates after achieving this baseline working system.
+**Next Steps:** Implement Phases 6-9 to ensure every document matching filters gets either extracted text content with metadata or proper flagging for manual review with rich context for human reviewers.
 
-## Interim Deployment Strategy
-
-### Simple Rollout for Milestone
-
-1. **Development:** Implement basic multi-API functionality locally
-1. **Testing:** Validate with small document set (5-10 documents)
-1. **P7 Deployment:** Deploy to p7 environment with basic monitoring
-1. **Validation:** Confirm >70% success rate on test document set
-
-### Simple Rollback Plan
-
-- Disable PDF fallback via environment variable
-- Fallback to existing single-API processing
-- Clear retry queue if needed
-- Monitor basic success/failure ratios
-
-______________________________________________________________________
-
-## Implementation Plan Summary (Revised for Interim Goal)
-
-**Objective:** Achieve working [Sejm API, ELI API] → act text, act metadata extraction
-**Total Development Time:** 12 hours (1.5 working days)
-**Testing Coverage:** Basic functional tests for core workflow
-**Success Criteria:** >70% document processing success rate from multiple API sources
-
-**Key Deliverables:**
-
-1. Multi-API document processing pipeline
-1. Basic PDF fallback for ELI API empty content
-1. Unified act text and metadata extraction
-1. Simple retry mechanism for failed documents
-1. CLI integration for multi-source ingestion
-
-**Post-Milestone Goals:** After achieving this foundational milestone, implement advanced quality assurance, optimization, comprehensive error handling, and higher success rate targets.
-
-This interim plan focuses on getting basic multi-API document processing working reliably before pursuing comprehensive optimization and advanced features.
+This enhanced plan builds upon the successful dual-API foundation to guarantee 100% document processing coverage - eliminating the current issue where documents return 404s and disappear without proper handling.

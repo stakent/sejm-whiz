@@ -103,37 +103,30 @@ class SejmApiClient:
 
         return clean_endpoint
 
-    def _sanitize_error_message(self, error_text: str) -> str:
+    def _get_status_message(self, status_code: int) -> str:
         """
-        Sanitize error messages to prevent information disclosure.
+        Get clean status message based on HTTP status code.
 
         Args:
-            error_text: Raw error message
+            status_code: HTTP status code
 
         Returns:
-            Sanitized error message
+            Clean, descriptive status message
         """
-        if not error_text:
-            return "No error details available"
+        status_messages = {
+            400: "Bad Request",
+            401: "Unauthorized",
+            403: "Forbidden",
+            404: "Not Found",
+            405: "Method Not Allowed",
+            429: "Rate Limited",
+            500: "Internal Server Error",
+            502: "Bad Gateway",
+            503: "Service Unavailable",
+            504: "Gateway Timeout",
+        }
 
-        # Limit message length
-        sanitized = error_text[:200]
-
-        # Remove potentially sensitive patterns
-        patterns_to_redact = [
-            (r"token[s]?[:\s=]+[\w\-\.]+", "[REDACTED]"),
-            (r"password[s]?[:\s=]+[\w\-\.]+", "[REDACTED]"),
-            (r"secret[s]?[:\s=]+[\w\-\.]+", "[REDACTED]"),
-            (r"api[_\s]?key[s]?[:\s=]+[\w\-\.]+", "[REDACTED]"),
-            (r"auth[a-z]*[:\s=]+[\w\-\.]+", "[REDACTED]"),
-            (r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "[IP_REDACTED]"),
-            (r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "[EMAIL_REDACTED]"),
-        ]
-
-        for pattern, replacement in patterns_to_redact:
-            sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
-
-        return sanitized
+        return status_messages.get(status_code, f"HTTP Error {status_code}")
 
     def _validate_pagination_params(
         self, limit: Optional[int], offset: Optional[int]
@@ -280,19 +273,19 @@ class SejmApiClient:
                     await asyncio.sleep(wait_time)
                     continue
                 else:
-                    # Enhanced error logging with HTTP context
-                    sanitized_message = self._sanitize_error_message(e.response.text)
+                    # Use HTTP status code for clean error messages (log once at debug level)
+                    status_message = self._get_status_message(e.response.status_code)
                     context_msg = add_context_to_message(
                         logger,
-                        "ERROR",
-                        f"HTTP {e.response.status_code}: {sanitized_message}",
+                        "DEBUG",
+                        f"HTTP {e.response.status_code}: {status_message}",
                         status_code=e.response.status_code,
                         api_url=url,
                         attempt=f"{attempt + 1}/{self.max_retries}",
                     )
-                    logger.error(context_msg)
+                    logger.debug(context_msg)
                     raise SejmApiError(
-                        f"HTTP {e.response.status_code}: {sanitized_message} url: {url}"
+                        f"HTTP {e.response.status_code}: {status_message} url: {url}"
                     ) from e
 
             except httpx.RequestError as e:
@@ -782,11 +775,15 @@ class SejmApiClient:
         """
         Get the current parliamentary term number.
 
+        Since Sejm API doesn't have a current-term endpoint,
+        we default to term 10 (current as of 2025).
+
         Returns:
             Current term number
         """
-        data = await self._make_request("current-term")
-        return data.get("term", 10)  # Default to term 10 if not found
+        # Sejm API uses term-specific endpoints like /sejm/term10/
+        # No current-term endpoint exists, so use current term (10)
+        return 10
 
     async def health_check(self) -> bool:
         """
@@ -812,135 +809,133 @@ class SejmApiClient:
 
     # Legal Act Methods for Multi-API Integration
 
-    async def get_act_with_full_text(self, sejm_id: str) -> Dict[str, Any]:
+    async def get_act_with_full_text(self, term: int, number: int) -> Dict[str, Any]:
         """Get legal act with full text content from Sejm API.
 
+        NOTE: This method only accesses document content endpoints.
+        Videos endpoint (/sejm/term{term}/videos) is excluded as it contains
+        video content, not text documents suitable for legal analysis.
+
         Args:
-            sejm_id: Sejm document identifier
+            term: Parliamentary term number (e.g., 10)
+            number: Document number within the term (e.g., 1, 2, 3...)
 
         Returns:
             Dictionary with act data including full text
         """
-        # For now, this is a placeholder implementation
-        # The Sejm API doesn't have a direct "acts" endpoint like ELI API
-        # This would need to be implemented based on actual Sejm API structure
+        logger.info(
+            f"Attempting to fetch document {number} from term {term} via Sejm API"
+        )
 
-        logger.info(f"Attempting to fetch act with full text for {sejm_id}")
-
-        # Try to get document from proceedings or committee transcripts
         try:
-            # Parse sejm_id to extract term, session, sitting if formatted that way
-            # Format could be "term10-session1-sitting2" or similar
-            parts = sejm_id.replace("-", "/").split("/")
+            # Try to get print document (legislative document with PDF attachments)
+            # Endpoint: /sejm/term{term}/prints/{number}
+            endpoint = f"sejm/term{term}/prints/{number}"
+            print_data = await self._make_request(endpoint, {})
 
-            if len(parts) >= 3:
-                term_part = (
-                    parts[0].replace("term", "") if "term" in parts[0] else parts[0]
+            # Extract document text from PDF attachments if available
+            document_text = ""
+            pdf_attachments = print_data.get("attachments", [])
+
+            if pdf_attachments:
+                # For now, create a summary from metadata until PDF processing is implemented
+                document_text = f"Legislative Document #{number}\n"
+                document_text += f"Title: {print_data.get('title', 'No title')}\n"
+                document_text += (
+                    f"Document Date: {print_data.get('documentDate', 'Unknown')}\n"
                 )
-                session_part = (
-                    parts[1].replace("session", "")
-                    if "session" in parts[1]
-                    else parts[1]
+                document_text += (
+                    f"Delivery Date: {print_data.get('deliveryDate', 'Unknown')}\n"
                 )
-                sitting_part = (
-                    parts[2].replace("sitting", "")
-                    if "sitting" in parts[2]
-                    else parts[2]
-                )
+                document_text += f"PDF Attachments: {', '.join(pdf_attachments)}\n"
 
-                try:
-                    term = int(term_part)
-                    session = int(session_part)
-                    sitting = int(sitting_part)
+                # Include additional prints information
+                additional_prints = print_data.get("additionalPrints", [])
+                if additional_prints:
+                    document_text += "\nAdditional Documents:\n"
+                    for i, additional in enumerate(additional_prints, 1):
+                        document_text += f"  {i}. {additional.get('title', 'No title')} ({additional.get('number', 'No number')})\n"
+                        if additional.get("attachments"):
+                            document_text += f"     Attachments: {', '.join(additional.get('attachments', []))}\n"
 
-                    # Try to get proceeding details
-                    votings = await self.get_votings(
-                        term=term, session=session, proceeding_sitting=sitting, limit=1
-                    )
-                    if votings:
-                        # Extract relevant information
-                        voting = votings[0]
-                        act_data = {
-                            "text": f"Voting on: {voting.title}\nDescription: {voting.description or 'No description'}\nResult: {voting.result}",
-                            "title": voting.title,
-                            "sejm_id": sejm_id,
-                            "term": term,
-                            "session": session,
-                            "sitting": sitting,
-                            "voting_date": voting.date.isoformat()
-                            if voting.date
-                            else None,
-                            "source": "sejm_api_voting",
-                        }
-                        logger.info(f"Retrieved act data from voting for {sejm_id}")
-                        return act_data
-                except (ValueError, IndexError):
-                    logger.debug(
-                        f"Could not parse {sejm_id} as term/session/sitting format"
-                    )
-
-            # Fallback: try to get current proceedings
-            current_term = await self.get_current_term()
-            proceedings = await self.get_proceedings(term=current_term, limit=10)
-
-            if proceedings:
-                # Use the first proceeding as a fallback
-                proceeding = proceedings[0]
-                act_data = {
-                    "text": f"Parliamentary Proceeding: {proceeding.title or 'Untitled'}\nDates: {', '.join([date.strftime('%Y-%m-%d') for date in proceeding.dates]) if proceeding.dates else 'No dates'}",
-                    "title": proceeding.title or f"Proceeding {proceeding.num}",
-                    "sejm_id": sejm_id,
-                    "term": current_term,
-                    "proceeding_num": proceeding.num,
-                    "dates": [date.isoformat() for date in proceeding.dates]
-                    if proceeding.dates
-                    else [],
-                    "source": "sejm_api_proceeding",
-                }
                 logger.info(
-                    f"Retrieved fallback act data from proceeding for {sejm_id}"
+                    f"Retrieved print document {number} from term {term} with {len(pdf_attachments)} PDF attachments"
                 )
-                return act_data
+            else:
+                # Fallback if no attachments
+                document_text = f"Legislative Document #{number}: {print_data.get('title', 'No title')}\n"
+                document_text += "Note: No PDF attachments found for this document."
+                logger.warning(
+                    f"Print document {number} from term {term} has no PDF attachments"
+                )
 
-            # Final fallback: return minimal structure
             act_data = {
-                "text": f"Sejm document {sejm_id} - content not available through current API endpoints",
-                "title": f"Document {sejm_id}",
-                "sejm_id": sejm_id,
-                "source": "sejm_api_placeholder",
-                "note": "This is a placeholder implementation - actual content extraction needs API-specific implementation",
+                "text": document_text,
+                "title": print_data.get("title", f"Print Document {number}"),
+                "term": term,
+                "number": number,
+                "document_type": "legislative_print",
+                "source": "sejm_api_print",
+                "document_date": print_data.get("documentDate"),
+                "delivery_date": print_data.get("deliveryDate"),
+                "change_date": print_data.get("changeDate"),
+                "pdf_attachments": pdf_attachments,
+                "additional_prints": print_data.get("additionalPrints", []),
+                "raw_metadata": print_data,  # Store complete API response
             }
-            logger.warning(f"Using placeholder data for {sejm_id}")
+
             return act_data
 
         except Exception as e:
-            logger.error(f"Failed to fetch act data for {sejm_id}: {e}")
-            raise SejmApiError(f"Failed to fetch act with full text for {sejm_id}: {e}")
+            # Don't duplicate log - pipeline will log business-level error
+            raise SejmApiError(
+                f"Failed to fetch print document {number} from term {term}: {e}"
+            )
 
     async def extract_act_metadata(self, act_data: Dict) -> Dict[str, Any]:
         """Extract standardized metadata from Sejm API response.
+
+        NOTE: Metadata structure varies by Sejm API endpoint. Store as received from API.
+        Sejm Term 10 example from /sejm/term10/prints:
+        {
+            "attachments": ["2.pdf"],
+            "changeDate": "2023-11-29T12:27:56",
+            "deliveryDate": "2023-11-13",
+            "documentDate": "2023-11-13",
+            "number": "2",
+            "processPrint": ["2"],
+            "term": 10,
+            "title": "Poselski projekt uchwały..."
+        }
+        Unique ID: term + number (e.g., "10_2")
 
         Args:
             act_data: Raw act data from Sejm API
 
         Returns:
-            Standardized metadata dictionary
+            Standardized metadata dictionary with original API fields preserved
         """
         try:
+            # Generate unique document ID from term + number
+            term = act_data.get("term")
+            number = act_data.get("number")
+            document_id = (
+                f"{term}_{number}"
+                if term and number
+                else act_data.get("sejm_id", "unknown")
+            )
+
+            # Base metadata with original API fields preserved
             metadata = {
                 "source_api": "sejm_api",
                 "extraction_timestamp": datetime.now().isoformat(),
-                "document_id": act_data.get("sejm_id", "unknown"),
+                "document_id": document_id,
+                "unique_id": document_id,  # term_number format
+                # Original API fields - store as received
+                **act_data,  # Preserve all original fields
+                # Standardized fields for compatibility
                 "title": act_data.get("title", "Untitled"),
-                "term": act_data.get("term"),
-                "session": act_data.get("session"),
-                "sitting": act_data.get("sitting"),
-                "proceeding_num": act_data.get("proceeding_num"),
-                "voting_date": act_data.get("voting_date"),
-                "dates": act_data.get("dates", []),
-                "source_type": act_data.get("source", "unknown"),
                 "content_length": len(act_data.get("text", "")),
-                "processing_notes": act_data.get("note", ""),
             }
 
             # Add additional metadata based on source type
