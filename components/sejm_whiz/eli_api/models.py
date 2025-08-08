@@ -87,11 +87,15 @@ class LegalDocument(BaseModel):
         if not v or len(v.strip()) == 0:
             raise ValueError("ELI ID cannot be empty")
 
-        # Basic ELI ID validation - should start with country code
-        if not v.startswith(("pl/", "PL/")):
-            raise ValueError("ELI ID must start with Polish country code (pl/ or PL/)")
+        # Polish ELI ID format: DU/YYYY/NUMBER or MP/YYYY/NUMBER
+        # Where DU = Dziennik Ustaw, MP = Monitor Polski
+        stripped = v.strip()
+        if not (stripped.startswith(("DU/", "MP/")) and len(stripped.split("/")) >= 3):
+            # More flexible validation - accept any reasonable ELI ID format
+            if "/" not in stripped:
+                raise ValueError("ELI ID must contain at least one '/' separator")
 
-        return v.strip()
+        return stripped
 
     @field_validator("title")
     @classmethod
@@ -118,52 +122,89 @@ class LegalDocument(BaseModel):
     def from_api_response(cls, data: Dict[str, Any]) -> "LegalDocument":
         """Create LegalDocument from ELI API response."""
 
-        # Parse dates
+        # Parse dates - API uses different field names
         published_date = None
-        if data.get("published_date"):
-            try:
-                published_date = datetime.fromisoformat(
-                    data["published_date"].replace("Z", "+00:00")
-                )
-            except (ValueError, AttributeError):
-                pass
+        for date_field in ["promulgation", "published_date", "announcementDate"]:
+            if data.get(date_field):
+                try:
+                    date_str = data[date_field]
+                    if "T" in date_str:
+                        published_date = datetime.fromisoformat(
+                            date_str.replace("Z", "+00:00")
+                        )
+                    else:
+                        published_date = datetime.strptime(date_str, "%Y-%m-%d")
+                    break
+                except (ValueError, AttributeError):
+                    continue
 
         effective_date = None
-        if data.get("effective_date"):
-            try:
-                effective_date = datetime.fromisoformat(
-                    data["effective_date"].replace("Z", "+00:00")
-                )
-            except (ValueError, AttributeError):
-                pass
+        for date_field in ["entryIntoForce", "effective_date", "validFrom"]:
+            if data.get(date_field):
+                try:
+                    date_str = data[date_field]
+                    if "T" in date_str:
+                        effective_date = datetime.fromisoformat(
+                            date_str.replace("Z", "+00:00")
+                        )
+                    else:
+                        effective_date = datetime.strptime(date_str, "%Y-%m-%d")
+                    break
+                except (ValueError, AttributeError):
+                    continue
 
         repeal_date = None
         if data.get("repeal_date"):
             try:
-                repeal_date = datetime.fromisoformat(
-                    data["repeal_date"].replace("Z", "+00:00")
-                )
+                date_str = data["repeal_date"]
+                if "T" in date_str:
+                    repeal_date = datetime.fromisoformat(
+                        date_str.replace("Z", "+00:00")
+                    )
+                else:
+                    repeal_date = datetime.strptime(date_str, "%Y-%m-%d")
             except (ValueError, AttributeError):
                 pass
 
-        # Parse document type
+        # Parse document type - API uses Polish names
         doc_type_str = data.get("type", "").lower()
         try:
             document_type = DocumentType(doc_type_str)
         except ValueError:
-            # Default to ustawa if type not recognized
-            document_type = DocumentType.USTAWA
+            # Map common Polish document types
+            type_mapping = {
+                "rozporządzenie": DocumentType.ROZPORZADZENIE,
+                "ustawa": DocumentType.USTAWA,
+                "uchwała": DocumentType.UCHWALA,
+                "obwieszczenie": DocumentType.ROZPORZADZENIE,  # Treat as regulation
+                "komunikat": DocumentType.ROZPORZADZENIE,
+                "postanowienie": DocumentType.ROZPORZADZENIE,
+                "zarządzenie": DocumentType.ROZPORZADZENIE,
+            }
+            document_type = type_mapping.get(doc_type_str, DocumentType.USTAWA)
 
-        # Parse status
-        status_str = data.get("status", "").lower()
-        try:
-            status = DocumentStatus(status_str)
-        except ValueError:
-            # Default to obowiązująca if status not recognized
-            status = DocumentStatus.OBOWIAZUJACA
+        # Parse status - API uses Polish names
+        status_str = data.get("status", "obowiązujący").lower()
+        status_mapping = {
+            "obowiązujący": DocumentStatus.OBOWIAZUJACA,
+            "akt jednorazowy": DocumentStatus.OBOWIAZUJACA,
+            "akt indywidualny": DocumentStatus.OBOWIAZUJACA,
+            "akt objęty tekstem jednolitym": DocumentStatus.OBOWIAZUJACA,
+            "bez statusu": DocumentStatus.OBOWIAZUJACA,
+            "uchylony": DocumentStatus.UCHYLONA,
+            "wygasły": DocumentStatus.WYGASLA,
+        }
+        status = status_mapping.get(status_str, DocumentStatus.OBOWIAZUJACA)
+
+        # Extract keywords from API response
+        keywords = []
+        if data.get("keywords"):
+            keywords.extend(data["keywords"])
+        if data.get("keywordsNames"):
+            keywords.extend(data["keywordsNames"])
 
         return cls(
-            eli_id=data.get("eli_id", ""),
+            eli_id=data.get("ELI", data.get("eli_id", "")),
             title=data.get("title", ""),
             document_type=document_type,
             status=status,
@@ -171,13 +212,13 @@ class LegalDocument(BaseModel):
             effective_date=effective_date,
             repeal_date=repeal_date,
             publisher=data.get("publisher"),
-            journal_reference=data.get("journal_reference"),
-            journal_year=data.get("journal_year"),
-            journal_number=data.get("journal_number"),
-            journal_position=data.get("journal_position"),
+            journal_reference=data.get("displayAddress", data.get("journal_reference")),
+            journal_year=data.get("year", data.get("journal_year")),
+            journal_number=data.get("volume", data.get("journal_number")),
+            journal_position=data.get("pos", data.get("journal_position")),
             content_url=data.get("content_url"),
             metadata_url=data.get("metadata_url"),
-            keywords=data.get("keywords", []),
+            keywords=keywords,
             subject_areas=data.get("subject_areas", []),
             amending_documents=data.get("amending_documents", []),
             amended_documents=data.get("amended_documents", []),
