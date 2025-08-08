@@ -116,7 +116,7 @@ class CliPipelineOrchestrator:
                 )
 
                 # Execute pipeline
-                result = await pipeline.ingest_recent_documents(days=days)
+                result = await pipeline.ingest_recent_documents(days=days, limit=limit)
 
                 # Update progress as completed
                 progress.update(

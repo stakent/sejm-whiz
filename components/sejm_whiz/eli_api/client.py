@@ -364,8 +364,25 @@ class EliApiClient:
                 f"Invalid format: {format}. Must be one of {valid_formats}"
             )
 
-        endpoint = f"/document/{quote(eli_id, safe='')}/content"
-        params = {"format": format}
+        # Parse ELI ID to extract publisher, year, position
+        # Expected format: DU/2025/1076 or MP/2025/719
+        parts = eli_id.split("/")
+        if len(parts) != 3:
+            raise EliValidationError(f"Invalid ELI ID format: {eli_id}")
+
+        publisher, year, position = parts
+
+        # Map format to correct endpoint suffix
+        format_map = {
+            "html": "text.html",
+            "pdf": "text.pdf",
+            "xml": "text.xml",
+            "txt": "text.txt",
+        }
+        text_format = format_map.get(format, "text.html")
+
+        endpoint = f"/eli/acts/{publisher}/{year}/{position}/{text_format}"
+        params = {}
 
         logger.info(f"Fetching document content: {eli_id} (format: {format})")
 
@@ -375,7 +392,14 @@ class EliApiClient:
             await self._ensure_client()
 
             url = urljoin(self.config.base_url, endpoint)
-            response = await self._client.get(url, params=params)
+            # Use appropriate headers for content requests
+            content_headers = {
+                "Accept": "text/html,text/plain,application/xml,*/*",
+                "User-Agent": self.config.user_agent,
+            }
+            response = await self._client.get(
+                url, params=params, headers=content_headers
+            )
 
             if response.status_code == 404:
                 raise EliNotFoundError(f"Document content not found: {eli_id}")

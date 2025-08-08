@@ -113,106 +113,74 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
     async def _process_document_text_with_cache(
         self, document_id: str, content: Union[str, bytes], content_type: str
     ) -> Optional[str]:
-        """Process document text with caching at each stage."""
+        """Process document text with caching using TextProcessor."""
 
-        processing_stages = [
-            {
-                "stage": "raw_extraction",
-                "params": {"content_type": content_type, "method": "basic"},
-            },
-            {
-                "stage": "cleaned",
-                "params": {"remove_whitespace": True, "normalize_unicode": True},
-            },
-            {
-                "stage": "normalized",
-                "params": {"legal_format": True, "structure_preservation": True},
-            },
-        ]
+        # Define a single processing stage that uses the TextProcessor
+        stage = "processed"
+        params = {"content_type": content_type, "processor": "TextProcessor"}
 
-        current_text = None
+        # Check if we have cached processed text
+        cached_result = self.text_cache.get_processed_text(document_id, stage, params)
 
-        for stage_info in processing_stages:
-            stage = stage_info["stage"]
-            params = stage_info["params"]
-
-            # Check if we have cached processed text for this stage
-            cached_result = self.text_cache.get_processed_text(
-                document_id, stage, params
-            )
-
-            if cached_result:
-                current_text, stage_metadata = cached_result
-                logger.info(f"Using cached {stage} text for document {document_id}")
-            else:
-                # Process text for this stage
-                logger.info(f"Processing {stage} stage for document {document_id}")
-
-                try:
-                    import time
-
-                    start_time = time.time()
-
-                    if stage == "raw_extraction":
-                        current_text = await self._extract_raw_text(
-                            content, content_type
-                        )
-                    elif stage == "cleaned" and current_text:
-                        current_text = await self._clean_text(current_text)
-                    elif stage == "normalized" and current_text:
-                        current_text = await self._normalize_text(current_text)
-
-                    processing_time_ms = (time.time() - start_time) * 1000
-
-                    # Cache the processed text
-                    if current_text:
-                        self.text_cache.cache_processed_text(
-                            document_id=document_id,
-                            stage=stage,
-                            processed_text=current_text,
-                            processing_params=params,
-                            processing_time_ms=processing_time_ms,
-                        )
-
-                except Exception as e:
-                    logger.error(
-                        f"Failed to process {stage} stage for document {document_id}: {e}"
-                    )
-                    return None
-
-        return current_text
-
-    async def _extract_raw_text(
-        self, content: Union[str, bytes], content_type: str
-    ) -> str:
-        """Extract raw text from document content."""
-        if content_type == "html":
-            # Use existing text processor for HTML
-            return await self.text_processor.extract_text_from_html(content)
-        elif content_type == "pdf":
-            # Use existing text processor for PDF
-            return await self.text_processor.extract_text_from_pdf(content)
+        if cached_result:
+            processed_text, stage_metadata = cached_result
+            logger.info(f"Using cached processed text for document {document_id}")
+            return processed_text
         else:
-            # Plain text
-            return content if isinstance(content, str) else content.decode("utf-8")
+            # Process text using TextProcessor
+            logger.info(f"Processing text for document {document_id}")
 
-    async def _clean_text(self, text: str) -> str:
-        """Clean extracted text."""
-        # Use existing text processor
-        return await self.text_processor.clean_text(text)
+            try:
+                import time
 
-    async def _normalize_text(self, text: str) -> str:
-        """Normalize text for legal document processing."""
-        # Use existing text processor
-        return await self.text_processor.normalize_legal_text(text)
+                start_time = time.time()
+
+                # Use the existing TextProcessor interface
+                processed_text = self._process_content_with_text_processor(
+                    content, content_type, document_id
+                )
+
+                processing_time_ms = (time.time() - start_time) * 1000
+
+                # Cache the processed text
+                if processed_text:
+                    self.text_cache.cache_processed_text(
+                        document_id=document_id,
+                        stage=stage,
+                        processed_text=processed_text,
+                        processing_params=params,
+                        processing_time_ms=processing_time_ms,
+                    )
+
+                return processed_text
+
+            except Exception as e:
+                logger.error(f"Failed to process text for document {document_id}: {e}")
+                return None
+
+    def _process_content_with_text_processor(
+        self, content: Union[str, bytes], content_type: str, document_id: str
+    ) -> str:
+        """Process content using the existing TextProcessor interface."""
+        if isinstance(content, bytes):
+            content = content.decode("utf-8", errors="ignore")
+
+        # Use the existing TextProcessor.process_document method
+        processed_doc = self.text_processor.process_document(
+            raw_content=content, eli_id=document_id, source_url=""
+        )
+
+        return processed_doc.content
 
     async def process_document(
         self, document_metadata: Dict[str, Any], eli_client: ELIClient
     ) -> Dict[str, Any]:
         """Process a single document with comprehensive caching."""
 
-        document_id = document_metadata.get("id") or document_metadata.get(
-            "identifier", ""
+        document_id = (
+            document_metadata.get("eli_id")
+            or document_metadata.get("id")
+            or document_metadata.get("identifier", "")
         )
         if not document_id:
             logger.warning("Document missing ID, skipping")
@@ -308,9 +276,14 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
 
         return result
 
-    async def ingest_recent_documents(self, days: int = 7) -> Dict[str, Any]:
+    async def ingest_recent_documents(
+        self, days: int = 7, limit: Optional[int] = None
+    ) -> Dict[str, Any]:
         """Ingest recent documents with caching."""
-        logger.info(f"Starting cached document ingestion for last {days} days")
+        limit_msg = f" (limit: {limit})" if limit else ""
+        logger.info(
+            f"Starting cached document ingestion for last {days} days{limit_msg}"
+        )
 
         self.stats["start_time"] = datetime.now(UTC)
 
@@ -347,6 +320,11 @@ class CachedDocumentIngestionPipeline(DocumentIngestionPipeline):
                 )
 
             logger.info(f"Found {len(documents)} documents to process")
+
+            # Apply limit if specified
+            if limit and len(documents) > limit:
+                documents = documents[:limit]
+                logger.info(f"Limited to {limit} documents for processing")
 
             # Process documents with concurrency control
             semaphore = asyncio.Semaphore(self.config.parallel_workers)
