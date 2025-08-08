@@ -112,8 +112,8 @@ def _detect_environment() -> str:
     """Detect current environment from various sources."""
     import os
 
-    # Environment variable
-    env_var = os.getenv("SEJM_WHIZ_ENV")
+    # Environment variables (check DEPLOYMENT_ENV first for consistency)
+    env_var = os.getenv("DEPLOYMENT_ENV") or os.getenv("SEJM_WHIZ_ENV")
     if env_var:
         return env_var
 

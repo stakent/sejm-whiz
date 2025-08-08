@@ -117,8 +117,20 @@ class DatabaseConfig(BaseSettings):
         )
 
 
-# Global configuration instance
-db_config = DatabaseConfig()
+# Global configuration instance - initialized lazily
+_db_config_cache = None
+
+
+def get_db_config() -> DatabaseConfig:
+    """Get cached database configuration."""
+    global _db_config_cache
+    if _db_config_cache is None:
+        _db_config_cache = get_database_config()
+    return _db_config_cache
+
+
+# For backward compatibility
+db_config = None  # Will be set on first access
 
 
 def get_database_config() -> DatabaseConfig:
