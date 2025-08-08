@@ -17,6 +17,7 @@ dependencies = [
     "nltk>=3.9.1",
     "numpy>=2.3.2",
     "optuna>=4.4.0",
+    "pdfplumber>=0.9.0",
     "pgvector>=0.4.1",
     "pl-core-news-sm",
     "protobuf>=6.31.1",
