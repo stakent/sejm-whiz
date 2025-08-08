@@ -408,14 +408,33 @@ class CliPipelineOrchestrator:
         end_date: Optional[datetime],
         limit: Optional[int],
     ) -> List[str]:
-        """Get ELI document IDs for processing (simplified for CLI)."""
-        # For now, return sample document IDs for testing
-        # In production, this would query the ELI API for actual document listings
-        sample_ids = ["DU/2025/1", "DU/2025/2", "DU/2025/3", "MP/2025/1", "MP/2025/2"]
+        """Get ELI document IDs by searching the API with date filters."""
+        try:
+            from sejm_whiz.eli_api.client import EliApiClient
 
-        if limit:
-            return sample_ids[:limit]
-        return sample_ids
+            async with EliApiClient() as client:
+                # Search documents with date filtering
+                search_result = await client.search_documents(
+                    date_from=start_date,
+                    date_to=end_date,
+                    limit=limit or 500,  # Default to 500 if no limit specified
+                )
+
+                # Extract ELI IDs from search results
+                document_ids = []
+                for doc in search_result.documents:
+                    if doc.eli_id:
+                        document_ids.append(doc.eli_id)
+
+                self.logger.info(
+                    f"Found {len(document_ids)} ELI documents via API search"
+                )
+                return document_ids
+
+        except Exception as e:
+            self.logger.error(f"Failed to get ELI document IDs from API: {e}")
+            # Fallback to empty list rather than sample data
+            return []
 
     async def _get_sejm_document_ids(
         self,
@@ -423,14 +442,81 @@ class CliPipelineOrchestrator:
         end_date: Optional[datetime],
         limit: Optional[int],
     ) -> List[str]:
-        """Get Sejm document IDs for processing (simplified for CLI)."""
-        # For now, return sample document IDs for testing
-        # In production, this would query the Sejm API for actual document listings
-        sample_ids = ["10_1", "10_2", "10_3", "10_4", "10_5"]
+        """Get Sejm document IDs by searching for legislative documents."""
+        try:
+            from sejm_whiz.sejm_api.client import SejmApiClient
 
-        if limit:
-            return sample_ids[:limit]
-        return sample_ids
+            async with SejmApiClient() as client:
+                current_term = await client.get_current_term()
+                document_ids = []
+
+                # Get recent legislative documents (prints) from current term
+                # Sejm API works with term/number format, so we'll try a range of recent numbers
+                max_attempts = limit or 100  # Limit attempts to find valid documents
+                found_count = 0
+
+                # Start from document 1 and work forward to find recent documents
+                # We'll check a reasonable range of document numbers
+                for number in range(1, max_attempts + 1):
+                    try:
+                        # Try to get document metadata to check if it exists and matches date filter
+                        act_data = await client.get_act_with_full_text(
+                            current_term, number
+                        )
+
+                        if act_data and act_data.get("text"):
+                            # If we have date filtering, check document date
+                            doc_date_str = act_data.get(
+                                "document_date"
+                            ) or act_data.get("delivery_date")
+                            if doc_date_str and start_date:
+                                try:
+                                    # Parse document date (format: YYYY-MM-DD)
+                                    if "T" in doc_date_str:
+                                        doc_date = datetime.fromisoformat(
+                                            doc_date_str.replace("T", " ").replace(
+                                                "Z", ""
+                                            )
+                                        )
+                                    else:
+                                        doc_date = datetime.strptime(
+                                            doc_date_str, "%Y-%m-%d"
+                                        )
+
+                                    # Skip documents older than start_date
+                                    if doc_date.date() < start_date.date():
+                                        continue
+
+                                    # Skip documents newer than end_date
+                                    if end_date and doc_date.date() > end_date.date():
+                                        continue
+
+                                except Exception as e:
+                                    # If date parsing fails, include the document
+                                    self.logger.debug(
+                                        f"Failed to parse date {doc_date_str} for document {current_term}_{number}: {e}"
+                                    )
+                                    pass
+
+                            document_ids.append(f"{current_term}_{number}")
+                            found_count += 1
+
+                            if limit and found_count >= limit:
+                                break
+
+                    except Exception:
+                        # Document doesn't exist or failed to fetch, continue
+                        continue
+
+                self.logger.info(
+                    f"Found {len(document_ids)} Sejm documents via API search"
+                )
+                return document_ids
+
+        except Exception as e:
+            self.logger.error(f"Failed to get Sejm document IDs from API: {e}")
+            # Fallback to empty list rather than sample data
+            return []
 
     def _merge_stats(self, pipeline_result: Dict[str, Any]) -> None:
         """Merge pipeline results into overall statistics."""
