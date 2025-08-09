@@ -455,6 +455,69 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
+## Recent Enhancements ✅ COMPLETED
+
+### Raw Content Storage for Future LLM Processing
+
+**Implementation Completed**: 2025-08-08
+
+**Overview**: Enhanced document storage to preserve both raw source content (PDF bytes, HTML) and extracted text for future reprocessing with improved methods, including LLM-assisted extraction of complex document layouts.
+
+**Database Schema Changes**:
+
+```sql
+ALTER TABLE sejm_whiz_documents ADD COLUMN pdf_raw_content BYTEA;          -- Raw PDF bytes from ELI API
+ALTER TABLE sejm_whiz_documents ADD COLUMN html_raw_content TEXT;          -- Raw HTML content from ELI API
+ALTER TABLE sejm_whiz_documents ADD COLUMN pdf_extracted_text TEXT;        -- Text extracted from PDF
+ALTER TABLE sejm_whiz_documents ADD COLUMN html_extracted_text TEXT;       -- Text extracted from HTML
+ALTER TABLE sejm_whiz_documents ADD COLUMN preferred_source VARCHAR(10);   -- 'pdf' or 'html' priority
+```
+
+**Key Features**:
+
+- **PDF-First Priority**: 2025 documents are PDF-only, consistent with ELI API evolution
+- **Dual Storage**: Both raw content and extracted text preserved for quality comparison
+- **LLM-Ready**: Raw PDF bytes enable future LLM-assisted processing of complex layouts (tables, charts, maps)
+- **Reprocessing Capability**: Offline extraction improvement without API re-fetching
+- **Quality Validation**: Compare different extraction methods against original content
+
+**Implementation Results**:
+
+- ✅ Database migration applied successfully
+- ✅ ELI API client updated to return raw content alongside extracted text
+- ✅ Document ingestion pipeline stores both raw and processed content
+- ✅ Verified: 5.6MB raw PDF → 48K chars extracted text for sample document
+- ✅ Future-ready: Complex PDF layouts can be reprocessed with LLM assistance
+
+**Future LLM Processing Notes**: Legal documents contain creative tables, formatting, drawings, and maps that traditional text extraction struggles with. Raw content storage enables experimenting with LLM-based extraction methods that can interpret visual elements and maintain document structure integrity.
+
+### Database Migration Consolidation ✅ COMPLETED
+
+**Implementation Completed**: 2025-08-08
+
+**Overview**: Consolidated all alembic migrations into a comprehensive fresh installation migration while preserving incremental migrations for existing deployments.
+
+**Migration Strategy**:
+
+- **Incremental Path**: Existing databases use sequential migrations (fb191867ebe8 → 94ff641a7af5 → 4d1a99a5dcc7)
+- **Fresh Installation**: New databases use single consolidated migration (`fresh_consolidated_schema.py`)
+- **Backup Strategy**: All original migrations backed up in `alembic/backup/` directory
+
+**Files Created**:
+
+- `fresh_consolidated_schema.py` - Complete schema creation for new installations
+- `alembic/backup/` - Backup directory containing original migration files
+
+**Benefits**:
+
+- **Simplified Setup**: New installations require only one migration step
+- **Reduced Complexity**: Single comprehensive schema definition
+- **Backward Compatibility**: Existing databases continue with incremental approach
+- **Documentation**: Clear schema structure in one readable file
+- **Maintenance**: Easier to understand complete database structure
+
+______________________________________________________________________
+
 ## Next Steps 🎯
 
 ### Immediate Tasks (This Week)

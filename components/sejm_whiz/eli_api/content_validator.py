@@ -98,12 +98,17 @@ class BasicContentValidator:
         return result
 
     def get_content_source_priority(self) -> List[str]:
-        """Return content source priority: HTML first, then PDF.
+        """Return content source priority: PDF first, then HTML.
+
+        Changed to PDF-first because:
+        - 2025 documents are PDF-only (no HTML available)
+        - Consistent extraction approach across all years
+        - PDF is the authoritative source for legal documents
 
         Returns:
             List of content sources in priority order
         """
-        return ["html", "pdf"]
+        return ["pdf", "html"]
 
     def validate_content_by_source(self, content: str, source: str) -> bool:
         """Validate content based on its source type.
@@ -201,9 +206,9 @@ class BasicContentValidator:
         if total_chars == 0:
             return False
 
-        # At least 30% of characters should be alphabetic
+        # At least 10% of characters should be alphabetic (lowered for legal documents with lots of numbers/formatting)
         alpha_ratio = alpha_chars / total_chars
-        return alpha_ratio >= 0.3
+        return alpha_ratio >= 0.10
 
     def _not_mostly_gibberish(self, text: str) -> bool:
         """Check if text is not mostly gibberish/random characters.

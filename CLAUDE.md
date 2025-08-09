@@ -128,6 +128,32 @@ ssh root@p7 "cd /root/tmp/sejm-whiz && docker compose -f docker-compose.dev-p7.y
 - For p7 baremetal deployment:
   - Use sejm-whiz linux, database user for running code, files ownership
 
+### P7 Remote CLI Execution (KISS Approach)
+
+**Problem**: CLI commands run locally on x230 instead of on p7 server with more resources.
+
+**Solution**: Use p7cli tool for direct SSH execution with sejm-whiz user:
+
+```bash
+# Execute CLI commands on p7 using sejm-whiz user
+p7cli system status
+p7cli ingest documents --source eli --since 30d --limit 50
+p7cli search query "ustawa RODO" --limit 3
+p7cli db status
+```
+
+**Architecture**:
+
+- **Local CLI** (`DEPLOYMENT_ENV=p7`): Database connections only, processing on x230 (shows warning)
+- **p7cli Tool**: Direct SSH execution as sejm-whiz user on p7 with full resources
+
+**P7 Directory Structure**:
+
+- Working directory: `/home/sejm-whiz/sejm-whiz-baremetal/`
+- User: `sejm-whiz` (direct SSH connection, no root involved)
+- Environment: `DEPLOYMENT_ENV=p7`, `PYTHONPATH=components:bases`
+- Python: `uv` managed virtual environment per project specs
+
 ## Git Workflow Memories
 
 - Remember to commit your changes from feature branch with meaningful name, push to GitHub, create PR, then merge to main, then checkout and pull origin main

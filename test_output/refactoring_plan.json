@@ -1,0 +1,181 @@
+{
+  "name": "Incremental API Refactoring",
+  "description": "Safe step-by-step refactoring with backward compatibility focus",
+  "strategy": "RefactoringStrategy.INCREMENTAL",
+  "total_files": 9,
+  "estimated_hours": 5.75,
+  "steps": [
+    {
+      "id": "step_001",
+      "description": "Apply backward compatible changes",
+      "change_type": "ChangeType.IMPORT_UPDATE",
+      "risk_level": "RiskLevel.LOW",
+      "files_affected": [
+        "components/sejm_whiz/document_ingestion/cached_ingestion_pipeline.py",
+        "components/sejm_whiz/document_ingestion/content_extraction_orchestrator.py"
+      ],
+      "dependencies": [],
+      "commands": [
+        "# Update imports in components/sejm_whiz/document_ingestion/cached_ingestion_pipeline.py",
+        "sed -i 's/from old_module import/from new_module import/g' components/sejm_whiz/document_ingestion/cached_ingestion_pipeline.py",
+        "sed -i 's/import old_module/import new_module/g' components/sejm_whiz/document_ingestion/cached_ingestion_pipeline.py",
+        "# Update imports in components/sejm_whiz/document_ingestion/content_extraction_orchestrator.py",
+        "sed -i 's/from old_module import/from new_module import/g' components/sejm_whiz/document_ingestion/content_extraction_orchestrator.py",
+        "sed -i 's/import old_module/import new_module/g' components/sejm_whiz/document_ingestion/content_extraction_orchestrator.py"
+      ],
+      "validation_commands": [
+        "python -m py_compile {file}",
+        "python -m py_compile {file}"
+      ],
+      "rollback_commands": [
+        "git checkout HEAD -- {file}",
+        "git checkout HEAD -- {file}"
+      ],
+      "estimated_time_minutes": 45,
+      "notes": "Safe changes that maintain backward compatibility"
+    },
+    {
+      "id": "step_002",
+      "description": "Update breaking changes batch 1",
+      "change_type": "ChangeType.METHOD_SIGNATURE",
+      "risk_level": "RiskLevel.HIGH",
+      "files_affected": [
+        "components/sejm_whiz/eli_api/client.py",
+        "components/sejm_whiz/eli_api/content_validator.py",
+        "test/components/sejm_whiz/eli_api/test_client.py",
+        "components/sejm_whiz/eli_api/client.py",
+        "test/components/sejm_whiz/eli_api/test_client.py"
+      ],
+      "dependencies": [
+        "step_001"
+      ],
+      "commands": [
+        "# Update method signatures in components/sejm_whiz/eli_api/client.py",
+        "# Use Python AST-based refactoring tool",
+        "python scripts/update_signatures.py --file components/sejm_whiz/eli_api/client.py",
+        "# Update method signatures in components/sejm_whiz/eli_api/content_validator.py",
+        "# Use Python AST-based refactoring tool",
+        "python scripts/update_signatures.py --file components/sejm_whiz/eli_api/content_validator.py",
+        "# Update method signatures in test/components/sejm_whiz/eli_api/test_client.py",
+        "# Use Python AST-based refactoring tool",
+        "python scripts/update_signatures.py --file test/components/sejm_whiz/eli_api/test_client.py",
+        "# Update method signatures in components/sejm_whiz/eli_api/client.py",
+        "# Use Python AST-based refactoring tool",
+        "python scripts/update_signatures.py --file components/sejm_whiz/eli_api/client.py",
+        "# Update method signatures in test/components/sejm_whiz/eli_api/test_client.py",
+        "# Use Python AST-based refactoring tool",
+        "python scripts/update_signatures.py --file test/components/sejm_whiz/eli_api/test_client.py"
+      ],
+      "validation_commands": [
+        "python -m py_compile {file}",
+        "python -m py_compile {file}",
+        "python -m py_compile {file}",
+        "python -m py_compile {file}",
+        "python -m py_compile {file}",
+        "uv run poly test --affected"
+      ],
+      "rollback_commands": [
+        "git checkout HEAD -- {file}",
+        "git checkout HEAD -- {file}",
+        "git checkout HEAD -- {file}",
+        "git checkout HEAD -- {file}",
+        "git checkout HEAD -- {file}"
+      ],
+      "estimated_time_minutes": 90,
+      "notes": "Breaking changes requiring careful validation"
+    },
+    {
+      "id": "step_003",
+      "description": "Update breaking changes batch 2",
+      "change_type": "ChangeType.METHOD_SIGNATURE",
+      "risk_level": "RiskLevel.HIGH",
+      "files_affected": [
+        "components/sejm_whiz/cli/commands/ingest.py",
+        "components/sejm_whiz/document_ingestion/multi_api_pipeline.py",
+        "components/sejm_whiz/document_ingestion/dual_stream_pipeline.py",
+        "components/sejm_whiz/document_ingestion/content_extraction_orchestrator.py"
+      ],
+      "dependencies": [
+        "step_002"
+      ],
+      "commands": [
+        "# Update method signatures in components/sejm_whiz/cli/commands/ingest.py",
+        "# Use Python AST-based refactoring tool",
+        "python scripts/update_signatures.py --file components/sejm_whiz/cli/commands/ingest.py",
+        "# Update method signatures in components/sejm_whiz/document_ingestion/multi_api_pipeline.py",
+        "# Use Python AST-based refactoring tool",
+        "python scripts/update_signatures.py --file components/sejm_whiz/document_ingestion/multi_api_pipeline.py",
+        "# Update method signatures in components/sejm_whiz/document_ingestion/dual_stream_pipeline.py",
+        "# Use Python AST-based refactoring tool",
+        "python scripts/update_signatures.py --file components/sejm_whiz/document_ingestion/dual_stream_pipeline.py",
+        "# Update method signatures in components/sejm_whiz/document_ingestion/content_extraction_orchestrator.py",
+        "# Use Python AST-based refactoring tool",
+        "python scripts/update_signatures.py --file components/sejm_whiz/document_ingestion/content_extraction_orchestrator.py"
+      ],
+      "validation_commands": [
+        "python -m py_compile {file}",
+        "python -m py_compile {file}",
+        "python -m py_compile {file}",
+        "python -m py_compile {file}",
+        "uv run poly test --affected"
+      ],
+      "rollback_commands": [
+        "git checkout HEAD -- {file}",
+        "git checkout HEAD -- {file}",
+        "git checkout HEAD -- {file}",
+        "git checkout HEAD -- {file}"
+      ],
+      "estimated_time_minutes": 90,
+      "notes": "Breaking changes requiring careful validation"
+    },
+    {
+      "id": "step_004",
+      "description": "Update test files",
+      "change_type": "ChangeType.TEST_UPDATE",
+      "risk_level": "RiskLevel.MEDIUM",
+      "files_affected": [
+        "test/components/sejm_whiz/eli_api/test_client.py",
+        "test/components/sejm_whiz/sejm_api/test_client.py"
+      ],
+      "dependencies": [
+        "step_001",
+        "step_002",
+        "step_003"
+      ],
+      "commands": [
+        "# Update test file test/components/sejm_whiz/eli_api/test_client.py",
+        "# Update mocks and assertions",
+        "python scripts/update_test_mocks.py --file test/components/sejm_whiz/eli_api/test_client.py",
+        "# Update test file test/components/sejm_whiz/sejm_api/test_client.py",
+        "# Update mocks and assertions",
+        "python scripts/update_test_mocks.py --file test/components/sejm_whiz/sejm_api/test_client.py"
+      ],
+      "validation_commands": [
+        "uv run poly test",
+        "python -m pytest --tb=short"
+      ],
+      "rollback_commands": [
+        "git checkout HEAD -- {file}",
+        "git checkout HEAD -- {file}"
+      ],
+      "estimated_time_minutes": 120,
+      "notes": "Update tests to work with new API signatures"
+    }
+  ],
+  "checkpoints": [
+    "checkpoint_after_step_step_002",
+    "checkpoint_after_step_step_003"
+  ],
+  "prerequisites": [
+    "Create feature branch: git checkout -b refactor/api-migration",
+    "Backup current state: git tag backup-before-refactor",
+    "Ensure all tests pass: uv run poly test",
+    "Ensure clean working directory: git status"
+  ],
+  "post_refactoring": [
+    "Run full test suite: uv run poly test",
+    "Run linting: uv ruff check --fix .",
+    "Update CHANGELOG.md",
+    "Create PR for review"
+  ]
+}

@@ -1,0 +1,66 @@
+#!/bin/bash
+# p7cli - Execute sejm-whiz CLI commands on p7 server as sejm-whiz user
+# Usage: p7cli [CLI_ARGUMENTS...]
+
+set -euo pipefail
+
+# Configuration - Use root access only to switch to sejm-whiz user
+P7_HOST="root@p7"
+P7_HOME="/home/sejm-whiz"
+P7_APP_DIR="$P7_HOME/sejm-whiz-baremetal"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Validate arguments
+if [[ $# -eq 0 ]]; then
+    echo "Usage: p7cli [CLI_ARGUMENTS...]"
+    echo ""
+    echo "Examples:"
+    echo "  p7cli system status"
+    echo "  p7cli ingest documents --source eli --since 30d"
+    echo "  p7cli search query \"ustawa RODO\" --limit 3"
+    echo "  p7cli db status"
+    exit 1
+fi
+
+CLI_ARGS="$*"
+
+# Execute CLI command as sejm-whiz user (minimal root usage)
+ssh -t $P7_HOST "
+    # Switch to sejm-whiz user for all operations
+    sudo -u sejm-whiz bash -c '
+        cd $P7_APP_DIR || exit 1
+
+        # Set environment variables
+        export DEPLOYMENT_ENV=p7
+        export PYTHONPATH=components:bases
+
+        # Load any additional environment configuration
+        if [[ -f $P7_HOME/config/environment.env ]]; then
+            source $P7_HOME/config/environment.env
+        fi
+
+        # Show execution context
+        echo -e \"${BLUE}🌍 Environment: p7 (remote execution as sejm-whiz)${NC}\"
+        echo -e \"${BLUE}📂 Working directory: \$(pwd)${NC}\"
+        echo -e \"${BLUE}👤 User: \$(whoami)${NC}\"
+        echo \"\"
+
+        # Install uv for sejm-whiz user if not available
+        if [[ ! -f ~/.local/bin/uv ]]; then
+            echo -e \"${YELLOW}Installing uv for sejm-whiz user...${NC}\"
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+            export PATH=\"\$HOME/.local/bin:\$PATH\"
+        fi
+
+        # Execute CLI command using uv
+        ~/.local/bin/uv run python sejm-whiz-cli.py $CLI_ARGS
+    '
+"
+
+exit $?

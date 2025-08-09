@@ -94,7 +94,23 @@ def main(
     if ctx.invoked_subcommand is not None:
         current_env = ctx.obj["env"]
         env_color = _get_environment_color(current_env)
-        console.print(f"🌍 [{env_color}]Environment: {current_env}[/{env_color}]")
+
+        # Show execution location warning for resource-intensive operations
+        execution_location = (
+            "p7 (remote)" if os.path.exists("/home/sejm-whiz") else "local (x230)"
+        )
+        if current_env == "p7" and execution_location == "local (x230)":
+            console.print(
+                "⚠️ [bold yellow]WARNING: Executing locally with p7 database connection[/bold yellow]"
+            )
+            console.print(
+                f"  💡 For better performance on p7 server: [cyan]p7cli {' '.join(ctx.parent.params.get('args', []) if ctx.parent and ctx.parent.params else [])}[/cyan]"
+            )
+            console.print()
+
+        console.print(
+            f"🌍 [{env_color}]Environment: {current_env}[/{env_color}] ({execution_location})"
+        )
         if verbose:
             if profile:
                 console.print(f"📋 [dim]Profile: {profile}[/dim]")
@@ -111,21 +127,26 @@ def main(
 def _detect_environment() -> str:
     """Detect current environment from various sources."""
     import os
+    import socket
 
-    # Environment variables (check DEPLOYMENT_ENV first for consistency)
+    # Check hostname FIRST (most reliable indicator)
+    hostname = socket.gethostname()
+    if hostname == "p7":
+        return "p7"
+
+    # Check for other deployment-specific indicators
+    if os.path.exists("/app"):
+        return "docker"
+    elif os.getenv("KUBERNETES_SERVICE_HOST"):
+        return "k8s"
+
+    # Environment variables (fallback)
     env_var = os.getenv("DEPLOYMENT_ENV") or os.getenv("SEJM_WHIZ_ENV")
     if env_var:
         return env_var
 
-    # Check for deployment-specific indicators
-    if os.path.exists("/root/tmp/sejm-whiz"):
-        return "p7"
-    elif os.path.exists("/app"):
-        return "docker"
-    elif os.getenv("KUBERNETES_SERVICE_HOST"):
-        return "k8s"
-    else:
-        return "local"
+    # Default fallback
+    return "local"
 
 
 def _get_environment_color(env: str) -> str:

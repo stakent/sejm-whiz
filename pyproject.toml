@@ -63,6 +63,7 @@ dev = [
     "bumpversion>=0.6.0",
     "types-pyyaml>=6.0.12.20250516",
     "ruff>=0.12.7",
+    "vulture>=2.14",
 ]
 
 [tool.hatch.build]
