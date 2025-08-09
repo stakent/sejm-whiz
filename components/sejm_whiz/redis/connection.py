@@ -118,7 +118,7 @@ class RedisConnection:
             pipe.reset()
 
 
-# Global Redis connection instance
+# Global Redis connection instance - initialized lazily
 _redis_connection: Optional[RedisConnection] = None
 
 
@@ -126,7 +126,7 @@ def get_redis_connection(config: Optional[RedisConfig] = None) -> RedisConnectio
     """Get global Redis connection instance."""
     global _redis_connection
 
-    if _redis_connection is None:
+    if _redis_connection is None or config is not None:
         _redis_connection = RedisConnection(config)
 
     return _redis_connection

@@ -4,7 +4,7 @@ This component provides database connectivity, models, and operations
 for legal documents with vector embeddings support.
 """
 
-from .config import DatabaseConfig, get_database_config, db_config
+from .config import DatabaseConfig, get_database_config, get_db_config
 from .connection import (
     DatabaseManager,
     get_database_manager,
@@ -33,7 +33,7 @@ __all__ = [
     # Configuration
     "DatabaseConfig",
     "get_database_config",
-    "db_config",
+    "get_db_config",
     # Connection management
     "DatabaseManager",
     "get_database_manager",

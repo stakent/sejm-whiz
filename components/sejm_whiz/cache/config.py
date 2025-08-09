@@ -82,12 +82,19 @@ class CacheConfig(BaseSettings):
         """Create configuration for local development."""
         return cls(cache_root="./cache")
 
+    @classmethod
+    def for_p7(cls) -> "CacheConfig":
+        """Create configuration for p7 development (use local cache)."""
+        return cls(cache_root="./cache")
+
 
 def get_cache_config() -> CacheConfig:
     """Get cache configuration based on environment."""
     deployment_env = os.getenv("DEPLOYMENT_ENV", "local")
 
-    if deployment_env in ["baremetal", "p7_baremetal", "p7"]:
+    if deployment_env == "p7":
+        return CacheConfig.for_p7()
+    elif deployment_env in ["baremetal", "p7_baremetal"]:
         return CacheConfig.for_baremetal()
     else:
         return CacheConfig.for_local_dev()

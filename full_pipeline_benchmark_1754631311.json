@@ -1,0 +1,111 @@
+{
+  "benchmark_info": {
+    "timestamp": "2025-08-08T07:34:55.078897",
+    "benchmark_type": "full_pipeline_comparative",
+    "description": "Sejm-Whiz processing pipeline performance comparison (GPU vs CPU)"
+  },
+  "results": {
+    "gpu": {
+      "device": "cuda",
+      "timestamp": "2025-08-08T07:35:04.124815",
+      "total_duration": 9.041780948638916,
+      "total_texts_processed": 30,
+      "overall_throughput": 3.317930413312654,
+      "benchmarks": {
+        "api_fetching": {
+          "total_duration": 0.23424363136291504,
+          "total_items": 20,
+          "items_per_second": 85.38119001841243,
+          "sejm_time": 0.08497786521911621,
+          "sejm_items": 0,
+          "eli_time": 0.14926362037658691,
+          "eli_items": 20
+        },
+        "text_processing": {
+          "duration": 0.0070340633392333984,
+          "texts_count": 30,
+          "texts_per_second": 4264.960173541674,
+          "avg_time_per_text": 0.0002344687779744466
+        },
+        "embedding_generation": {
+          "duration": 8.797035455703735,
+          "texts_count": 30,
+          "texts_per_second": 3.41023975077296,
+          "avg_time_per_text": 0.2932345151901245,
+          "embedding_dimension": 768
+        }
+      },
+      "performance_breakdown": {
+        "api_time_percent": 2.5906802287460455,
+        "processing_time_percent": 0.07779510894136686,
+        "embedding_time_percent": 97.29317161823056
+      },
+      "summary": {
+        "benchmark_completed": true,
+        "total_pipeline_time": 9.041780948638916,
+        "total_throughput": 3.317930413312654
+      }
+    },
+    "cpu": {
+      "device": "cpu",
+      "timestamp": "2025-08-08T07:35:11.380382",
+      "total_duration": 7.255174160003662,
+      "total_texts_processed": 30,
+      "overall_throughput": 4.134979993365846,
+      "benchmarks": {
+        "api_fetching": {
+          "total_duration": 0.1699998378753662,
+          "total_items": 20,
+          "items_per_second": 117.6471710206148,
+          "sejm_time": 0.03194165229797363,
+          "sejm_items": 0,
+          "eli_time": 0.13805651664733887,
+          "eli_items": 20
+        },
+        "text_processing": {
+          "duration": 0.00521540641784668,
+          "texts_count": 30,
+          "texts_per_second": 5752.188342857143,
+          "avg_time_per_text": 0.00017384688059488931
+        },
+        "embedding_generation": {
+          "duration": 7.0784337520599365,
+          "texts_count": 30,
+          "texts_per_second": 4.238225722077221,
+          "avg_time_per_text": 0.23594779173533123,
+          "embedding_dimension": 768
+        }
+      },
+      "performance_breakdown": {
+        "api_time_percent": 2.343153094966922,
+        "processing_time_percent": 0.07188533731689285,
+        "embedding_time_percent": 97.5639398304446
+      },
+      "summary": {
+        "benchmark_completed": true,
+        "total_pipeline_time": 7.255174160003662,
+        "total_throughput": 4.134979993365846
+      }
+    }
+  },
+  "comparison": {
+    "overall_performance": {
+      "gpu_throughput": 3.317930413312654,
+      "cpu_throughput": 4.134979993365846,
+      "gpu_speedup": 0.8024054333118745,
+      "gpu_total_time": 9.041780948638916,
+      "cpu_total_time": 7.255174160003662
+    },
+    "embedding_performance": {
+      "gpu_embedding_time": 8.797035455703735,
+      "cpu_embedding_time": 7.0784337520599365,
+      "gpu_embedding_speedup": 0.8046385384829262
+    },
+    "text_processing_performance": {
+      "gpu_processing_time": 0.0070340633392333984,
+      "cpu_processing_time": 0.00521540641784668
+    },
+    "recommendation": "CPU",
+    "cost_efficiency": "CPU"
+  }
+}

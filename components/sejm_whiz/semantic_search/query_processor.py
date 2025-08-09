@@ -8,9 +8,8 @@ from datetime import datetime, UTC
 from enum import Enum
 
 from sejm_whiz.text_processing import (
-    clean_text,
+    clean_legal_text,
     normalize_legal_text,
-    tokenize_polish_legal,
 )
 from sejm_whiz.text_processing.legal_parser import LegalReference
 
@@ -120,7 +119,7 @@ class QueryProcessor:
     def _normalize_query(self, query: str) -> str:
         """Normalize query text for better search."""
         # Basic text cleaning
-        normalized = clean_text(query)
+        normalized = clean_legal_text(query)
 
         # Legal text normalization
         normalized = normalize_legal_text(normalized)
@@ -159,7 +158,7 @@ class QueryProcessor:
         legal_terms = []
 
         # Tokenize the query
-        tokens = tokenize_polish_legal(normalized_query)
+        tokens = normalized_query.split()
 
         # Find legal terms using dictionary
         for token in tokens:

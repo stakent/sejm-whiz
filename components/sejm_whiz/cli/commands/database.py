@@ -39,7 +39,7 @@ def migrate(
         alembic_cfg = Config(
             os.path.join(os.path.dirname(__file__), "../../database/alembic.ini")
         )
-        alembic_cfg.set_main_option("sqlalchemy.url", db_config.get_connection_string())
+        alembic_cfg.set_main_option("sqlalchemy.url", db_config.database_url)
 
         # Run migration
         if revision:

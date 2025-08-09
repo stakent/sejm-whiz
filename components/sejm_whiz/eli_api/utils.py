@@ -19,8 +19,10 @@ def validate_eli_id(eli_id: str) -> bool:
 
     eli_id = eli_id.strip()
 
-    # Basic validation - must start with country code
-    if not eli_id.startswith(("pl/", "PL/")):
+    # Basic validation - accept both full ELI format (pl/...) and Polish short format (DU/..., MP/...)
+    if not (
+        eli_id.startswith(("pl/", "PL/")) or re.match(r"^[A-Z]{1,3}/\d{4}/\d+", eli_id)
+    ):
         return False
 
     # Must have minimum length
@@ -208,28 +210,16 @@ def parse_date_string(date_str: str) -> Optional[str]:
     # Polish month names to numbers
     polish_months = {
         "stycznia": "01",
-        "stycznia": "01",
-        "lutego": "02",
         "lutego": "02",
         "marca": "03",
-        "marca": "03",
-        "kwietnia": "04",
         "kwietnia": "04",
         "maja": "05",
-        "maja": "05",
-        "czerwca": "06",
         "czerwca": "06",
         "lipca": "07",
-        "lipca": "07",
-        "sierpnia": "08",
         "sierpnia": "08",
         "września": "09",
-        "września": "09",
-        "października": "10",
         "października": "10",
         "listopada": "11",
-        "listopada": "11",
-        "grudnia": "12",
         "grudnia": "12",
     }
 

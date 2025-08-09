@@ -237,46 +237,28 @@ class EliApiClient:
         logger.info(f"Searching documents with query: {query}")
 
         try:
-            # Use working publisher/year endpoint instead of problematic search endpoint
-            # Fetch from both DU (Dziennik Ustaw) and MP (Monitor Polski) for current year
-            current_year = datetime.now().year
-            all_documents = []
+            # Use the proper search endpoint which provides richer data
+            search_params = {"limit": limit, "offset": offset}
 
-            # Fetch ALL documents from DU (Dziennik Ustaw - primary official journal)
-            try:
-                du_result = await self._make_request(
-                    f"/eli/acts/DU/{current_year}/", {}
-                )
-                du_documents = du_result.get("items", [])
-                all_documents.extend(du_documents)
-                logger.info(
-                    f"Successfully fetched {len(du_documents)} documents from DU/{current_year}"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to fetch from DU: {e}")
+            # Add query parameter if provided
+            if query:
+                search_params["title"] = query
 
-            # Fetch ALL documents from MP (Monitor Polski - official announcements)
-            try:
-                mp_result = await self._make_request(
-                    f"/eli/acts/MP/{current_year}/", {}
-                )
-                mp_documents = mp_result.get("items", [])
-                all_documents.extend(mp_documents)
-                logger.info(
-                    f"Successfully fetched {len(mp_documents)} documents from MP/{current_year}"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to fetch from MP: {e}")
+            # Add date filters if provided
+            if date_from:
+                search_params["pubDateFrom"] = date_from.strftime("%Y-%m-%d")
 
-            # Apply limit to combined results
-            all_documents = all_documents[:limit] if limit else all_documents
+            if date_to:
+                search_params["pubDateTo"] = date_to.strftime("%Y-%m-%d")
 
-            # Create combined result
-            result = {
-                "items": all_documents,
-                "count": len(all_documents),
-                "totalCount": len(all_documents),
-            }
+            # Add document type filter if provided (temporarily disabled due to API issues)
+            # if document_type:
+            #     search_params["type"] = document_type
+
+            logger.debug(f"Search parameters: {search_params}")
+            result = await self._make_request("/eli/acts/search", search_params)
+
+            logger.info(f"Search endpoint returned {result.get('count', 0)} documents")
 
             # Parse documents
             documents = []
@@ -382,8 +364,25 @@ class EliApiClient:
                 f"Invalid format: {format}. Must be one of {valid_formats}"
             )
 
-        endpoint = f"/document/{quote(eli_id, safe='')}/content"
-        params = {"format": format}
+        # Parse ELI ID to extract publisher, year, position
+        # Expected format: DU/2025/1076 or MP/2025/719
+        parts = eli_id.split("/")
+        if len(parts) != 3:
+            raise EliValidationError(f"Invalid ELI ID format: {eli_id}")
+
+        publisher, year, position = parts
+
+        # Map format to correct endpoint suffix
+        format_map = {
+            "html": "text.html",
+            "pdf": "text.pdf",
+            "xml": "text.xml",
+            "txt": "text.txt",
+        }
+        text_format = format_map.get(format, "text.html")
+
+        endpoint = f"/eli/acts/{publisher}/{year}/{position}/{text_format}"
+        params = {}
 
         logger.info(f"Fetching document content: {eli_id} (format: {format})")
 
@@ -393,7 +392,14 @@ class EliApiClient:
             await self._ensure_client()
 
             url = urljoin(self.config.base_url, endpoint)
-            response = await self._client.get(url, params=params)
+            # Use appropriate headers for content requests
+            content_headers = {
+                "Accept": "text/html,text/plain,application/xml,*/*",
+                "User-Agent": self.config.user_agent,
+            }
+            response = await self._client.get(
+                url, params=params, headers=content_headers
+            )
 
             if response.status_code == 404:
                 raise EliNotFoundError(f"Document content not found: {eli_id}")
@@ -456,65 +462,61 @@ class EliApiClient:
 
     async def get_recent_documents(
         self, days: int = 7, document_types: Optional[List[str]] = None
-    ) -> List[LegalDocument]:
-        """Get recently published documents."""
+    ) -> List[Dict[str, Any]]:
+        """Get recently published documents using search endpoint."""
 
         if days < 1 or days > 365:
             raise EliValidationError("Days must be between 1 and 365")
 
-        date_from = datetime.now() - timedelta(days=days)
-        document_types = document_types or ["ustawa", "rozporządzenie", "kodeks"]
+        # Calculate date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
 
-        all_documents = []
+        logger.info(
+            f"Fetching documents from last {days} days ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})"
+        )
 
-        for doc_type in document_types:
-            try:
-                result = await self.search_documents(
-                    document_type=doc_type, date_from=date_from, limit=100
-                )
+        try:
+            # Use search endpoint with date filtering for recent documents
+            search_result = await self.search_documents(
+                date_from=start_date,
+                date_to=end_date,
+                limit=500,  # Get more documents since we're filtering by date
+            )
 
-                all_documents.extend(result.documents)
-                logger.info(
-                    f"Found {len(result.documents)} recent {doc_type} documents"
-                )
-
-            except Exception as e:
-                # Enhanced error logging with document type context
-                context_msg = add_context_to_message(
-                    logger,
-                    "ERROR",
-                    f"Failed to fetch recent {doc_type} documents: {e}",
-                    document_type=doc_type,
-                    days_back=days,
-                    api_endpoint=getattr(self, "_last_url", "unknown"),
-                )
-                logger.error(context_msg)
-                continue
-
-        # Sort by publication date
-        all_documents.sort(key=lambda x: x.published_date or datetime.min, reverse=True)
-
-        logger.info(f"Total recent documents found: {len(all_documents)}")
-
-        # For compatibility with document ingestion pipeline, convert to dict format
-        documents_as_dicts = []
-        for doc in all_documents:
-            try:
-                doc_dict = {
-                    "id": doc.id,
-                    "identifier": doc.id,
+            # Convert to raw dictionary format for compatibility with document ingestion pipeline
+            raw_documents = []
+            for doc in search_result.documents:
+                raw_doc = {
+                    "eli_id": doc.eli_id,
+                    "ELI": doc.eli_id,
                     "title": doc.title,
-                    "url": getattr(doc, "url", ""),
-                    "document_type": doc.document_type,
-                    "published_date": doc.published_date,
-                    "language": doc.language,
+                    "type": doc.document_type.value,
+                    "status": doc.status.value,
+                    "promulgation": doc.published_date.strftime("%Y-%m-%d")
+                    if doc.published_date
+                    else None,
+                    "publisher": doc.publisher,
+                    "year": doc.journal_year,
+                    "pos": doc.journal_position,
+                    "displayAddress": doc.journal_reference,
+                    "published_date": doc.published_date.isoformat()
+                    if doc.published_date
+                    else None,
+                    "source_url": f"https://api.sejm.gov.pl/eli/acts/{doc.publisher}/{doc.journal_year}/{doc.journal_position}"
+                    if doc.publisher and doc.journal_year and doc.journal_position
+                    else None,
                 }
-                documents_as_dicts.append(doc_dict)
-            except Exception as e:
-                logger.warning(f"Failed to convert document to dict format: {e}")
-                continue
+                raw_documents.append(raw_doc)
 
-        return documents_as_dicts
+            logger.info(
+                f"Retrieved {len(raw_documents)} recent documents from search endpoint"
+            )
+            return raw_documents
+
+        except Exception as e:
+            logger.error(f"Failed to fetch recent documents: {e}")
+            return []
 
     async def batch_get_documents(
         self, eli_ids: List[str], max_batch_size: int = 50, max_concurrent: int = 10
