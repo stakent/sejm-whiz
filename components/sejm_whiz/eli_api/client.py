@@ -10,6 +10,8 @@ from dataclasses import dataclass
 
 from .models import LegalDocument, Amendment, DocumentSearchResult
 from .utils import validate_eli_id, sanitize_query
+from .pdf_converter import BasicPDFConverter
+from .content_validator import BasicContentValidator
 from sejm_whiz.logging import get_enhanced_logger, add_context_to_message
 
 if TYPE_CHECKING:
@@ -115,6 +117,10 @@ class EliApiClient:
         self._client: Optional[httpx.AsyncClient] = None
         self._rate_limiter = RateLimiter(self.config.rate_limit)
         self._last_url: str = ""
+
+        # Initialize PDF converter and content validator for fallback
+        self.pdf_converter = BasicPDFConverter()
+        self.content_validator = BasicContentValidator()
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -418,6 +424,255 @@ class EliApiClient:
         except Exception as e:
             logger.error(f"Failed to fetch content for {eli_id}: {e}")
             raise
+
+    async def get_document_content_with_dual_storage(
+        self, eli_id: str
+    ) -> Dict[str, Any]:
+        """Get document content with dual HTML+PDF storage for quality validation.
+
+        Fetches and stores BOTH HTML and PDF content when available to enable:
+        - PDF conversion quality validation against HTML
+        - Content quality comparison
+        - Best content selection based on metrics
+
+        Args:
+            eli_id: ELI identifier for the document
+
+        Returns:
+            Dictionary with dual content, quality scores, and best content selection
+        """
+        result = {
+            "eli_id": eli_id,
+            "html_content": None,
+            "pdf_content": None,
+            "html_quality_score": 0.0,
+            "pdf_quality_score": 0.0,
+            "preferred_content": None,
+            "preferred_source": "none",
+            "conversion_accuracy": None,
+            "usable": False,
+        }
+
+        # 1. Try to fetch HTML content
+        try:
+            html_content = await self.get_document_content(eli_id, "html")
+            if html_content:
+                result["html_content"] = html_content
+                if self.content_validator.is_html_content_usable(html_content):
+                    result["html_quality_score"] = (
+                        self.content_validator.get_content_quality_score(
+                            html_content, "html"
+                        )
+                    )
+                    logger.info(
+                        f"HTML content retrieved for {eli_id}: {len(html_content)} chars, quality={result['html_quality_score']}"
+                    )
+                else:
+                    logger.debug(
+                        f"HTML content for {eli_id} failed usability validation"
+                    )
+        except Exception as e:
+            logger.warning(f"HTML fetch failed for {eli_id}: {e}")
+
+        # 2. Try to fetch PDF content
+        try:
+            pdf_bytes = await self._get_document_content_raw(eli_id, "pdf")
+            if pdf_bytes:
+                pdf_text = await self.pdf_converter.convert_pdf_to_text(pdf_bytes)
+                if pdf_text:
+                    result["pdf_content"] = pdf_text
+                    if self.content_validator.is_pdf_text_usable(pdf_text):
+                        result["pdf_quality_score"] = (
+                            self.content_validator.get_content_quality_score(
+                                pdf_text, "pdf"
+                            )
+                        )
+                        logger.info(
+                            f"PDF content converted for {eli_id}: {len(pdf_text)} chars, quality={result['pdf_quality_score']}"
+                        )
+                    else:
+                        logger.debug(
+                            f"PDF content for {eli_id} failed usability validation"
+                        )
+        except Exception as e:
+            logger.warning(f"PDF fetch/conversion failed for {eli_id}: {e}")
+
+        # 3. Quality comparison and best content selection
+        if result["html_content"] and result["pdf_content"]:
+            # Both available - compare quality and calculate conversion accuracy
+            html_score = result["html_quality_score"]
+            pdf_score = result["pdf_quality_score"]
+
+            # Calculate conversion accuracy (similarity between HTML and PDF)
+            result["conversion_accuracy"] = self._calculate_content_similarity(
+                result["html_content"], result["pdf_content"]
+            )
+
+            # Choose preferred content based on quality scores
+            if html_score >= pdf_score:
+                result["preferred_content"] = result["html_content"]
+                result["preferred_source"] = "html"
+            else:
+                result["preferred_content"] = result["pdf_content"]
+                result["preferred_source"] = "pdf"
+
+            result["usable"] = True
+            logger.info(
+                f"Dual content available for {eli_id}: HTML={html_score:.2f}, PDF={pdf_score:.2f}, accuracy={result['conversion_accuracy']:.2f}"
+            )
+
+        elif result["html_content"] and result["html_quality_score"] > 0:
+            # Only HTML available
+            result["preferred_content"] = result["html_content"]
+            result["preferred_source"] = "html"
+            result["usable"] = True
+            logger.info(
+                f"HTML-only content for {eli_id}: quality={result['html_quality_score']:.2f}"
+            )
+
+        elif result["pdf_content"] and result["pdf_quality_score"] > 0:
+            # Only PDF available
+            result["preferred_content"] = result["pdf_content"]
+            result["preferred_source"] = "pdf"
+            result["usable"] = True
+            logger.info(
+                f"PDF-only content for {eli_id}: quality={result['pdf_quality_score']:.2f}"
+            )
+
+        else:
+            logger.warning(f"No usable content found for {eli_id}")
+
+        return result
+
+    def _calculate_content_similarity(
+        self, html_content: str, pdf_content: str
+    ) -> float:
+        """Calculate similarity between HTML and PDF content for conversion accuracy.
+
+        Args:
+            html_content: HTML text content
+            pdf_content: PDF text content
+
+        Returns:
+            Similarity score between 0.0 and 1.0
+        """
+        if not html_content or not pdf_content:
+            return 0.0
+
+        # Simple similarity based on common words (preliminary implementation)
+        html_words = set(html_content.lower().split())
+        pdf_words = set(pdf_content.lower().split())
+
+        if not html_words and not pdf_words:
+            return 1.0  # Both empty
+        elif not html_words or not pdf_words:
+            return 0.0  # One empty
+
+        intersection = html_words.intersection(pdf_words)
+        union = html_words.union(pdf_words)
+
+        # Jaccard similarity
+        similarity = len(intersection) / len(union) if union else 0.0
+        return similarity
+
+    # Keep the old method for backward compatibility
+    async def get_document_content_with_basic_fallback(
+        self, eli_id: str
+    ) -> Dict[str, Any]:
+        """DEPRECATED: Use get_document_content_with_dual_storage instead.
+
+        Legacy method for backward compatibility.
+        """
+        logger.warning(
+            "get_document_content_with_basic_fallback is deprecated. Use get_document_content_with_dual_storage."
+        )
+
+        dual_result = await self.get_document_content_with_dual_storage(eli_id)
+
+        # Convert to old format for compatibility
+        return {
+            "eli_id": eli_id,
+            "content": dual_result.get("preferred_content", ""),
+            "source": dual_result.get("preferred_source", "none"),
+            "usable": dual_result.get("usable", False),
+        }
+
+    async def _get_document_content_raw(
+        self, eli_id: str, format: str = "pdf"
+    ) -> Optional[bytes]:
+        """Get raw document content as bytes (for PDF processing).
+
+        Args:
+            eli_id: ELI identifier
+            format: Content format ('pdf', 'html', etc.)
+
+        Returns:
+            Raw content as bytes, or None if not found
+        """
+        # Validate inputs
+        if not validate_eli_id(eli_id):
+            raise EliValidationError(f"Invalid ELI ID format: {eli_id}")
+
+        valid_formats = ["html", "xml", "txt", "pdf"]
+        if format not in valid_formats:
+            raise EliValidationError(
+                f"Invalid format: {format}. Must be one of {valid_formats}"
+            )
+
+        # Parse ELI ID to extract publisher, year, position
+        parts = eli_id.split("/")
+        if len(parts) != 3:
+            raise EliValidationError(f"Invalid ELI ID format: {eli_id}")
+
+        publisher, year, position = parts
+
+        # Map format to correct endpoint suffix
+        format_map = {
+            "html": "text.html",
+            "pdf": "text.pdf",
+            "xml": "text.xml",
+            "txt": "text.txt",
+        }
+        text_format = format_map.get(format, "text.pdf")
+
+        endpoint = f"/eli/acts/{publisher}/{year}/{position}/{text_format}"
+
+        try:
+            await self._rate_limiter.acquire()
+            await self._ensure_client()
+
+            url = urljoin(self.config.base_url, endpoint)
+
+            # Use appropriate headers for binary content
+            if format == "pdf":
+                content_headers = {
+                    "Accept": "application/pdf,*/*",
+                    "User-Agent": self.config.user_agent,
+                }
+            else:
+                content_headers = {
+                    "Accept": "text/html,text/plain,application/xml,*/*",
+                    "User-Agent": self.config.user_agent,
+                }
+
+            response = await self._client.get(url, headers=content_headers)
+
+            if response.status_code == 404:
+                logger.debug(f"Raw content not found for {eli_id} in format {format}")
+                return None
+
+            response.raise_for_status()
+
+            content_bytes = response.content
+            logger.debug(
+                f"Retrieved raw {format} content for {eli_id}: {len(content_bytes)} bytes"
+            )
+
+            return content_bytes
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch raw {format} content for {eli_id}: {e}")
+            return None
 
     async def get_document_amendments(self, eli_id: str) -> List[Amendment]:
         """Get amendments for a specific document."""

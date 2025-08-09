@@ -103,37 +103,30 @@ class SejmApiClient:
 
         return clean_endpoint
 
-    def _sanitize_error_message(self, error_text: str) -> str:
+    def _get_status_message(self, status_code: int) -> str:
         """
-        Sanitize error messages to prevent information disclosure.
+        Get clean status message based on HTTP status code.
 
         Args:
-            error_text: Raw error message
+            status_code: HTTP status code
 
         Returns:
-            Sanitized error message
+            Clean, descriptive status message
         """
-        if not error_text:
-            return "No error details available"
+        status_messages = {
+            400: "Bad Request",
+            401: "Unauthorized",
+            403: "Forbidden",
+            404: "Not Found",
+            405: "Method Not Allowed",
+            429: "Rate Limited",
+            500: "Internal Server Error",
+            502: "Bad Gateway",
+            503: "Service Unavailable",
+            504: "Gateway Timeout",
+        }
 
-        # Limit message length
-        sanitized = error_text[:200]
-
-        # Remove potentially sensitive patterns
-        patterns_to_redact = [
-            (r"token[s]?[:\s=]+[\w\-\.]+", "[REDACTED]"),
-            (r"password[s]?[:\s=]+[\w\-\.]+", "[REDACTED]"),
-            (r"secret[s]?[:\s=]+[\w\-\.]+", "[REDACTED]"),
-            (r"api[_\s]?key[s]?[:\s=]+[\w\-\.]+", "[REDACTED]"),
-            (r"auth[a-z]*[:\s=]+[\w\-\.]+", "[REDACTED]"),
-            (r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "[IP_REDACTED]"),
-            (r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "[EMAIL_REDACTED]"),
-        ]
-
-        for pattern, replacement in patterns_to_redact:
-            sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
-
-        return sanitized
+        return status_messages.get(status_code, f"HTTP Error {status_code}")
 
     def _validate_pagination_params(
         self, limit: Optional[int], offset: Optional[int]
@@ -280,19 +273,19 @@ class SejmApiClient:
                     await asyncio.sleep(wait_time)
                     continue
                 else:
-                    # Enhanced error logging with HTTP context
-                    sanitized_message = self._sanitize_error_message(e.response.text)
+                    # Use HTTP status code for clean error messages (log once at debug level)
+                    status_message = self._get_status_message(e.response.status_code)
                     context_msg = add_context_to_message(
                         logger,
-                        "ERROR",
-                        f"HTTP {e.response.status_code}: {sanitized_message}",
+                        "DEBUG",
+                        f"HTTP {e.response.status_code}: {status_message}",
                         status_code=e.response.status_code,
                         api_url=url,
                         attempt=f"{attempt + 1}/{self.max_retries}",
                     )
-                    logger.error(context_msg)
+                    logger.debug(context_msg)
                     raise SejmApiError(
-                        f"HTTP {e.response.status_code}: {sanitized_message} url: {url}"
+                        f"HTTP {e.response.status_code}: {status_message} url: {url}"
                     ) from e
 
             except httpx.RequestError as e:
@@ -782,11 +775,15 @@ class SejmApiClient:
         """
         Get the current parliamentary term number.
 
+        Since Sejm API doesn't have a current-term endpoint,
+        we default to term 10 (current as of 2025).
+
         Returns:
             Current term number
         """
-        data = await self._make_request("current-term")
-        return data.get("term", 10)  # Default to term 10 if not found
+        # Sejm API uses term-specific endpoints like /sejm/term10/
+        # No current-term endpoint exists, so use current term (10)
+        return 10
 
     async def health_check(self) -> bool:
         """
@@ -808,4 +805,222 @@ class SejmApiClient:
                 api_url=getattr(self, "_last_url", "unknown"),
             )
             logger.error(context_msg)
+            return False
+
+    # Legal Act Methods for Multi-API Integration
+
+    async def get_act_with_full_text(self, term: int, number: int) -> Dict[str, Any]:
+        """Get legal act with full text content from Sejm API.
+
+        NOTE: This method only accesses document content endpoints.
+        Videos endpoint (/sejm/term{term}/videos) is excluded as it contains
+        video content, not text documents suitable for legal analysis.
+
+        Args:
+            term: Parliamentary term number (e.g., 10)
+            number: Document number within the term (e.g., 1, 2, 3...)
+
+        Returns:
+            Dictionary with act data including full text
+        """
+        logger.info(
+            f"Attempting to fetch document {number} from term {term} via Sejm API"
+        )
+
+        try:
+            # Try to get print document (legislative document with PDF attachments)
+            # Endpoint: /sejm/term{term}/prints/{number}
+            endpoint = f"sejm/term{term}/prints/{number}"
+            print_data = await self._make_request(endpoint, {})
+
+            # Extract document text from PDF attachments if available
+            document_text = ""
+            pdf_attachments = print_data.get("attachments", [])
+
+            if pdf_attachments:
+                # For now, create a summary from metadata until PDF processing is implemented
+                document_text = f"Legislative Document #{number}\n"
+                document_text += f"Title: {print_data.get('title', 'No title')}\n"
+                document_text += (
+                    f"Document Date: {print_data.get('documentDate', 'Unknown')}\n"
+                )
+                document_text += (
+                    f"Delivery Date: {print_data.get('deliveryDate', 'Unknown')}\n"
+                )
+                document_text += f"PDF Attachments: {', '.join(pdf_attachments)}\n"
+
+                # Include additional prints information
+                additional_prints = print_data.get("additionalPrints", [])
+                if additional_prints:
+                    document_text += "\nAdditional Documents:\n"
+                    for i, additional in enumerate(additional_prints, 1):
+                        document_text += f"  {i}. {additional.get('title', 'No title')} ({additional.get('number', 'No number')})\n"
+                        if additional.get("attachments"):
+                            document_text += f"     Attachments: {', '.join(additional.get('attachments', []))}\n"
+
+                logger.info(
+                    f"Retrieved print document {number} from term {term} with {len(pdf_attachments)} PDF attachments"
+                )
+            else:
+                # Fallback if no attachments
+                document_text = f"Legislative Document #{number}: {print_data.get('title', 'No title')}\n"
+                document_text += "Note: No PDF attachments found for this document."
+                logger.warning(
+                    f"Print document {number} from term {term} has no PDF attachments"
+                )
+
+            act_data = {
+                "text": document_text,
+                "title": print_data.get("title", f"Print Document {number}"),
+                "term": term,
+                "number": number,
+                "document_type": "legislative_print",
+                "source": "sejm_api_print",
+                "document_date": print_data.get("documentDate"),
+                "delivery_date": print_data.get("deliveryDate"),
+                "change_date": print_data.get("changeDate"),
+                "pdf_attachments": pdf_attachments,
+                "additional_prints": print_data.get("additionalPrints", []),
+                "raw_metadata": print_data,  # Store complete API response
+            }
+
+            return act_data
+
+        except Exception as e:
+            # Don't duplicate log - pipeline will log business-level error
+            raise SejmApiError(
+                f"Failed to fetch print document {number} from term {term}: {e}"
+            )
+
+    async def extract_act_metadata(self, act_data: Dict) -> Dict[str, Any]:
+        """Extract standardized metadata from Sejm API response.
+
+        NOTE: Metadata structure varies by Sejm API endpoint. Store as received from API.
+        Sejm Term 10 example from /sejm/term10/prints:
+        {
+            "attachments": ["2.pdf"],
+            "changeDate": "2023-11-29T12:27:56",
+            "deliveryDate": "2023-11-13",
+            "documentDate": "2023-11-13",
+            "number": "2",
+            "processPrint": ["2"],
+            "term": 10,
+            "title": "Poselski projekt uchwały..."
+        }
+        Unique ID: term + number (e.g., "10_2")
+
+        Args:
+            act_data: Raw act data from Sejm API
+
+        Returns:
+            Standardized metadata dictionary with original API fields preserved
+        """
+        try:
+            # Generate unique document ID from term + number
+            term = act_data.get("term")
+            number = act_data.get("number")
+            document_id = (
+                f"{term}_{number}"
+                if term and number
+                else act_data.get("sejm_id", "unknown")
+            )
+
+            # Base metadata with original API fields preserved
+            metadata = {
+                "source_api": "sejm_api",
+                "extraction_timestamp": datetime.now().isoformat(),
+                "document_id": document_id,
+                "unique_id": document_id,  # term_number format
+                # Original API fields - store as received
+                **act_data,  # Preserve all original fields
+                # Standardized fields for compatibility
+                "title": act_data.get("title", "Untitled"),
+                "content_length": len(act_data.get("text", "")),
+            }
+
+            # Add additional metadata based on source type
+            if act_data.get("source") == "sejm_api_voting":
+                metadata["document_type"] = "voting_record"
+                metadata["parliamentary_process"] = "voting"
+            elif act_data.get("source") == "sejm_api_proceeding":
+                metadata["document_type"] = "proceeding_record"
+                metadata["parliamentary_process"] = "proceeding"
+            else:
+                metadata["document_type"] = "unknown"
+                metadata["parliamentary_process"] = "unknown"
+
+            logger.debug(
+                f"Extracted metadata for {metadata['document_id']}: {metadata['document_type']}"
+            )
+            return metadata
+
+        except Exception as e:
+            logger.error(f"Failed to extract metadata from act data: {e}")
+            # Return minimal metadata on error
+            return {
+                "source_api": "sejm_api",
+                "extraction_timestamp": datetime.now().isoformat(),
+                "document_id": act_data.get("sejm_id", "unknown"),
+                "title": "Extraction Failed",
+                "error": str(e),
+            }
+
+    def is_sejm_content_complete(self, act_data: Dict) -> bool:
+        """Check if Sejm API returned complete act text.
+
+        Args:
+            act_data: Act data dictionary to validate
+
+        Returns:
+            True if content appears complete and usable
+        """
+        try:
+            # Check if we have basic required fields
+            required_fields = ["text", "title", "sejm_id"]
+            if not all(field in act_data for field in required_fields):
+                logger.debug("Missing required fields in act data")
+                return False
+
+            # Check text content length and quality
+            text_content = act_data.get("text", "")
+            if not isinstance(text_content, str):
+                logger.debug("Text content is not a string")
+                return False
+
+            text_length = len(text_content.strip())
+
+            # Minimum length threshold for Sejm content (more lenient than ELI)
+            min_length = 100
+            if text_length < min_length:
+                logger.debug(f"Text too short: {text_length} < {min_length}")
+                return False
+
+            # Check for placeholder content
+            placeholder_indicators = [
+                "content not available",
+                "placeholder implementation",
+                "extraction failed",
+                "not implemented",
+            ]
+
+            text_lower = text_content.lower()
+            if any(indicator in text_lower for indicator in placeholder_indicators):
+                logger.debug("Content appears to be placeholder")
+                return False
+
+            # Check for reasonable content structure
+            # Sejm documents should have some structure (sentences, reasonable words)
+            words = text_content.split()
+            if len(words) < 10:  # Very basic check
+                logger.debug(f"Too few words: {len(words)}")
+                return False
+
+            # Content passed all checks
+            logger.debug(
+                f"Sejm content validation passed: {text_length} chars, {len(words)} words"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(f"Error validating Sejm content: {e}")
             return False

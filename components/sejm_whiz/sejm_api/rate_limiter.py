@@ -250,7 +250,7 @@ def rate_limit(
             try:
                 return await func(*args, **kwargs)
             except Exception as e:
-                logger.error(f"Error in rate-limited function {key}: {e}")
+                logger.debug(f"Error in rate-limited function {key}: {e}")
                 raise
 
         # Add utility methods to the wrapper
